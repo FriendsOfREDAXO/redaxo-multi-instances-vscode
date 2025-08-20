@@ -1,0 +1,173 @@
+name: 🚀 Release Extension
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.1)'
+        required: true
+        default: 'v1.0.1'
+
+jobs:
+  release:
+    name: 📦 Build and Release VSIX
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: |
+          npm ci
+          npm install -g @vscode/vsce
+
+      - name: 🧪 Run Tests
+        run: npm run test --if-present
+
+      - name: 🏗️ Build Extension
+        run: |
+          npm run compile
+          npm run package
+
+      - name: 📋 Package Extension
+        run: |
+          # Update package.json with repository field
+          npm pkg set repository.type=git
+          npm pkg set repository.url="https://github.com/skerbis/redaxo-multi-instances-vscode.git"
+          
+          # Create VSIX package
+          vsce package --allow-missing-repository
+          
+          # Get package info
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          echo "PACKAGE_VERSION=${PACKAGE_VERSION}" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=${PACKAGE_NAME}" >> $GITHUB_ENV
+          echo "VSIX_FILE=${PACKAGE_NAME}-${PACKAGE_VERSION}.vsix" >> $GITHUB_ENV
+
+      - name: 📋 Generate Changelog
+        id: changelog
+        run: |
+          cat > RELEASE_NOTES.md << 'EOF'
+          ## 🚀 REDAXO Multi-Instances Manager v${{ env.PACKAGE_VERSION }}
+          
+          ### ✨ Features
+          - 🏗️ **Multi-Instance Management** - Erstellen, starten, stoppen und löschen von REDAXO-Instanzen
+          - 🔒 **SSL/HTTPS Support** - Automatische SSL-Zertifikate mit mkcert
+          - 🐳 **Docker Integration** - Vollständig containerisierte Umgebung
+          - 📊 **Dashboard** - Modernes Webview-Dashboard
+          - 🔑 **Login-Informationen** - Automatische Anzeige von Zugangsdaten und URLs
+          - 📱 **TreeView** - Seitenleiste mit allen Instanzen und deren Status
+          
+          ### 🔧 Technical Features
+          - **PHP Support** - PHP 7.4, 8.1, 8.2, 8.3, 8.4, 8.5
+          - **MariaDB Support** - Verschiedene MariaDB-Versionen (10.6 - 11.2)
+          - **Port Management** - Automatische Port-Zuweisung
+          - **SSL Zertifikate** - Lokale Entwicklungszertifikate
+          - **Docker Compose** - Automatische Container-Orchestrierung
+          
+          ### 📥 Installation
+          
+          #### Option 1: VSIX Package (Empfohlen)
+          1. VSIX-Datei aus diesem Release herunterladen
+          2. VS Code öffnen
+          3. \`Cmd+Shift+P\` → "Extensions: Install from VSIX"
+          4. VSIX-Datei auswählen und installieren
+          
+          #### Option 2: Repository klonen
+          \`\`\`bash
+          git clone https://github.com/skerbis/redaxo-multi-instances-vscode.git
+          cd redaxo-multi-instances-vscode
+          npm install && npm run compile
+          \`\`\`
+          
+          ### 🔒 SSL Setup (Optional)
+          \`\`\`bash
+          # macOS
+          brew install mkcert nss && mkcert -install
+          
+          # Linux
+          sudo apt install libnss3-tools && mkcert -install
+          \`\`\`
+          
+          ### 🏁 Erste Schritte
+          1. \`Cmd+Shift+P\` → \`REDAXO: Show Dashboard\`
+          2. \`REDAXO: Create New Instance\`
+          3. Instanz konfigurieren (Name, PHP-Version, SSL)
+          4. Automatisch generierte URLs verwenden
+          
+          ### 📞 Support
+          - **Issues**: [GitHub Issues](https://github.com/skerbis/redaxo-multi-instances-vscode/issues)
+          - **Community**: [REDAXO Slack](https://redaxo.org/slack/)
+          
+          ---
+          **Made with ❤️ for the REDAXO Community**
+          EOF
+
+      - name: 🏷️ Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name || github.event.inputs.version }}
+          release_name: 🚀 REDAXO Multi-Instances Manager ${{ github.ref_name || github.event.inputs.version }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: false
+
+      - name: ⬆️ Upload VSIX Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ env.VSIX_FILE }}
+          asset_name: ${{ env.VSIX_FILE }}
+          asset_content_type: application/zip
+
+      - name: 📊 Release Summary
+        run: |
+          echo "## 🎉 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY  
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | ${{ env.PACKAGE_VERSION }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Package** | ${{ env.VSIX_FILE }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Size** | $(du -h ${{ env.VSIX_FILE }} | cut -f1) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release** | [${{ github.ref_name || github.event.inputs.version }}](${{ steps.create_release.outputs.html_url }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 Installation" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "# Download VSIX from release" >> $GITHUB_STEP_SUMMARY
+          echo "# VS Code: Cmd+Shift+P → 'Extensions: Install from VSIX'" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # Optional: Auto-publish to VS Code Marketplace
+  # publish:
+  #   name: 📤 Publish to Marketplace
+  #   needs: release
+  #   runs-on: ubuntu-latest
+  #   if: startsWith(github.ref, 'refs/tags/v')
+  #   
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '18'
+  #         cache: 'npm'
+  #     
+  #     - run: npm ci
+  #     - run: npm install -g @vscode/vsce
+  #     
+  #     - name: 🚀 Publish to Marketplace
+  #       run: vsce publish -p ${{ secrets.VSCE_PAT }}
