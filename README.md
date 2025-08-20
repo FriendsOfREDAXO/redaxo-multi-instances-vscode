@@ -24,6 +24,7 @@ Eine mächtige VS Code Extension zur Verwaltung mehrerer REDAXO-Instanzen mit Do
 - **Port Management** - Automatische Port-Zuweisung und -Verwaltung
 - **SSL Zertifikate** - Lokale Entwicklungszertifikate mit mkcert
 - **Docker Compose** - Automatische Container-Orchestrierung
+- **Docker Images** - Basiert auf [webdevops/php-apache](https://hub.docker.com/r/webdevops/php-apache) und [mariadb](https://hub.docker.com/_/mariadb) Images
 
 ## 🚀 Installation
 
