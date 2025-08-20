@@ -16,7 +16,7 @@ Eine mächtige VS Code Extension zur Verwaltung mehrerer REDAXO-Instanzen mit Do
 - **🏗️ Instanz-Management** - Erstellen, starten, stoppen und löschen von REDAXO-Instanzen
 - **🔒 SSL/HTTPS Support** - Automatische SSL-Zertifikate mit mkcert
 - **🐳 Docker Integration** - Vollständig containerisierte Umgebung
-- **📊 Dashboard** - Modernes Webview-Dashboard mit Übersicht aller Instanzen
+- **📊 Info Pages* - Modernes Webview-Dashboard je Instanz
 - **🔑 Login-Informationen** - Automatische Anzeige von Zugangsdaten und URLs
 - **📱 TreeView** - Seitenleiste mit allen Instanzen und deren Status
 
