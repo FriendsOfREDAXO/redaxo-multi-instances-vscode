@@ -47,7 +47,8 @@ export class SSLManager {
     }
 
     private static generateApacheSSLConfig(instanceName: string, releaseType: string = 'standard'): string {
-        const documentRoot = releaseType === 'modern' ? '/var/www/public' : '/var/www/html';
+        // Always use standard document root
+        const documentRoot = '/var/www/html';
         
         return `<VirtualHost *:443>
     ServerName ${instanceName}.local
@@ -57,7 +58,7 @@ export class SSLManager {
     SSLCertificateFile /etc/ssl/certs/${instanceName}.pem
     SSLCertificateKeyFile /etc/ssl/private/${instanceName}-key.pem
     
-    # Modern SSL Configuration
+    # SSL Configuration for REDAXO
     SSLProtocol -all +TLSv1.2 +TLSv1.3
     SSLCipherSuite ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384
     SSLHonorCipherOrder off

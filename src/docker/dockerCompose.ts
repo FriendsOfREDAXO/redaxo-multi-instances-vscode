@@ -3,8 +3,8 @@ import { CreateInstanceOptions } from '../types/redaxo';
 export class DockerComposeGenerator {
     
     static generate(options: CreateInstanceOptions, dbPassword: string, dbRootPassword: string, httpPort: number, httpsPort: number, sslEnabled: boolean): string {
-        // Base volumes that are always included - adjust path based on release type
-        const webRootMount = options.releaseType === 'modern' ? './data/modern-web:/var/www' : './data/redaxo:/var/www/html';
+        // Always use standard web root mount
+        const webRootMount = './data/redaxo:/var/www/html';
         const baseVolumes = [
             `      - ${webRootMount}`,
             '      - ./custom-setup.sh:/usr/local/bin/custom-setup.sh:ro'

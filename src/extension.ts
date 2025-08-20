@@ -46,6 +46,16 @@ function registerCommands(context: vscode.ExtensionContext) {
             instancesProvider.refresh();
         }),
 
+        vscode.commands.registerCommand('redaxo-instances.changeInstancesPath', async () => {
+            try {
+                const newPath = await dockerService.changeInstancesDirectory();
+                vscode.window.showInformationMessage(`Instances folder changed to: ${newPath}`);
+                instancesProvider.refresh();
+            } catch (error: any) {
+                vscode.window.showErrorMessage(`Failed to change instances folder: ${error.message}`);
+            }
+        }),
+
         vscode.commands.registerCommand('redaxo-instances.createInstance', async () => {
             const options = await getInstanceCreationOptions();
             if (options) {
@@ -719,24 +729,16 @@ async function getInstanceCreationOptions(): Promise<any> {
     }
 
     let releaseType = 'standard';
-    if (autoInstall.value) {
-        const releaseChoice = await vscode.window.showQuickPick([
-            { label: 'Standard REDAXO Release', value: 'standard', description: 'Official REDAXO release from GitHub' },
-            { label: 'REDAXO Modern Structure', value: 'modern', description: 'Enhanced structure by skerbis' }
-        ], {
-            placeHolder: 'Choose REDAXO version'
-        });
-
-        if (releaseChoice) {
-            releaseType = releaseChoice.value;
-        }
+    if (autoInstall && autoInstall.value) {
+        // Only standard REDAXO release is supported
+        releaseType = 'standard';
     }
 
     return {
         name: name.trim(),
         phpVersion: phpVersion.value,
         mariadbVersion: mariadbVersion.value,
-        autoInstall: autoInstall.value,
+        autoInstall: autoInstall ? autoInstall.value : false,
         releaseType: releaseType,
         importDump: false,
         webserverOnly: false

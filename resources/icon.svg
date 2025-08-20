@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B35;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D63031;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="url(#gradient)" stroke="#2d3748" stroke-width="2"/>
+  <!-- Letter R -->
+  <path d="M35 32 L35 96 L45 96 L45 70 L65 70 L65 80 C65 88 68 92 75 96 L85 96 C78 92 75 88 75 80 L75 75 C82 72 85 65 85 55 L85 45 C85 37 78 32 70 32 Z M45 42 L70 42 C74 42 75 43 75 45 L75 55 C75 59 74 60 70 60 L45 60 Z" fill="white" stroke="white" stroke-width="1"/>
+</svg>

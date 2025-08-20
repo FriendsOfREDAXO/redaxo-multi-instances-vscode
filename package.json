@@ -4,6 +4,7 @@
   "description": "Complete REDAXO multi-instance management with Docker containers, SSL support, and automatic port management integrated into VS Code",
   "version": "1.0.0",
   "publisher": "skerbis",
+  "icon": "resources/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/skerbis/redaxo-multi-instances-vscode.git"
@@ -29,6 +30,11 @@
         "command": "redaxo-instances.createInstance",
         "title": "Create REDAXO Instance",
         "icon": "$(add)"
+      },
+      {
+        "command": "redaxo-instances.changeInstancesPath",
+        "title": "Change Instances Folder",
+        "icon": "$(folder)"
       },
       {
         "command": "redaxo-instances.startInstance",
@@ -130,7 +136,7 @@
         {
           "id": "redaxo-instances",
           "title": "REDAXO Multi-Instances",
-          "icon": "$(server-environment)"
+          "icon": "$(server)"
         }
       ]
     },
@@ -138,6 +144,11 @@
       "view/title": [
         {
           "command": "redaxo-instances.createInstance",
+          "when": "view == redaxo-instances.instancesView",
+          "group": "navigation"
+        },
+        {
+          "command": "redaxo-instances.changeInstancesPath",
           "when": "view == redaxo-instances.instancesView",
           "group": "navigation"
         },

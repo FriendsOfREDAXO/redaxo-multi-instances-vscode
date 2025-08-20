@@ -40,7 +40,7 @@ export interface CreateInstanceOptions {
     webserverOnly: boolean;
     dumpFile?: string;
     port?: number;
-    releaseType?: 'standard' | 'modern';
+    releaseType?: 'standard';
     downloadUrl?: string;
     sslEnabled?: boolean;
 }

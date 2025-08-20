@@ -60,18 +60,60 @@ export class DockerService {
         let instancesPath = config.get<string>('instancesPath');
         
         if (!instancesPath) {
-            // Default to user's Documents directory
-            const documentsPath = path.join(require('os').homedir(), 'Documents', 'dev', 'testmystuff');
-            await fs.mkdir(documentsPath, { recursive: true });
-            instancesPath = documentsPath;
+            // Always ask user to select instances directory
+            const selectedPath = await vscode.window.showOpenDialog({
+                canSelectFiles: false,
+                canSelectFolders: true,
+                canSelectMany: false,
+                openLabel: 'Select Instances Folder',
+                title: 'Choose folder for REDAXO instances',
+                defaultUri: vscode.Uri.file(require('os').homedir())
+            });
+
+            if (!selectedPath || selectedPath.length === 0) {
+                throw new Error('No instances folder selected. Please select a folder to store REDAXO instances.');
+            }
+
+            instancesPath = selectedPath[0].fsPath;
             
             // Save the path for future use
             await config.update('instancesPath', instancesPath, vscode.ConfigurationTarget.Global);
+            vscode.window.showInformationMessage(`Instances folder set to: ${instancesPath}`);
         }
 
         await fs.mkdir(instancesPath, { recursive: true });
         this.instancesDir = instancesPath;
         return instancesPath;
+    }
+
+    async changeInstancesDirectory(): Promise<string> {
+        const selectedPath = await vscode.window.showOpenDialog({
+            canSelectFiles: false,
+            canSelectFolders: true,
+            canSelectMany: false,
+            openLabel: 'Select New Instances Folder',
+            title: 'Choose new folder for REDAXO instances',
+            defaultUri: vscode.Uri.file(this.instancesDir || require('os').homedir())
+        });
+
+        if (!selectedPath || selectedPath.length === 0) {
+            throw new Error('No folder selected. Instances path not changed.');
+        }
+
+        const newInstancesPath = selectedPath[0].fsPath;
+        const config = vscode.workspace.getConfiguration('redaxo-instances');
+        await config.update('instancesPath', newInstancesPath, vscode.ConfigurationTarget.Global);
+        
+        // Clear the cached directory path so it gets refreshed
+        this.instancesDir = null;
+        
+        // Set the new path and create directory if needed
+        this.instancesDir = newInstancesPath;
+        await fs.mkdir(newInstancesPath, { recursive: true });
+        
+        vscode.window.showInformationMessage(`Instances folder changed to: ${newInstancesPath}`);
+        
+        return newInstancesPath;
     }
 
     async createInstance(options: CreateInstanceOptions): Promise<void> {
@@ -562,15 +604,24 @@ try {
 done
 echo "✅ MySQL is ready"
 
+${options.autoInstall ? `
 # Standard REDAXO Setup - using Docker image
 echo "✅ Using standard REDAXO from Docker image"
 
-${options.autoInstall ? this.generateAutoInstallScript(options) : '# Auto-install disabled'}
+${this.generateAutoInstallScript(options)}` : `
+# Empty instance setup - removing pre-installed REDAXO
+echo "🗑️ Creating empty instance (removing pre-installed REDAXO)"
+rm -rf /var/www/html/*
+echo "📁 Creating basic web directory structure"
+mkdir -p /var/www/html
+echo "<?php phpinfo(); ?>" > /var/www/html/index.php
+echo "✅ Empty web instance ready"
+`}
 
 # Mark setup as complete
 touch /tmp/setup-complete.flag
 
-echo "✅ REDAXO instance setup complete!"
+echo "✅ Instance setup complete!"
 `;
     }
 
