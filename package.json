@@ -7,11 +7,11 @@
   "icon": "resources/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/skerbis/redaxo-multi-instances-vscode.git"
+    "url": "https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode.git"
   },
-  "homepage": "https://github.com/skerbis/redaxo-multi-instances-vscode",
+  "homepage": "https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode",
   "bugs": {
-    "url": "https://github.com/skerbis/redaxo-multi-instances-vscode/issues"
+    "url": "https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/issues"
   },
   "license": "MIT",
   "engines": {

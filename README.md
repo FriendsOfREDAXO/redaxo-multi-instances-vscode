@@ -37,14 +37,14 @@ Eine mächtige VS Code Extension zur Verwaltung mehrerer REDAXO-Instanzen mit Do
 ### Extension Installation
 
 #### Option 1: VSIX Package (Aktuell)
-1. VSIX-Datei von [Releases](https://github.com/skerbis/redaxo-multi-instances-vscode/releases) herunterladen
+1. VSIX-Datei von [Releases](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/releases) herunterladen
 2. VS Code öffnen
 3. `Cmd+Shift+P` → "Extensions: Install from VSIX"
 4. VSIX-Datei auswählen und installieren
 
 #### Option 2: Repository klonen
 ```bash
-git clone https://github.com/skerbis/redaxo-multi-instances-vscode.git
+git clone https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode.git
 cd redaxo-multi-instances-vscode
 npm install
 npm run compile
@@ -117,7 +117,7 @@ sudo dscacheutil -flushcache  # macOS
 ## 👨‍💻 Entwicklung
 
 ```bash
-git clone https://github.com/skerbis/redaxo-multi-instances-vscode.git
+git clone https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode.git
 cd redaxo-multi-instances-vscode
 npm install
 npm run compile
@@ -135,7 +135,7 @@ F5  # Development Host starten
 
 ## 📞 Support
 
-- **GitHub Issues**: [Issues erstellen](https://github.com/skerbis/redaxo-multi-instances-vscode/issues)
+- **GitHub Issues**: [Issues erstellen](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/issues)
 - **REDAXO Community**: [REDAXO Slack](https://redaxo.org/slack/)
 
 ---

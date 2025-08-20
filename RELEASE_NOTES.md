@@ -25,7 +25,7 @@
 
 #### Option 2: Repository klonen
 ```bash
-git clone https://github.com/skerbis/redaxo-multi-instances-vscode.git
+git clone https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode.git
 cd redaxo-multi-instances-vscode
 npm install
 npm run compile
@@ -61,9 +61,9 @@ mkcert -install
 - **HTTPS Backend**: `https://instancename.local:8443/redaxo`
 
 ### 📞 Support & Community
-- **GitHub Issues**: [Probleme melden](https://github.com/skerbis/redaxo-multi-instances-vscode/issues)
+- **GitHub Issues**: [Probleme melden](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/issues)
 - **REDAXO Community**: [REDAXO Slack](https://redaxo.org/slack/)
-- **Dokumentation**: [Repository README](https://github.com/skerbis/redaxo-multi-instances-vscode)
+- **Dokumentation**: [Repository README](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode)
 
 ---
 **Made with ❤️ for the REDAXO Community**

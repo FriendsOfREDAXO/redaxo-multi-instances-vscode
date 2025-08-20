@@ -90,7 +90,7 @@ jobs:
           
           #### Option 2: Repository klonen
           \`\`\`bash
-          git clone https://github.com/skerbis/redaxo-multi-instances-vscode.git
+          git clone https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode.git
           cd redaxo-multi-instances-vscode
           npm install && npm run compile
           \`\`\`
@@ -111,7 +111,7 @@ jobs:
           4. Automatisch generierte URLs verwenden
           
           ### 📞 Support
-          - **Issues**: [GitHub Issues](https://github.com/skerbis/redaxo-multi-instances-vscode/issues)
+          - **Issues**: [GitHub Issues](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/issues)
           - **Community**: [REDAXO Slack](https://redaxo.org/slack/)
           
           ---
@@ -142,7 +142,7 @@ jobs:
           echo "| **Version** | $(node -p 'require(\"./package.json\").version') |" >> $GITHUB_STEP_SUMMARY
           echo "| **Package** | $(ls *.vsix) |" >> $GITHUB_STEP_SUMMARY
           echo "| **Size** | $(du -h *.vsix | cut -f1) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Release** | [${{ github.ref_name || github.event.inputs.version }}](https://github.com/skerbis/redaxo-multi-instances-vscode/releases/tag/${{ github.ref_name || github.event.inputs.version }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release** | [${{ github.ref_name || github.event.inputs.version }}](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/releases/tag/${{ github.ref_name || github.event.inputs.version }}) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📥 Installation" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
