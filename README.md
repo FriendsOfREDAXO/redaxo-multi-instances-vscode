@@ -140,6 +140,10 @@ F5  # Development Host starten
 - **GitHub Issues**: [Issues erstellen](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/issues)
 - **REDAXO Community**: [REDAXO Slack](https://redaxo.org/slack/)
 
+## Lead
+
+[Thomas Skerbis](https://github.com/skerbis)
+
 ---
 
 **Made with ❤️ by [FriendsOfREDAXO](https://github.com/FriendsOfREDAXO) - Danke Dirk! 🙏**
