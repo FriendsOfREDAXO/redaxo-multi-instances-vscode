@@ -1,0 +1,275 @@
+{
+  "name": "redaxo-multi-instances-manager",
+  "displayName": "REDAXO Multi-Instances Manager",
+  "description": "Complete REDAXO multi-instance management with Docker containers, dump imports, and release management integrated into VS Code",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.103.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "redaxo-instances.createInstance",
+        "title": "Create REDAXO Instance",
+        "icon": "$(add)"
+      },
+      {
+        "command": "redaxo-instances.startInstance",
+        "title": "Start Instance",
+        "icon": "$(play)"
+      },
+      {
+        "command": "redaxo-instances.stopInstance",
+        "title": "Stop Instance",
+        "icon": "$(stop)"
+      },
+      {
+        "command": "redaxo-instances.deleteInstance",
+        "title": "Delete Instance",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "redaxo-instances.openInBrowser",
+        "title": "Open Frontend",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "redaxo-instances.openBackend",
+        "title": "Open Backend",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "redaxo-instances.openTerminal",
+        "title": "Open Container Terminal",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "redaxo-instances.showLogs",
+        "title": "Show Container Logs",
+        "icon": "$(output)"
+      },
+      {
+        "command": "redaxo-instances.getDatabaseInfo",
+        "title": "Database Information",
+        "icon": "$(database)"
+      },
+      {
+        "command": "redaxo-instances.getLoginInfo",
+        "title": "Login Information",
+        "icon": "$(key)"
+      },
+      {
+        "command": "redaxo-instances.importDump",
+        "title": "Import Dump",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "redaxo-instances.setupSSL",
+        "title": "Setup HTTPS/SSL",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "redaxo-instances.repairInstance",
+        "title": "Repair Instance",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "redaxo-instances.updateHosts",
+        "title": "Add to Hosts File",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "redaxo-instances.openWorkspace",
+        "title": "Open Workspace in VS Code",
+        "icon": "$(folder)"
+      },
+      {
+        "command": "redaxo-instances.openInFinder",
+        "title": "Open in Finder",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "redaxo-instances.refresh",
+        "title": "Refresh Instances",
+        "icon": "$(refresh)"
+      }
+    ],
+    "views": {
+      "redaxo-instances": [
+        {
+          "id": "redaxo-instances.instancesView",
+          "name": "REDAXO Instances",
+          "when": "true"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "redaxo-instances",
+          "title": "REDAXO Multi-Instances",
+          "icon": "$(server-environment)"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "redaxo-instances.createInstance",
+          "when": "view == redaxo-instances.instancesView",
+          "group": "navigation"
+        },
+        {
+          "command": "redaxo-instances.refresh",
+          "when": "view == redaxo-instances.instancesView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "redaxo-instances.startInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-stopped|stopped-instance/",
+          "group": "1_control@1"
+        },
+        {
+          "command": "redaxo-instances.stopInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
+          "group": "1_control@1"
+        },
+        {
+          "command": "redaxo-instances.openInBrowser",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
+          "group": "2_browser@1"
+        },
+        {
+          "command": "redaxo-instances.openBackend",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
+          "group": "2_browser@2"
+        },
+        {
+          "command": "redaxo-instances.openTerminal",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "group": "3_docker@1"
+        },
+        {
+          "command": "redaxo-instances.showLogs",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "group": "3_docker@2"
+        },
+        {
+          "command": "redaxo-instances.getDatabaseInfo",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "group": "4_info@1"
+        },
+        {
+          "command": "redaxo-instances.getLoginInfo",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "group": "4_info@2"
+        },
+        {
+          "command": "redaxo-instances.importDump",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "group": "4_info@3"
+        },
+        {
+          "command": "redaxo-instances.setupSSL",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "group": "4_info@4"
+        },
+        {
+          "command": "redaxo-instances.repairInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "group": "4_info@5"
+        },
+        {
+          "command": "redaxo-instances.updateHosts",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "group": "4_info@6"
+        },
+        {
+          "command": "redaxo-instances.openWorkspace",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "group": "4_workspace@1"
+        },
+        {
+          "command": "redaxo-instances.openInFinder",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "group": "4_workspace@2"
+        },
+        {
+          "command": "redaxo-instances.deleteInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "group": "5_danger@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "REDAXO Multi-Instances",
+      "properties": {
+        "redaxo-instances.dockerPath": {
+          "type": "string",
+          "default": "docker",
+          "description": "Path to Docker executable"
+        },
+        "redaxo-instances.instancesPath": {
+          "type": "string",
+          "description": "Directory where REDAXO instances are stored"
+        },
+        "redaxo-instances.instancesDirectory": {
+          "type": "string",
+          "default": "./instances",
+          "description": "Directory where REDAXO instances are stored"
+        },
+        "redaxo-instances.defaultPhpVersion": {
+          "type": "string",
+          "default": "8.3",
+          "enum": ["7.4", "8.0", "8.1", "8.2", "8.3", "8.4"],
+          "description": "Default PHP version for new instances"
+        },
+        "redaxo-instances.defaultMariaDbVersion": {
+          "type": "string",
+          "default": "10.11",
+          "enum": ["10.4", "10.5", "10.6", "10.11", "11.0", "latest"],
+          "description": "Default MariaDB version for new instances"
+        },
+        "redaxo-instances.autoRefresh": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh instance status"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.103.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@typescript-eslint/eslint-plugin": "^8.39.0",
+    "@typescript-eslint/parser": "^8.39.0",
+    "eslint": "^9.32.0",
+    "typescript": "^5.9.2",
+    "ts-loader": "^9.5.2",
+    "webpack": "^5.101.0",
+    "webpack-cli": "^6.0.1",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2"
+  }
+}

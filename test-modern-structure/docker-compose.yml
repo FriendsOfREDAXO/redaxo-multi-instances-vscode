@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  redaxo:
+    image: php:8.3-apache
+    container_name: test-modern-redaxo
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_PASSWORD=redaxo123
+      - INSTANCE_NAME=test-modern
+      - RELEASE_TYPE=modern
+    ports:
+      - "8090:80"
+      - "8450:443"
+    volumes:
+      - ./setup.sh:/usr/local/bin/setup.sh
+    command: >
+      bash -c "
+        # Install required packages
+        apt-get update && apt-get install -y curl unzip
+        # Run our setup script
+        chmod +x /usr/local/bin/setup.sh
+        /usr/local/bin/setup.sh
+        # Keep container running
+        apache2-foreground
+      "
+    depends_on:
+      - mysql
+    networks:
+      - redaxo-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: test-modern-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: redaxo
+      MYSQL_USER: redaxo
+      MYSQL_PASSWORD: redaxo123
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - redaxo-network
+
+volumes:
+  mysql_data:
+
+networks:
+  redaxo-network:
+    driver: bridge
