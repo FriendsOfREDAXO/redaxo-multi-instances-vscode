@@ -43,6 +43,7 @@ export interface CreateInstanceOptions {
     releaseType?: 'standard';
     downloadUrl?: string;
     sslEnabled?: boolean;
+    imageVariant?: 'stable' | 'edge'; // stable = older PHP, edge = latest PHP/REDAXO
 }
 
 export interface DockerContainer {

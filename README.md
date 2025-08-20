@@ -1,4 +1,4 @@
-# 🚀 REDAXO Multi-Instances Manager für VS Code
+# 🚀 REDAXO Docker mit VS Code
 
 Eine mächtige VS Code Extension zur Verwaltung mehrerer REDAXO-Instanzen mit Docker, SSL-Support und modernem Dashboard.
 
@@ -140,4 +140,4 @@ F5  # Development Host starten
 
 ---
 
-**Made with ❤️ for the REDAXO Community**
+**Made with ❤️ by [FriendsOfREDAXO](https://github.com/FriendsOfREDAXO) - Danke Dirk! 🙏**

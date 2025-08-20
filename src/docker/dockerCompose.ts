@@ -25,9 +25,12 @@ export class DockerComposeGenerator {
       - "${httpsPort}:443"`
             : `      - "${httpPort}:80"`;
 
+        // Choose image variant: stable (older PHP) or edge (latest PHP/REDAXO)
+        const imageTag = options.imageVariant === 'edge' ? '5-edge' : '5-stable';
+        
         // Standard REDAXO service definition  
         const serviceDefinition = `  redaxo:
-    image: friendsofredaxo/redaxo:5
+    image: friendsofredaxo/redaxo:${imageTag}
     container_name: redaxo-${options.name}
     command: >
       sh -c "

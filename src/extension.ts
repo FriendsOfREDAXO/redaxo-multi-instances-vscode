@@ -717,6 +717,25 @@ async function getInstanceCreationOptions(): Promise<any> {
         return null;
     }
 
+    const imageVariant = await vscode.window.showQuickPick([
+        { 
+            label: 'Stable (Recommended)', 
+            value: 'stable',
+            description: 'Latest stable REDAXO with older but stable PHP version'
+        },
+        { 
+            label: 'Edge (Latest)', 
+            value: 'edge',
+            description: 'Latest REDAXO with newest PHP, including beta versions'
+        }
+    ], {
+        placeHolder: 'Select REDAXO image variant'
+    });
+
+    if (!imageVariant) {
+        return null;
+    }
+
     const autoInstall = await vscode.window.showQuickPick([
         { label: 'Yes, install REDAXO automatically', value: true },
         { label: 'No, create empty instance', value: false }
@@ -738,6 +757,7 @@ async function getInstanceCreationOptions(): Promise<any> {
         name: name.trim(),
         phpVersion: phpVersion.value,
         mariadbVersion: mariadbVersion.value,
+        imageVariant: imageVariant.value, // stable or edge
         autoInstall: autoInstall ? autoInstall.value : false,
         releaseType: releaseType,
         importDump: false,
