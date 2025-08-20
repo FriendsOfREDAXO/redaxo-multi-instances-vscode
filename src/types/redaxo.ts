@@ -41,6 +41,7 @@ export interface CreateInstanceOptions {
     dumpFile?: string;
     port?: number;
     releaseType?: 'standard' | 'modern';
+    downloadUrl?: string;
     sslEnabled?: boolean;
 }
 

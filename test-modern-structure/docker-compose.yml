@@ -9,11 +9,12 @@ services:
       - MYSQL_PASSWORD=redaxo123
       - INSTANCE_NAME=test-modern
       - RELEASE_TYPE=modern
+      - DOWNLOAD_URL=https://github.com/skerbis/REDAXO_MODERN_STRUCTURE/archive/refs/heads/main.zip
     ports:
       - "8090:80"
       - "8450:443"
     volumes:
-      - ./setup.sh:/usr/local/bin/setup.sh
+      - ./setup-fixed.sh:/usr/local/bin/setup.sh
     command: >
       bash -c "
         # Install required packages

@@ -1,8 +1,8 @@
 {
   "name": "redaxo-multi-instances-manager",
   "displayName": "REDAXO Multi-Instances Manager",
-  "description": "Complete REDAXO multi-instance management with Docker containers, dump imports, and release management integrated into VS Code",
-  "version": "0.0.1",
+  "description": "Complete REDAXO multi-instance management with Docker containers, SSL support, and automatic port management integrated into VS Code",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.103.0"
   },
@@ -99,6 +99,11 @@
         "command": "redaxo-instances.refresh",
         "title": "Refresh Instances",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "redaxo-instances.showPortUsage",
+        "title": "Show Port Usage",
+        "icon": "$(symbol-network)"
       }
     ],
     "views": {
@@ -128,6 +133,11 @@
         },
         {
           "command": "redaxo-instances.refresh",
+          "when": "view == redaxo-instances.instancesView",
+          "group": "navigation"
+        },
+        {
+          "command": "redaxo-instances.showPortUsage",
           "when": "view == redaxo-instances.instancesView",
           "group": "navigation"
         }

@@ -5,6 +5,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { DockerService } from './docker/dockerService';
 import { InstancesProvider } from './providers/instancesProvider';
+import { PortManager } from './docker/portManager';
 
 const execAsync = promisify(exec);
 
@@ -634,6 +635,39 @@ function registerCommands(context: vscode.ExtensionContext) {
                     vscode.window.showErrorMessage(`Failed to open in file explorer: ${error.message}`);
                 }
             }
+        }),
+
+        // Port Management
+        vscode.commands.registerCommand('redaxo-instances.showPortUsage', async () => {
+            try {
+                outputChannel.clear();
+                outputChannel.appendLine('🌐 REDAXO Multi-Instances - Port Usage Report');
+                outputChannel.appendLine('='.repeat(50));
+                outputChannel.appendLine('');
+                
+                // Zeige aktuelle Port-Nutzung
+                const usedPorts: number[] = PortManager.getUsedPorts();
+                outputChannel.appendLine('📊 Aktuell verwendete Ports (Bereich 8000-9999):');
+                
+                if (usedPorts.length === 0) {
+                    outputChannel.appendLine('   ✅ Keine Ports im Bereich 8000-9999 in Verwendung');
+                } else {
+                    usedPorts.sort((a: number, b: number) => a - b).forEach((port: number) => {
+                        outputChannel.appendLine(`   📌 Port ${port} ist in Verwendung`);
+                    });
+                }
+                
+                outputChannel.appendLine('');
+                outputChannel.appendLine('🏠 REDAXO-Instanzen:');
+                outputChannel.appendLine('   Verwende die Tree View um Details zu den einzelnen Instanzen zu sehen.');
+                
+                outputChannel.appendLine('');
+                outputChannel.appendLine('💡 Tipp: Beim Erstellen neuer Instanzen werden automatisch freie Ports gefunden.');
+                outputChannel.show(true);
+                
+            } catch (error: any) {
+                vscode.window.showErrorMessage(`Fehler beim Anzeigen der Port-Nutzung: ${error.message}`);
+            }
         })
     ];
 
@@ -718,26 +752,13 @@ async function getInstanceCreationOptions(): Promise<any> {
         return null;
     }
 
-    let releaseType = 'standard';
-    if (autoInstall.value) {
-        const releaseChoice = await vscode.window.showQuickPick([
-            { label: 'Standard REDAXO Release', value: 'standard', description: 'Official REDAXO release from GitHub' },
-            { label: 'REDAXO Modern Structure', value: 'modern', description: 'Enhanced structure by skerbis' }
-        ], {
-            placeHolder: 'Choose REDAXO version'
-        });
-
-        if (releaseChoice) {
-            releaseType = releaseChoice.value;
-        }
-    }
-
     return {
         name: name.trim(),
         phpVersion: phpVersion.value,
         mariadbVersion: mariadbVersion.value,
         autoInstall: autoInstall.value,
-        releaseType: releaseType,
+        releaseType: 'standard',
+        downloadUrl: '',
         importDump: false,
         webserverOnly: false
     };
@@ -989,6 +1010,41 @@ function getLoginInfoHtml(instanceName: string, loginInfo: any): string {
             
             <div class="info-section">
                 <h2>⚙️ System Information</h2>
+                <div class="info-item">
+                    <span class="info-label">PHP Version:</span>
+                    <span class="info-value">${loginInfo.phpVersion}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">MariaDB Version:</span>
+                    <span class="info-value">${loginInfo.mariadbVersion}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Release Type:</span>
+                    <span class="info-value">${loginInfo.releaseType}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">HTTP Port:</span>
+                    <span class="info-value">${loginInfo.httpPort}</span>
+                </div>
+                ${loginInfo.httpsPort ? `
+                <div class="info-item">
+                    <span class="info-label">HTTPS Port:</span>
+                    <span class="info-value">${loginInfo.httpsPort} 🔒</span>
+                </div>` : ''}
+                <div class="info-item">
+                    <span class="info-label">SSL Enabled:</span>
+                    <span class="info-value">${loginInfo.sslEnabled ? '✅ Yes' : '❌ No'}</span>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h2>📋 Quick Actions</h2>
+                <p><strong>Copy Backend URL:</strong> <code>${loginInfo.sslEnabled && loginInfo.backendUrlHttps ? loginInfo.backendUrlHttps : loginInfo.backendUrl}</code></p>
+                <p><strong>Copy Credentials:</strong> admin / ${loginInfo.adminPassword}</p>
+            </div>
+        </body>
+        </html>
+    `;
                 <div class="info-item">
                     <span class="info-label">PHP Version:</span>
                     <span class="info-value">${loginInfo.phpVersion}</span>

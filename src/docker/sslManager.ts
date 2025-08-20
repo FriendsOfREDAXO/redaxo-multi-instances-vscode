@@ -15,44 +15,43 @@ export class SSLManager {
         console.log(`SSL Manager: ${message}`);
     }
 
-    static async setupSSLCertificates(instanceName: string, instancePath: string): Promise<boolean> {
+    static async setupSSLCertificates(instanceName: string, instancePath: string, releaseType: string = 'standard'): Promise<boolean> {
         try {
-            // Check if mkcert is available
-            await execPromise('mkcert -version');
-            this.log(`✅ mkcert is available`);
-            
-            // Create ssl directory
+            // Create SSL directory
             const sslDir = path.join(instancePath, 'ssl');
             await fs.mkdir(sslDir, { recursive: true });
-            
+
             // Generate SSL certificates using mkcert
-            const certCommand = `mkcert -cert-file "${path.join(sslDir, instanceName)}.pem" -key-file "${path.join(sslDir, instanceName)}-key.pem" "${instanceName}.local" "*.${instanceName}.local"`;
-            
-            this.log(`🔧 Executing: ${certCommand}`);
-            await execPromise(certCommand);
-            
+            const certPath = path.join(sslDir, `${instanceName}.pem`);
+            const keyPath = path.join(sslDir, `${instanceName}-key.pem`);
+
+            const result = await exec(`mkcert -cert-file "${certPath}" -key-file "${keyPath}" "${instanceName}.local"`, {
+                cwd: sslDir
+            });
+
+            console.log('mkcert output:', result.stdout);
+
             // Generate Apache SSL configuration
-            const apacheSslConfig = this.generateApacheSSLConfig(instanceName);
-            await fs.writeFile(path.join(instancePath, 'apache-ssl.conf'), apacheSslConfig);
-            
-            this.log(`✅ SSL certificates created for ${instanceName}.local`);
-            
-            // Add to hosts file (optional, requires sudo)
-            await this.addToHostsFile(instanceName);
-            
+            const sslConfig = SSLManager.generateApacheSSLConfig(instanceName, releaseType);
+            const sslConfigPath = path.join(instancePath, 'apache-ssl.conf');
+            await fs.writeFile(sslConfigPath, sslConfig);
+
+            // Add to hosts file
+            await SSLManager.addToHostsFile(instanceName);
+
             return true;
-            
         } catch (error: any) {
-            this.log(`❌ SSL setup failed: ${error.message}`);
-            console.log(`SSL Manager: SSL setup failed for ${instanceName}:`, error);
+            console.error('SSL setup failed:', error.message);
             return false;
         }
     }
 
-    private static generateApacheSSLConfig(instanceName: string): string {
+    private static generateApacheSSLConfig(instanceName: string, releaseType: string = 'standard'): string {
+        const documentRoot = releaseType === 'modern' ? '/var/www/public' : '/var/www/html';
+        
         return `<VirtualHost *:443>
     ServerName ${instanceName}.local
-    DocumentRoot /var/www/public
+    DocumentRoot ${documentRoot}
     
     SSLEngine on
     SSLCertificateFile /etc/ssl/certs/${instanceName}.pem

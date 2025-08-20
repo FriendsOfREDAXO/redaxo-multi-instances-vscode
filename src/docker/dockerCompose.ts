@@ -3,9 +3,10 @@ import { CreateInstanceOptions } from '../types/redaxo';
 export class DockerComposeGenerator {
     
     static generate(options: CreateInstanceOptions, dbPassword: string, dbRootPassword: string, httpPort: number, httpsPort: number, sslEnabled: boolean): string {
-        // Base volumes that are always included
+        // Base volumes that are always included - adjust path based on release type
+        const webRootMount = options.releaseType === 'modern' ? './data/modern-web:/var/www' : './data/redaxo:/var/www/html';
         const baseVolumes = [
-            '      - ./data/redaxo:/var/www/html',
+            `      - ${webRootMount}`,
             '      - ./custom-setup.sh:/usr/local/bin/custom-setup.sh:ro'
         ];
         
@@ -24,16 +25,10 @@ export class DockerComposeGenerator {
       - "${httpsPort}:443"`
             : `      - "${httpPort}:80"`;
 
-        // Use different approach for Modern Structure
-        let serviceDefinition = '';
-        if (options.releaseType === 'modern') {
-            serviceDefinition = `  redaxo:
+        // Standard REDAXO service definition  
+        const serviceDefinition = `  redaxo:
+    image: friendsofredaxo/redaxo:5
     container_name: redaxo-${options.name}
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - PHP_VERSION=${options.phpVersion || '8.2'}
     command: >
       sh -c "
         /usr/local/bin/custom-setup.sh &&
@@ -43,15 +38,6 @@ export class DockerComposeGenerator {
 ${ports}
     volumes:
 ${allVolumes}`;
-        } else {
-            serviceDefinition = `  redaxo:
-    image: friendsofredaxo/redaxo:5
-    container_name: redaxo-${options.name}
-    ports:
-${ports}
-    volumes:
-${allVolumes}`;
-        }
 
         return `services:
 ${serviceDefinition}
@@ -68,6 +54,13 @@ ${serviceDefinition}
       - REDAXO_DB_CHARSET=utf8mb4
       - REDAXO_ADMIN_USER=admin
       - REDAXO_ADMIN_PASSWORD=${dbPassword}
+      - MYSQL_ROOT_PASSWORD=${dbRootPassword}
+      - MYSQL_PASSWORD=${dbPassword}
+      - INSTANCE_NAME=${options.name}
+      - HTTP_PORT=${httpPort}${sslEnabled ? `
+      - HTTPS_PORT=${httpsPort}` : ''}
+      - RELEASE_TYPE=${options.releaseType || 'standard'}${options.downloadUrl ? `
+      - DOWNLOAD_URL=${options.downloadUrl}` : ''}
     depends_on:
       - mysql
     networks:
@@ -100,7 +93,7 @@ networks:
 INSTANCE_NAME=${options.name}
 PHP_VERSION=${options.phpVersion}
 MARIADB_VERSION=${options.mariadbVersion}
-RELEASE_TYPE=${options.releaseType || 'standard'}
+RELEASE_TYPE=standard
 HTTP_PORT=${httpPort}
 ${sslEnabled ? `HTTPS_PORT=${httpsPort}
 SSL_ENABLED=true` : `SSL_ENABLED=false`}
