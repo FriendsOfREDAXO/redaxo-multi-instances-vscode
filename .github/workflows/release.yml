@@ -41,15 +41,11 @@ jobs:
 
       - name: 📋 Package Extension
         run: |
-          # Install vsce
+          # Install vsce globally
           npm install -g @vscode/vsce
           
-          # Update package.json with repository field
-          npm pkg set repository.type=git
-          npm pkg set repository.url="https://github.com/skerbis/redaxo-multi-instances-vscode.git"
-          
-          # Create VSIX package
-          vsce package --allow-missing-repository
+          # Create VSIX package (repository info already in package.json)
+          vsce package
           
           # Get package info
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
@@ -57,12 +53,17 @@ jobs:
           echo "PACKAGE_VERSION=${PACKAGE_VERSION}" >> $GITHUB_ENV
           echo "PACKAGE_NAME=${PACKAGE_NAME}" >> $GITHUB_ENV
           echo "VSIX_FILE=${PACKAGE_NAME}-${PACKAGE_VERSION}.vsix" >> $GITHUB_ENV
+          
+          # Verify VSIX file exists
+          ls -la *.vsix
+          echo "Created VSIX: $(ls *.vsix)"
 
       - name: 📋 Generate Changelog
         id: changelog
         run: |
-          cat > RELEASE_NOTES.md << 'EOF'
-          ## 🚀 REDAXO Multi-Instances Manager v${{ env.PACKAGE_VERSION }}
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          cat > RELEASE_NOTES.md << EOF
+          ## 🚀 REDAXO Multi-Instances Manager v${PACKAGE_VERSION}
           
           ### ✨ Features
           - 🏗️ **Multi-Instance Management** - Erstellen, starten, stoppen und löschen von REDAXO-Instanzen
@@ -116,6 +117,9 @@ jobs:
           ---
           **Made with ❤️ for the REDAXO Community**
           EOF
+          
+          echo "Release notes created:"
+          cat RELEASE_NOTES.md
 
       - name: 🏷️ Create Release
         id: create_release  
@@ -128,17 +132,16 @@ jobs:
           body_path: RELEASE_NOTES.md
           draft: false
           prerelease: false
-          files: |
-            ${{ env.VSIX_FILE }}
+          files: "*.vsix"
 
       - name: 📊 Release Summary
         run: |
           echo "## 🎉 Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "| | |" >> $GITHUB_STEP_SUMMARY  
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Version** | ${PACKAGE_VERSION} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Package** | ${VSIX_FILE} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Size** | $(du -h ${VSIX_FILE} | cut -f1) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | $(node -p 'require(\"./package.json\").version') |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Package** | $(ls *.vsix) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Size** | $(du -h *.vsix | cut -f1) |" >> $GITHUB_STEP_SUMMARY
           echo "| **Release** | [${{ github.ref_name || github.event.inputs.version }}](https://github.com/skerbis/redaxo-multi-instances-vscode/releases/tag/${{ github.ref_name || github.event.inputs.version }}) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📥 Installation" >> $GITHUB_STEP_SUMMARY
