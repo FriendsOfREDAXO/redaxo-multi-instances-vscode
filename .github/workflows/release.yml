@@ -115,36 +115,28 @@ jobs:
           EOF
 
       - name: 🏷️ Create Release
-        id: create_release
-        uses: actions/create-release@v1
+        id: create_release  
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name || github.event.inputs.version }}
-          release_name: 🚀 REDAXO Multi-Instances Manager ${{ github.ref_name || github.event.inputs.version }}
+          name: 🚀 REDAXO Multi-Instances Manager ${{ github.ref_name || github.event.inputs.version }}
           body_path: RELEASE_NOTES.md
           draft: false
           prerelease: false
-
-      - name: ⬆️ Upload VSIX Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./${{ env.VSIX_FILE }}
-          asset_name: ${{ env.VSIX_FILE }}
-          asset_content_type: application/zip
+          files: |
+            ${{ env.VSIX_FILE }}
 
       - name: 📊 Release Summary
         run: |
           echo "## 🎉 Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "| | |" >> $GITHUB_STEP_SUMMARY  
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Version** | ${{ env.PACKAGE_VERSION }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Package** | ${{ env.VSIX_FILE }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Size** | $(du -h ${{ env.VSIX_FILE }} | cut -f1) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Release** | [${{ github.ref_name || github.event.inputs.version }}](${{ steps.create_release.outputs.html_url }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | ${PACKAGE_VERSION} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Package** | ${VSIX_FILE} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Size** | $(du -h ${VSIX_FILE} | cut -f1) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release** | [${{ github.ref_name || github.event.inputs.version }}](https://github.com/skerbis/redaxo-multi-instances-vscode/releases/tag/${{ github.ref_name || github.event.inputs.version }}) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📥 Installation" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
