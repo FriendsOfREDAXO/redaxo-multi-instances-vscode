@@ -1,5 +1,7 @@
 # 🚀 REDAXO Docker mit VS Code
 
+👉 Für macOs und Linux
+
 Eine mächtige VS Code Extension zur Verwaltung mehrerer REDAXO-Instanzen mit Docker, SSL-Support und modernem Dashboard.
 
 ![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue?style=flat-square&logo=visual-studio-code)
