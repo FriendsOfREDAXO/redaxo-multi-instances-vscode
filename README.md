@@ -1,13 +1,14 @@
-# 🚀 REDAXO Docker mit VS Code
+# 🚀 REDAXO Multi-Instances Manager (v1.1.0)
 
 👉 Für macOs und Linux
 
-Eine mächtige VS Code Extension zur Verwaltung mehrerer REDAXO-Instanzen mit Docker, SSL-Support und modernem Dashboard.
+Eine mächtige VS Code Extension zur Verwaltung mehrerer REDAXO-Instanzen ("Custom Instances") mit Docker, SSL-Support und modernem Dashboard.
 
 ![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue?style=flat-square&logo=visual-studio-code)
 ![Docker](https://img.shields.io/badge/Docker-Required-blue?style=flat-square&logo=docker)
 ![REDAXO](https://img.shields.io/badge/REDAXO-5.x-green?style=flat-square)
-![PHP](https://img.shields.io/badge/PHP-7.4--8.5-purple?style=flat-square&logo=php)
+![PHP](https://img.shields.io/badge/PHP-7.4%20|%208.1--8.5-purple?style=flat-square&logo=php)
+![MariaDB](https://img.shields.io/badge/MariaDB-11.3-blue?style=flat-square)
 ![SSL](https://img.shields.io/badge/SSL-mkcert-orange?style=flat-square&logo=letsencrypt)
 
 ## ✨ Features
@@ -22,7 +23,7 @@ Eine mächtige VS Code Extension zur Verwaltung mehrerer REDAXO-Instanzen mit Do
 
 ### 🔧 Technische Features
 - **PHP Support** - PHP 7.4, 8.1, 8.2, 8.3, 8.4, 8.5
-- **MariaDB Support** - Verschiedene MariaDB-Versionen (10.6 - 11.2)
+- **MariaDB Support** - Aktuell 11.3
 - **Port Management** - Automatische Port-Zuweisung und -Verwaltung
 - **SSL Zertifikate** - Lokale Entwicklungszertifikate mit mkcert
 - **Docker Compose** - Automatische Container-Orchestrierung
@@ -56,16 +57,16 @@ npm run compile
 
 1. **Extension aktivieren** - `Cmd+Shift+P` → `REDAXO: Show Dashboard`
 2. **Erste Instanz erstellen** - `REDAXO: Create New Instance`
-3. **Instanz konfigurieren** - Name, PHP-Version (7.4-8.5), MariaDB-Version wählen
+3. **Instanz konfigurieren** - Name, PHP-Version (7.4 + 8.1–8.5), MariaDB 11.3
 4. **SSL aktivieren** - Optional für HTTPS-Support
 5. **Zugriff** - Automatisch generierte URLs verwenden
 
 ## 📖 Verwendung
 
-### Alle VS Code Kommandos
+### Alle VS Code Kommandos (Auswahl)
 - `REDAXO: Create New Instance` - Neue Instanz erstellen
 - `REDAXO: Show Dashboard` - Dashboard öffnen
-- `REDAXO: Show Login Info` - Login-Daten anzeigen
+- `REDAXO: Show Login Info` - Login-Daten anzeigen (inkl. DB-Zugang)
 - `REDAXO: Start/Stop Instance` - Instanzen verwalten
 - `REDAXO: Setup HTTPS/SSL` - SSL für Instanz einrichten
 
@@ -75,7 +76,7 @@ npm run compile
 - 🔒 SSL aktiviert
 - Rechtsklick für Kontext-Menü
 
-## 🔒 SSL/HTTPS Setup
+## 🔒 SSL/HTTPS Setup (Optional)
 
 ### macOS
 ```bash
@@ -127,7 +128,19 @@ npm run watch  # Watch-Modus
 F5  # Development Host starten
 ```
 
-## 🤝 Beitragen
+## 🤝 Beitragen / Changelog Auszug 1.1.0
+
+### Neu / Geändert in 1.1.0
+| Änderung | Beschreibung |
+|----------|--------------|
+| Umbenennung | "Empty Instance" → "Custom Instance" |
+| Entfernt | Menüpunkt/Command Database Information |
+| Pfad-Handling | Öffnen in Finder / Workspace für project/ Struktur gefixt |
+| Versionen | PHP Auswahl bereinigt (7.4, 8.1–8.5) / MariaDB auf 11.3 |
+| Cleanup | Alte Test- & Template-Dateien entfernt |
+| Branding | README & Release Skript aktualisiert |
+
+---
 
 1. Repository forken
 2. Feature Branch erstellen: `git checkout -b feature/name`

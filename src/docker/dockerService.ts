@@ -51,7 +51,7 @@ export class DockerService {
         }
     }
 
-    private async getInstancesDirectory(): Promise<string> {
+    public async getInstancesDirectory(): Promise<string> {
         if (this.instancesDir) {
             return this.instancesDir;
         }

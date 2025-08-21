@@ -5,11 +5,22 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { DockerService } from './docker/dockerService';
 import { InstancesProvider } from './providers/instancesProvider';
+import { EmptyInstanceProvider } from './emptyInstance/emptyInstanceProvider';
 
 const execAsync = promisify(exec);
 
+async function dirExists(p: string): Promise<boolean> {
+    try {
+        const stat = await fs.stat(p);
+        return stat.isDirectory();
+    } catch {
+        return false;
+    }
+}
+
 let dockerService: DockerService;
 let instancesProvider: InstancesProvider;
+let emptyInstanceProvider: EmptyInstanceProvider;
 let outputChannel: vscode.OutputChannel;
 
 export function activate(context: vscode.ExtensionContext) {
@@ -22,15 +33,26 @@ export function activate(context: vscode.ExtensionContext) {
     // Initialize services
     dockerService = new DockerService(outputChannel);
     instancesProvider = new InstancesProvider(dockerService);
+    emptyInstanceProvider = new EmptyInstanceProvider(context.extensionUri, dockerService);
 
-    // Register Tree View
+    // Register Tree Views
     const treeView = vscode.window.createTreeView('redaxo-instances.instancesView', {
         treeDataProvider: instancesProvider,
         showCollapseAll: true,
         canSelectMany: false
     });
     
-    context.subscriptions.push(treeView);
+    const emptyInstanceView = vscode.window.registerWebviewViewProvider(
+        EmptyInstanceProvider.viewType,
+        emptyInstanceProvider,
+        {
+            webviewOptions: {
+                retainContextWhenHidden: true
+            }
+        }
+    );
+    
+    context.subscriptions.push(treeView, emptyInstanceView);
 
     // Register Commands
     registerCommands(context);
@@ -318,30 +340,7 @@ function registerCommands(context: vscode.ExtensionContext) {
             }
         }),
 
-        // Database Actions
-        vscode.commands.registerCommand('redaxo-instances.getDatabaseInfo', async (instanceName?: string) => {
-            if (!instanceName) {
-                instanceName = await selectInstance('Select instance for database info:');
-            }
-            if (instanceName) {
-                try {
-                    const dbInfo = await dockerService.getDatabaseInfo(instanceName);
-                    const panel = vscode.window.createWebviewPanel(
-                        'redaxoDbInfo',
-                        `Database Info - ${instanceName}`,
-                        vscode.ViewColumn.One,
-                        {
-                            enableScripts: false,
-                            retainContextWhenHidden: true
-                        }
-                    );
-
-                    panel.webview.html = getDatabaseInfoHtml(instanceName, dbInfo);
-                } catch (error: any) {
-                    vscode.window.showErrorMessage(`Failed to get database info: ${error.message}`);
-                }
-            }
-        }),
+    // Database Info Command entfernt
 
         vscode.commands.registerCommand('redaxo-instances.getLoginInfo', async (instanceItem?: any) => {
             let instanceName: string | undefined;
@@ -551,7 +550,20 @@ function registerCommands(context: vscode.ExtensionContext) {
 
                     let workspacePath: string;
                     if (instance.path) {
-                        workspacePath = path.join(instance.path, 'data', 'redaxo');
+                        // Prüfe verschiedene mögliche Strukturen
+                        const candidateProject = path.join(instance.path, 'project');
+                        const candidateProjectPublic = path.join(candidateProject, 'public');
+                        const candidateDataRedaxo = path.join(instance.path, 'data', 'redaxo');
+
+                        if (await dirExists(candidateProjectPublic)) {
+                            workspacePath = candidateProject; // Wurzel des Custom Projekts
+                        } else if (await dirExists(candidateProject)) {
+                            workspacePath = candidateProject;
+                        } else if (await dirExists(candidateDataRedaxo)) {
+                            workspacePath = candidateDataRedaxo; // Legacy REDAXO
+                        } else {
+                            workspacePath = instance.path; // Fallback
+                        }
                     } else {
                         vscode.window.showErrorMessage(`Instance path not found for ${name}`);
                         return;
@@ -616,7 +628,19 @@ function registerCommands(context: vscode.ExtensionContext) {
 
                     let workspacePath: string;
                     if (instance.path) {
-                        workspacePath = path.join(instance.path, 'data', 'redaxo');
+                        const candidateProject = path.join(instance.path, 'project');
+                        const candidateProjectPublic = path.join(candidateProject, 'public');
+                        const candidateDataRedaxo = path.join(instance.path, 'data', 'redaxo');
+
+                        if (await dirExists(candidateProjectPublic)) {
+                            workspacePath = candidateProject;
+                        } else if (await dirExists(candidateProject)) {
+                            workspacePath = candidateProject;
+                        } else if (await dirExists(candidateDataRedaxo)) {
+                            workspacePath = candidateDataRedaxo;
+                        } else {
+                            workspacePath = instance.path;
+                        }
                     } else {
                         vscode.window.showErrorMessage(`Instance path not found for ${name}`);
                         return;
@@ -738,7 +762,7 @@ async function getInstanceCreationOptions(): Promise<any> {
 
     const autoInstall = await vscode.window.showQuickPick([
         { label: 'Yes, install REDAXO automatically', value: true },
-        { label: 'No, create empty instance', value: false }
+        { label: 'No, create custom instance', value: false }
     ], {
         placeHolder: 'Auto-install REDAXO?'
     });
@@ -990,24 +1014,7 @@ function getLoginInfoHtml(instanceName: string, loginInfo: any): string {
             </div>
             
             <div class="info-section">
-                <h2>🗄️ Database Information</h2>
-                <div class="info-item">
-                    <span class="info-label">Host:</span>
-                    <span class="info-value">${loginInfo.dbHost}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Database:</span>
-                    <span class="info-value">${loginInfo.dbName}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Username:</span>
-                    <span class="info-value">${loginInfo.dbUser}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Password:</span>
-                    <span class="info-value">${loginInfo.dbPassword}</span>
-                </div>
-            </div>
+            
             
             <div class="info-section">
                 <h2>⚙️ System Information</h2>
@@ -1027,74 +1034,7 @@ function getLoginInfoHtml(instanceName: string, loginInfo: any): string {
     `;
 }
 
-function getDatabaseInfoHtml(instanceName: string, dbInfo: any): string {
-    return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Database Info - ${instanceName}</title>
-            <style>
-                body {
-                    font-family: var(--vscode-font-family);
-                    background: var(--vscode-editor-background);
-                    color: var(--vscode-editor-foreground);
-                    padding: 20px;
-                }
-                .info-card {
-                    background: var(--vscode-widget-background);
-                    border: 1px solid var(--vscode-widget-border);
-                    border-radius: 4px;
-                    padding: 20px;
-                    margin-bottom: 20px;
-                }
-                .info-item {
-                    display: flex;
-                    justify-content: space-between;
-                    padding: 8px 0;
-                    border-bottom: 1px solid var(--vscode-widget-border);
-                }
-                .info-item:last-child {
-                    border-bottom: none;
-                }
-                .info-label {
-                    font-weight: bold;
-                    color: var(--vscode-textLink-foreground);
-                }
-                .info-value {
-                    font-family: var(--vscode-editor-font-family);
-                    user-select: all;
-                }
-            </style>
-        </head>
-        <body>
-            <h1>🔑 Database Information - ${instanceName}</h1>
-            <div class="info-card">
-                <div class="info-item">
-                    <span class="info-label">Host:</span>
-                    <span class="info-value">${dbInfo.host}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Database:</span>
-                    <span class="info-value">${dbInfo.database}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">User:</span>
-                    <span class="info-value">${dbInfo.user}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Password:</span>
-                    <span class="info-value">${dbInfo.password}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Root Password:</span>
-                    <span class="info-value">${dbInfo.rootPassword}</span>
-                </div>
-            </div>
-            <p><em>You can select and copy any of these values.</em></p>
-        </body>
-        </html>
-    `;
-}
+// getDatabaseInfoHtml entfernt
 
 export function deactivate() {
     if (instancesProvider) {

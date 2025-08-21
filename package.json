@@ -2,7 +2,7 @@
   "name": "redaxo-multi-instances-manager",
   "displayName": "REDAXO Multi-Instances Manager",
   "description": "Complete REDAXO multi-instance management with Docker containers, SSL support, and automatic port management integrated into VS Code",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "skerbis",
   "icon": "resources/icon.png",
   "repository": {
@@ -72,11 +72,6 @@
         "icon": "$(output)"
       },
       {
-        "command": "redaxo-instances.getDatabaseInfo",
-        "title": "Database Information",
-        "icon": "$(database)"
-      },
-      {
         "command": "redaxo-instances.getLoginInfo",
         "title": "Login Information",
         "icon": "$(key)"
@@ -127,7 +122,15 @@
         {
           "id": "redaxo-instances.instancesView",
           "name": "REDAXO Instances",
-          "when": "true"
+          "when": "true",
+          "icon": "$(server)"
+        },
+        {
+          "id": "redaxoEmptyInstance",
+          "name": "Empty Instance",
+          "type": "webview",
+          "when": "true",
+          "icon": "$(package)"
         }
       ]
     },
@@ -195,34 +198,29 @@
           "group": "3_docker@2"
         },
         {
-          "command": "redaxo-instances.getDatabaseInfo",
+          "command": "redaxo-instances.getLoginInfo",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
           "group": "4_info@1"
         },
         {
-          "command": "redaxo-instances.getLoginInfo",
+          "command": "redaxo-instances.importDump",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
           "group": "4_info@2"
         },
         {
-          "command": "redaxo-instances.importDump",
+          "command": "redaxo-instances.setupSSL",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
           "group": "4_info@3"
         },
         {
-          "command": "redaxo-instances.setupSSL",
+          "command": "redaxo-instances.repairInstance",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
           "group": "4_info@4"
         },
         {
-          "command": "redaxo-instances.repairInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "4_info@5"
-        },
-        {
           "command": "redaxo-instances.updateHosts",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "4_info@6"
+          "group": "4_info@5"
         },
         {
           "command": "redaxo-instances.openWorkspace",
