@@ -149,18 +149,7 @@ npm run watch  # Watch-Modus
 F5  # Development Host starten
 ```
 
-## 🤝 Beitragen / Changelog Auszug 1.1.0
-
-### Neu / Geändert in 1.1.0
-| Änderung | Beschreibung |
-|----------|--------------|
-| Umbenennung | "Empty Instance" → "Custom Instance" |
-| Entfernt | Menüpunkt/Command Database Information |
-| Pfad-Handling | Öffnen in Finder / Workspace für project/ Struktur gefixt |
-| Versionen | PHP Auswahl bereinigt (7.4, 8.1–8.5) / MariaDB auf 11.3 |
-| Cleanup | Alte Test- & Template-Dateien entfernt |
-| Branding | README & Release Skript aktualisiert |
-
+## 🤝 Beitragen
 ---
 
 1. Repository forken
