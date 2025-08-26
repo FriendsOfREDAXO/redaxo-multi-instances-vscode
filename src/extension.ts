@@ -362,7 +362,7 @@ function registerCommands(context: vscode.ExtensionContext) {
                         `Login Information - ${instanceName}`,
                         vscode.ViewColumn.One,
                         {
-                            enableScripts: false,
+                            enableScripts: true,
                             retainContextWhenHidden: true
                         }
                     );
@@ -491,19 +491,52 @@ function registerCommands(context: vscode.ExtensionContext) {
             }
             
             if (instanceName) {
+                // Check if entry already exists
+                const hostEntry = `127.0.0.1 ${instanceName}.local`;
+                let entryExists = false;
+                
+                try {
+                    const { exec } = require('child_process');
+                    const { promisify } = require('util');
+                    const execPromise = promisify(exec);
+                    await execPromise(`grep -q "${instanceName}.local" /etc/hosts`);
+                    entryExists = true;
+                } catch {
+                    // Entry doesn't exist
+                }
+
+                if (entryExists) {
+                    vscode.window.showInformationMessage(
+                        `${instanceName}.local is already in your hosts file! ✅`,
+                        'Show Hosts File',
+                        'OK'
+                    ).then(choice => {
+                        if (choice === 'Show Hosts File') {
+                            const terminal = vscode.window.createTerminal({
+                                name: `Hosts File - ${instanceName}`,
+                            });
+                            terminal.show();
+                            terminal.sendText('cat /etc/hosts | grep -E "(local|127\\.0\\.0\\.1)"');
+                        }
+                    });
+                    return;
+                }
+
                 const choice = await vscode.window.showInformationMessage(
-                    `Add ${instanceName}.local to your hosts file?\n\nThis will open a terminal with the required commands that need administrator privileges.`,
+                    `Add ${instanceName}.local to your hosts file?`,
                     { modal: true },
-                    'Open Terminal with Commands',
-                    'Show Manual Instructions'
+                    'Auto Add (Terminal)',
+                    'Show Instructions',
+                    'Cancel'
                 );
                 
-                if (choice === 'Open Terminal with Commands') {
+                if (choice === 'Auto Add (Terminal)') {
                     showHostsUpdateInstructions(instanceName);
                     vscode.window.showInformationMessage(
-                        `Terminal opened! Run the commands shown to add ${instanceName}.local to your hosts file.`
+                        `Terminal opened! Run the command shown to add ${instanceName}.local to your hosts file.`,
+                        'Got it'
                     );
-                } else if (choice === 'Show Manual Instructions') {
+                } else if (choice === 'Show Instructions') {
                     showHostsManualInstructions(instanceName);
                 }
             }
@@ -970,6 +1003,37 @@ function getLoginInfoHtml(instanceName: string, loginInfo: any): string {
                 .url-link:hover {
                     color: var(--vscode-textLink-activeForeground);
                 }
+                .copy-button {
+                    margin-left: 8px;
+                    padding: 4px 8px;
+                    background: var(--vscode-button-secondaryBackground);
+                    color: var(--vscode-button-secondaryForeground);
+                    border: 1px solid var(--vscode-button-border);
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                }
+                .copy-button:hover {
+                    background: var(--vscode-button-secondaryHoverBackground);
+                }
+                .copy-button:active {
+                    background: var(--vscode-button-secondaryBackground);
+                    transform: scale(0.95);
+                }
+                .credential-container {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .copy-feedback {
+                    font-size: 12px;
+                    color: var(--vscode-charts-green);
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                }
+                .copy-feedback.show {
+                    opacity: 1;
+                }
                 h1, h2 { color: var(--vscode-textLink-foreground); }
             </style>
         </head>
@@ -1004,11 +1068,19 @@ function getLoginInfoHtml(instanceName: string, loginInfo: any): string {
                 <h2>🔑 REDAXO Backend Login</h2>
                 <div class="info-item">
                     <span class="info-label">Username:</span>
-                    <span class="info-value"><strong>${loginInfo.adminUser}</strong></span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="admin-username">${loginInfo.adminUser}</strong></span>
+                        <button class="copy-button" onclick="copyUsername()">📋 Copy</button>
+                        <span class="copy-feedback" id="username-copy-feedback">Copied!</span>
+                    </div>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Password:</span>
-                    <span class="info-value"><strong>${loginInfo.adminPassword}</strong></span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="admin-password">${loginInfo.adminPassword}</strong></span>
+                        <button class="copy-button" onclick="copyPassword()">📋 Copy</button>
+                        <span class="copy-feedback" id="password-copy-feedback">Copied!</span>
+                    </div>
                 </div>
                 <p><em>💡 These credentials are automatically generated for each instance.</em></p>
             </div>
@@ -1029,6 +1101,66 @@ function getLoginInfoHtml(instanceName: string, loginInfo: any): string {
             </div>
             
             <p><em>📋 Click on any value to select and copy it.</em></p>
+            
+            <script>
+                function copyUsername() {
+                    const usernameElement = document.getElementById('admin-username');
+                    const feedbackElement = document.getElementById('username-copy-feedback');
+                    
+                    if (usernameElement) {
+                        const username = usernameElement.textContent;
+                        navigator.clipboard.writeText(username).then(() => {
+                            feedbackElement.classList.add('show');
+                            setTimeout(() => {
+                                feedbackElement.classList.remove('show');
+                            }, 2000);
+                        }).catch(err => {
+                            console.error('Failed to copy username: ', err);
+                            // Fallback for older browsers
+                            const textArea = document.createElement('textarea');
+                            textArea.value = username;
+                            document.body.appendChild(textArea);
+                            textArea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textArea);
+                            
+                            feedbackElement.classList.add('show');
+                            setTimeout(() => {
+                                feedbackElement.classList.remove('show');
+                            }, 2000);
+                        });
+                    }
+                }
+
+                function copyPassword() {
+                    const passwordElement = document.getElementById('admin-password');
+                    const feedbackElement = document.getElementById('password-copy-feedback');
+                    
+                    if (passwordElement) {
+                        const password = passwordElement.textContent;
+                        navigator.clipboard.writeText(password).then(() => {
+                            feedbackElement.classList.add('show');
+                            setTimeout(() => {
+                                feedbackElement.classList.remove('show');
+                            }, 2000);
+                        }).catch(err => {
+                            console.error('Failed to copy password: ', err);
+                            // Fallback for older browsers
+                            const textArea = document.createElement('textarea');
+                            textArea.value = password;
+                            document.body.appendChild(textArea);
+                            textArea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textArea);
+                            
+                            feedbackElement.classList.add('show');
+                            setTimeout(() => {
+                                feedbackElement.classList.remove('show');
+                            }, 2000);
+                        });
+                    }
+                }
+            </script>
         </body>
         </html>
     `;

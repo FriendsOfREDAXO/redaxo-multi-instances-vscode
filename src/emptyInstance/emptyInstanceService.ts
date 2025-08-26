@@ -418,15 +418,29 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Configure PHP
 RUN { \\
-    echo 'memory_limit = 2G'; \\
-    echo 'upload_max_filesize = 64G'; \\
-    echo 'post_max_size = 64G'; \\
+    echo 'memory_limit = 2048M'; \\
+    echo 'upload_max_filesize = 512M'; \\
+    echo 'post_max_size = 512M'; \\
     echo 'max_execution_time = 300'; \\
     echo 'max_input_time = 300'; \\
     echo 'max_input_vars = 5000'; \\
+    echo 'max_file_uploads = 20'; \\
     echo 'default_charset = "UTF-8"'; \\
     echo 'date.timezone = Europe/Berlin'; \\
-    echo 'session.gc_maxlifetime = 7200'; \\
+    echo 'session.gc_maxlifetime = 3600'; \\
+    echo 'session.cookie_lifetime = 0'; \\
+    echo 'display_errors = On'; \\
+    echo 'display_startup_errors = On'; \\
+    echo 'log_errors = On'; \\
+    echo 'error_log = /var/log/php_errors.log'; \\
+    echo 'opcache.enable = 1'; \\
+    echo 'opcache.memory_consumption = 128'; \\
+    echo 'opcache.interned_strings_buffer = 8'; \\
+    echo 'opcache.max_accelerated_files = 4000'; \\
+    echo 'opcache.revalidate_freq = 60'; \\
+    echo 'opcache.fast_shutdown = 1'; \\
+    echo 'realpath_cache_size = 4096K'; \\
+    echo 'realpath_cache_ttl = 600'; \\
 } > /usr/local/etc/php/conf.d/99-custom.ini
 
 # Configure Xdebug

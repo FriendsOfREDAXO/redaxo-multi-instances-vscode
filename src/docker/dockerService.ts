@@ -7,6 +7,7 @@ import { RedaxoInstance, CreateInstanceOptions, DatabaseInfo } from '../types/re
 import { DockerComposeGenerator } from './dockerCompose';
 import { SSLManager } from './sslManager';
 import { PortManager } from './portManager';
+import { SetupTemplates } from './templates';
 
 const execPromise = promisify(exec);
 
@@ -289,6 +290,12 @@ export class DockerService {
                 // Config file doesn't exist or can't be read
             }
             
+            // Determine instance type: standard REDAXO vs custom
+            let instanceType: 'standard' | 'custom' = 'custom'; // Default to custom
+            if (config.RELEASE_TYPE) {
+                instanceType = 'standard'; // Has RELEASE_TYPE = standard REDAXO instance
+            }
+
             return {
                 name: instanceName,
                 path: instancePath,
@@ -300,7 +307,8 @@ export class DockerService {
                 frontendUrl: config.BASE_URL || `http://localhost:${config.HTTP_PORT || 8080}`,
                 backendUrl: config.BACKEND_URL || `http://localhost:${config.HTTP_PORT || 8080}/redaxo`,
                 frontendUrlHttps: config.SSL_ENABLED === 'true' ? `https://${instanceName}.local:${config.HTTPS_PORT || 8443}` : undefined,
-                backendUrlHttps: config.SSL_ENABLED === 'true' ? `https://${instanceName}.local:${config.HTTPS_PORT || 8443}/redaxo` : undefined
+                backendUrlHttps: config.SSL_ENABLED === 'true' ? `https://${instanceName}.local:${config.HTTPS_PORT || 8443}/redaxo` : undefined,
+                instanceType: instanceType
             };
         } catch (error) {
             console.error('Error getting instance:', error);
@@ -569,120 +577,14 @@ if [ -f "/tmp/setup-complete.flag" ]; then
     exit 0
 fi
 
-echo "🚀 Setting up REDAXO instance: ${options.name}"
+${SetupTemplates.generateCustomSetupScript(options.name, options.phpVersion, false)}
 
-# Setup Apache configuration (both HTTP and HTTPS)
-echo "🌐 Setting up Apache configuration..."
-a2enmod rewrite
-
-# Setup SSL configuration if available
-if [ -f "/usr/local/bin/apache-ssl.conf" ]; then
-    echo "🔒 Setting up SSL configuration..."
-    # Copy SSL config to Apache sites-available
-    cp /usr/local/bin/apache-ssl.conf /etc/apache2/sites-available/default-ssl.conf
-    # Enable SSL modules and site
-    a2enmod ssl
-    a2ensite default-ssl
-    echo "✅ SSL configuration prepared"
-    echo "🌐 Website will be available at: https://${options.name}.local"
-else
-    echo "🌐 Website will be available at: http://localhost"
-fi
-
-# Wait for MySQL to be ready
-echo "⏳ Waiting for MySQL..."
-while ! php -r "
-try {
-    \\$pdo = new PDO('mysql:host=mysql', 'root', getenv('MYSQL_ROOT_PASSWORD'));
-    echo 'Connected';
-    exit(0);
-} catch(Exception \\$e) {
-    exit(1);
-}
-" > /dev/null 2>&1; do
-    sleep 2
-done
-echo "✅ MySQL is ready"
-
-${options.autoInstall ? `
-# Standard REDAXO Setup - using Docker image
-echo "✅ Using standard REDAXO from Docker image"
-
-${this.generateAutoInstallScript(options)}` : `
-# Empty instance setup - removing pre-installed REDAXO
-echo "🗑️ Creating empty instance (removing pre-installed REDAXO)"
-rm -rf /var/www/html/*
-echo "📁 Creating basic web directory structure"
-mkdir -p /var/www/html
-echo "<?php phpinfo(); ?>" > /var/www/html/index.php
-echo "✅ Empty web instance ready"
-`}
+${options.autoInstall ? SetupTemplates.generateAutoInstallScript(options.name, options.phpVersion, false) : SetupTemplates.generateEmptyInstanceScript(options.name, options.phpVersion)}
 
 # Mark setup as complete
 touch /tmp/setup-complete.flag
 
 echo "✅ Instance setup complete!"
-`;
-    }
-
-    /**
-     * Generate auto-install script for REDAXO
-     */
-    private generateAutoInstallScript(options: CreateInstanceOptions): string {
-        return `
-# Auto-install REDAXO Standard Structure
-if [ ! -f "/var/www/html/redaxo/data/config.yml" ]; then
-    echo "⚙️ Auto-installing REDAXO Standard Structure..."
-    
-    # Create REDAXO configuration for Standard Structure
-    php /var/www/html/redaxo/bin/console setup:run \\
-        --agree-license \\
-        --db-host=mysql \\
-        --db-name=redaxo \\
-        --db-login=redaxo \\
-        --db-password=\${MYSQL_PASSWORD} \\
-        --db-setup=normal \\
-        --admin-username=admin \\
-        --admin-password=\${MYSQL_PASSWORD} \\
-        --server-name="\${INSTANCE_NAME}.local" \\
-        --error-email="admin@\${INSTANCE_NAME}.local" \\
-        --timezone="Europe/Berlin" \\
-        --lang=de_de
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ REDAXO Standard Structure auto-installation complete"
-        echo ""
-        echo "🔑 LOGIN INFORMATIONEN:"
-        echo "👤 Benutzername: admin"
-        echo "🔒 Passwort: \${MYSQL_PASSWORD}"
-        echo ""
-        if [ -f "/usr/local/bin/apache-ssl.conf" ]; then
-            echo "🌐 Backend URL: https://${options.name}.local/redaxo"
-            echo "🌐 Frontend URL: https://${options.name}.local"
-        else
-            echo "🌐 Backend URL: http://localhost:\${HTTP_PORT}/redaxo"  
-            echo "🌐 Frontend URL: http://localhost:\${HTTP_PORT}"
-        fi
-        echo ""
-    else
-        echo "❌ REDAXO auto-installation failed"
-    fi
-else
-    echo "✅ REDAXO Standard Structure already configured"
-    echo ""
-    echo "🔑 LOGIN INFORMATIONEN:"
-    echo "👤 Benutzername: admin"  
-    echo "🔒 Passwort: \${MYSQL_PASSWORD}"
-    echo ""
-    if [ -f "/usr/local/bin/apache-ssl.conf" ]; then
-        echo "🌐 Backend URL: https://${options.name}.local/redaxo"
-        echo "🌐 Frontend URL: https://${options.name}.local"
-    else
-        echo "🌐 Backend URL: http://localhost:\${HTTP_PORT}/redaxo"
-        echo "🌐 Frontend URL: http://localhost:\${HTTP_PORT}"
-    fi
-    echo ""
-fi
 `;
     }
 }

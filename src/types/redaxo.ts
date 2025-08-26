@@ -21,6 +21,7 @@ export interface RedaxoInstance {
     status?: 'running' | 'stopped' | 'creating' | 'error';
     hasSnapshot?: boolean;
     path?: string;
+    instanceType?: 'standard' | 'custom';
 }
 
 export interface DatabaseDump {

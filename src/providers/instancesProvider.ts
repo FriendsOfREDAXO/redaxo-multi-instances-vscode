@@ -136,7 +136,8 @@ export class RedaxoInstanceItem extends vscode.TreeItem {
 
     private generateTooltip(instance: RedaxoInstance): string {
         const status = instance.running ? 'Running' : 'Stopped';
-        let tooltip = `${instance.name}\nStatus: ${status}\nPHP: ${instance.phpVersion}\nMariaDB: ${instance.mariadbVersion}`;
+        const typeLabel = instance.instanceType === 'custom' ? 'Custom Instance' : 'REDAXO Instance';
+        let tooltip = `${instance.name}\nType: ${typeLabel}\nStatus: ${status}\nPHP: ${instance.phpVersion}\nMariaDB: ${instance.mariadbVersion}`;
         
         if (instance.port) {
             tooltip += `\nHTTP Port: ${instance.port}`;
@@ -169,7 +170,8 @@ export class RedaxoInstanceItem extends vscode.TreeItem {
 
     private generateDescription(instance: RedaxoInstance): string {
         const status = instance.running ? '●' : '○';
-        let description = `${status} PHP ${instance.phpVersion} | MariaDB ${instance.mariadbVersion}`;
+        const typeLabel = instance.instanceType === 'custom' ? 'Custom' : 'REDAXO';
+        let description = `${status} ${typeLabel} | PHP ${instance.phpVersion} | MariaDB ${instance.mariadbVersion}`;
         
         if (instance.port) {
             description += ` | HTTP:${instance.port}`;
@@ -190,15 +192,18 @@ export class RedaxoInstanceItem extends vscode.TreeItem {
             return new vscode.ThemeIcon('loading~spin');
         }
         
+        // Use different icons for different instance types
+        const iconName = instance.instanceType === 'custom' ? 'package' : 'server-environment';
+        
         if (instance.running) {
-            return new vscode.ThemeIcon('server-environment', new vscode.ThemeColor('charts.green'));
+            return new vscode.ThemeIcon(iconName, new vscode.ThemeColor('charts.green'));
         }
         
         if (instance.status === 'error') {
             return new vscode.ThemeIcon('error', new vscode.ThemeColor('charts.red'));
         }
         
-        return new vscode.ThemeIcon('server-environment', new vscode.ThemeColor('charts.yellow'));
+        return new vscode.ThemeIcon(iconName, new vscode.ThemeColor('charts.yellow'));
     }
 }
 

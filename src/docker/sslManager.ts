@@ -107,23 +107,33 @@ export class SSLManager {
 
     private static async addToHostsFile(instanceName: string): Promise<void> {
         try {
-            // Check if entry already exists
-            const checkCommand = `grep -q "${instanceName}.local" /etc/hosts`;
+            // Check if entry already exists (check both variations)
+            const checkCommand = `grep -E "(^|\s)${instanceName}\.local(\s|$)" /etc/hosts`;
             try {
-                await execPromise(checkCommand);
-                this.log(`✅ ${instanceName}.local already exists in hosts file`);
-                return;
+                const { stdout } = await execPromise(checkCommand);
+                if (stdout.trim()) {
+                    this.log(`✅ ${instanceName}.local already exists in hosts file`);
+                    this.log(`📋 Current entry: ${stdout.trim()}`);
+                    return;
+                }
             } catch {
-                // Entry doesn't exist, add it
+                // Entry doesn't exist, continue
             }
             
-            // Add to hosts file (this will prompt for sudo)
-            const addCommand = `echo "127.0.0.1 ${instanceName}.local" | sudo tee -a /etc/hosts`;
-            await execPromise(addCommand);
-            this.log(`✅ Added ${instanceName}.local to hosts file`);
+            // Add to hosts file (this will prompt for sudo if needed)
+            this.log(`📝 Adding ${instanceName}.local to hosts file...`);
+            const addCommand = `echo "# REDAXO Multi-Instance
+127.0.0.1 ${instanceName}.local" | sudo tee -a /etc/hosts`;
+            
+            const { stdout } = await execPromise(addCommand);
+            if (stdout.includes('127.0.0.1')) {
+                this.log(`✅ Added ${instanceName}.local to hosts file`);
+                this.log(`🔍 Verifying: ${stdout.trim()}`);
+            }
             
         } catch (error: any) {
-            this.log(`⚠️  Could not add to hosts file: ${error.message}`);
+            this.log(`⚠️  Could not add to hosts file automatically: ${error.message}`);
+            this.log(`💡 You can manually add "127.0.0.1 ${instanceName}.local" to your /etc/hosts file`);
             this.log(`⚠️  You may need to manually add "127.0.0.1 ${instanceName}.local" to your /etc/hosts file`);
         }
     }
