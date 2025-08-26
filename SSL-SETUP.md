@@ -122,6 +122,27 @@ docker logs redaxo-instancename
 docker ps -a | grep instancename
 ```
 
+### SSL-Verbindungsfehler nach außen
+Falls REDAXO innerhalb der Container keine SSL-Verbindungen zu externen Services aufbauen kann:
+
+```bash
+# Error: stream_socket_client(): SSL operation failed with code 1
+# Error: error:0A000086:SSL routines::certificate verify failed
+```
+
+**Lösung**: Dieser Fehler tritt auf, wenn die CA-Zertifikate im Container fehlen. Die Extension installiert automatisch die benötigten CA-Zertifikate für alle neuen Instanzen (seit Version 1.1.0). 
+
+Bei bestehenden Instanzen können Sie das Problem beheben durch:
+```bash
+# Container neu erstellen (empfohlen)
+# In VS Code: Rechtsklick auf Instance → "Repair Instance"
+
+# Oder manuell:
+cd instances/instancename
+docker compose down
+docker compose up -d --force-recreate
+```
+
 ## Manuelle Zertifikat-Erstellung
 
 Falls Sie Zertifikate manuell erstellen möchten:
