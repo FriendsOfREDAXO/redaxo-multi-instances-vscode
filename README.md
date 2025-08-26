@@ -2,6 +2,8 @@
 
 👉 Für macOs und Linux
 
+![Screenshot](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/blob/main/screenshot.png?raw=true)
+
 Eine mächt### TreeView (Seitenleiste)
 - �️ **Server-Symbol** = REDAXO-Instanz (Grün=läuft, Gelb=gestoppt, Rot=Fehler)
 - � **Paket-Symbol** = Custom-Instanz (Grün=läuft, Gelb=gestoppt, Rot=Fehler)
