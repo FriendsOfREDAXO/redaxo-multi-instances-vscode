@@ -376,6 +376,7 @@ RUN apt-get update && apt-get install -y \\
     curl \\
     unzip \\
     git \\
+    ca-certificates \\
     libfreetype6-dev \\
     libjpeg62-turbo-dev \\
     libpng-dev \\
@@ -386,7 +387,8 @@ RUN apt-get update && apt-get install -y \\
     ffmpeg \\
     imagemagick \\
     ghostscript \\
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \\
+    && update-ca-certificates
 
 # Configure and install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \\

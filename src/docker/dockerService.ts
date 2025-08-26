@@ -571,6 +571,12 @@ fi
 
 echo "🚀 Setting up REDAXO instance: ${options.name}"
 
+# Update CA certificates for outbound SSL connections
+echo "🔒 Installing CA certificates for SSL connections..."
+apt-get update -qq
+apt-get install -y ca-certificates
+update-ca-certificates
+
 # Setup Apache configuration (both HTTP and HTTPS)
 echo "🌐 Setting up Apache configuration..."
 a2enmod rewrite
