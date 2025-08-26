@@ -55,8 +55,8 @@ export class SSLManager {
     DocumentRoot ${documentRoot}
     
     SSLEngine on
-    SSLCertificateFile /etc/ssl/certs/${instanceName}.pem
-    SSLCertificateKeyFile /etc/ssl/private/${instanceName}-key.pem
+    SSLCertificateFile /etc/apache2/ssl/${instanceName}.pem
+    SSLCertificateKeyFile /etc/apache2/ssl/${instanceName}-key.pem
     
     # SSL Configuration for REDAXO
     SSLProtocol -all +TLSv1.2 +TLSv1.3
