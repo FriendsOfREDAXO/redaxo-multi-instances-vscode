@@ -1,56 +1,5 @@
 # 🚀 REDAXO Multi-Instances Manager 
 
-👉 Für macOS und Linux
-
-Eine mächtige VS Code Extension zur Verwaltung mehrerer RED### TreeView (Seitenleiste)
-- 🖥️ **Server-Symbol** = REDAXO-Instanz (Grün=läuft, Gelb=gestoppt, Rot=Fehler)
-- 📦 **Paket-Symbol** = Custom-Instanz (Grün=läuft, Gelb=gestoppt, Rot=Fehler)
-- **● / ○** in Beschreibung = Status (gefüllt=läuft, leer=gestoppt)
-- **📊 CPU/RAM-Anzeige** = Live-Ressourcen bei laufenden Instanzen (z.B. "📊 2.1% CPU, 5.3% RAM")
-- **Klick auf Instanz** öffnet Aktionsmenü (intuitiver Zugriff)
-- **Hover für Details** = Erweiterte Ressourcen-Info mit Web/DB-Container-Aufschlüsselung
-- Rechtsklick für Kontext-Menü (wie gehabt)
-- **❓ Help-Button** in der Toolbar für schnelle Hilfe
-- **⚡ Auto-Refresh** = Ressourcen aktualisieren sich alle 30 Sekundentanzen mit Docker, SSL-Support, modernem Dashboard und intuitiver Bedienung.
-
-![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue?style=flat-square&logo=visual-studio-code)
-![Docker](https://img.shields.io/badge/Docker-Required-blue?style=flat-square&logo=docker)
-![REDAXO](https://img.shields.io/badge/REDAXO-5.x-green?style=flat-square)
-![PHP](https://img.shields.io/badge/PHP-7.4%20|%208.1--8.5-purple?style=flat-square&logo=php)
-![MariaDB](https://img.shields.io/badge/MariaDB-11.3-blue?style=flat-square)
-![SSL](https://img.shields.io/badge/SSL-mkcert-orange?style=flat-square&logo=letsencrypt)
-
-## ✨ Features
-
-### 🎯 Kern-Funktionen
-- **🏗️ Instanz-Management** - Erstellen, starten, stoppen und löschen von REDAXO-Instanzen
-- **📦 Custom Instances** - Leere PHP-Instanzen für eigene Projekte oder REDAXO-Installation
-- **🔒 SSL/HTTPS Support** - Automatische SSL-Zertifikate mit mkcert
-- **🐳 Docker Integration** - Vollständig containerisierte Umgebung
-- **📊 Info Pages** - Modernes Webview-Dashboard je Instanz
-- **🔑 Login-Informationen** - Automatische Anzeige von Zugangsdaten und URLs
-- **📱 TreeView** - Seitenleiste mit allen Instanzen und deren Status
-
-### 🆕 Neue Features (v1.5.0)
-- **📊 Container-Ressourcen-Monitor** - Live CPU/RAM-Anzeige direkt in der TreeView
-- **🔧 Smart Container-Logs** - Korrekte Container-Namen für alle Instanz-Typen
-- **⚡ Auto-Refresh** - TreeView aktualisiert Ressourcen alle 30 Sekunden automatisch
-- **🎯 Erweiterte Tooltips** - Detaillierte Ressourcen-Info mit Web/DB-Container-Aufschlüsselung
-
-### 🆕 Neue Features (v1.4.0)
-- **🖱️ Intuitive Bedienung** - Instanzen-Klick öffnet Aktionsmenü statt Browser
-- **❓ Comprehensive Help** - Detaillierte Hilfe mit allen Features und Erklärungen  
-- **🚀 REDAXO Loader Integration** - Download-Link und Anleitung für automatische REDAXO-Installation
-- **🏷️ Visuelle Unterscheidung** - Server- und Paket-Symbole für verschiedene Instanz-Typen
-
-### 🔧 Technische Features
-- **PHP Support** - PHP 7.4, 8.1, 8.2, 8.3, 8.4, 8.5
-- **MariaDB Support** - Aktuell 11.3
-- **Port Management** - Automatische Port-Zuweisung und -Verwaltung
-- **SSL Zertifikate** - Lokale Entwicklungszertifikate mit mkcert
-- **Docker Compose** - Automatische Container-Orchestrierung
-- **Docker Images** - Basiert auf [friendsofredaxo/redaxo](https://github.com/FriendsOfREDAXO/docker-redaxo) und [mariadb](https://hub.docker.com/_/mariadb) Images Multi-Instances Manager 
-
 👉 Für macOs und Linux
 
 Eine mächt### TreeView (Seitenleiste)
