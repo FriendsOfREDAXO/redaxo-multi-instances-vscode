@@ -12,8 +12,7 @@ export class DockerComposeGenerator {
         
         // SSL volumes only if SSL is enabled
         if (sslEnabled) {
-            baseVolumes.push('      - ./ssl:/etc/ssl/certs:ro');
-            baseVolumes.push('      - ./ssl:/etc/ssl/private:ro');
+            baseVolumes.push('      - ./ssl:/etc/apache2/ssl:ro');
             // Mount apache-ssl.conf as script file that gets copied by setup script
             baseVolumes.push('      - ./apache-ssl.conf:/usr/local/bin/apache-ssl.conf:ro');
         }

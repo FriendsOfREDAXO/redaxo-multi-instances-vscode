@@ -419,8 +419,8 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Configure PHP
 RUN { \\
     echo 'memory_limit = 2G'; \\
-    echo 'upload_max_filesize = 512M'; \\
-    echo 'post_max_size = 512M'; \\
+    echo 'upload_max_filesize = 64G'; \\
+    echo 'post_max_size = 64G'; \\
     echo 'max_execution_time = 300'; \\
     echo 'max_input_time = 300'; \\
     echo 'max_input_vars = 5000'; \\
