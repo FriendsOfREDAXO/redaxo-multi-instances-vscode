@@ -1,4 +1,17 @@
-# Chan# Changelog
+# Changelog
+
+## [1.5.2] - 2025-08-27
+
+### 🔧 Fixed
+- **MySQL External Access**: Verbesserte MySQL Port-Mapping für externe Datenbankverbindungen
+- **Login Information**: Vollständige Anzeige von internen und externen Datenbankzugangsdaten
+- **Custom Instances**: MySQL Ports werden jetzt korrekt für Custom Instances zugewiesen
+- **Port Management**: Automatische Zuweisung freier MySQL Ports für alle Instanztypen
+
+### ✨ Enhanced
+- **Database Credentials**: Separate Bereiche für interne (Container-zu-Container) und externe (localhost:port) Verbindungen
+- **Copy Functionality**: 10+ Copy-Buttons für alle Datenbankverbindungsparameter
+- **Instance Detection**: Verbesserte Erkennung von Custom vs. REDAXO Instanzen für korrekte Credential-Anzeige
 
 ## [1.5.1] - 2025-08-26
 
@@ -7,7 +20,7 @@
 - **Visual Branding**: Optimierte REDAXO Erkennbarkeit in VS Code Activity Bar
 - **Icon Format**: Monochrome SVG mit automatischer Theme-Anpassung
 
-## [1.5.0] - 2025-08-26e Log
+## [1.5.0] - 2025-08-26
 
 All notable changes to the "redaxo-multi-instances-manager" extension will be documented in this file.
 

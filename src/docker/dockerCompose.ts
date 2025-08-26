@@ -2,7 +2,7 @@ import { CreateInstanceOptions } from '../types/redaxo';
 
 export class DockerComposeGenerator {
     
-    static generate(options: CreateInstanceOptions, dbPassword: string, dbRootPassword: string, httpPort: number, httpsPort: number, sslEnabled: boolean): string {
+    static generate(options: CreateInstanceOptions, dbPassword: string, dbRootPassword: string, httpPort: number, httpsPort: number, mysqlPort: number, sslEnabled: boolean): string {
         // Always use standard web root mount
         const webRootMount = './data/redaxo:/var/www/html';
         const baseVolumes = [
@@ -71,6 +71,8 @@ ${serviceDefinition}
   mysql:
     image: mariadb:${options.mariadbVersion}
     container_name: redaxo-${options.name}-mysql
+    ports:
+      - "${mysqlPort}:3306"
     environment:
       - MYSQL_ROOT_PASSWORD=${dbRootPassword}
       - MYSQL_DATABASE=redaxo
@@ -90,13 +92,14 @@ networks:
 `;
     }
 
-    static generateEnvFile(options: CreateInstanceOptions, dbPassword: string, dbRootPassword: string, httpPort: number, httpsPort: number, sslEnabled: boolean): string {
+    static generateEnvFile(options: CreateInstanceOptions, dbPassword: string, dbRootPassword: string, httpPort: number, httpsPort: number, mysqlPort: number, sslEnabled: boolean): string {
         return `# REDAXO Instance: ${options.name}
 INSTANCE_NAME=${options.name}
 PHP_VERSION=${options.phpVersion}
 MARIADB_VERSION=${options.mariadbVersion}
 RELEASE_TYPE=standard
 HTTP_PORT=${httpPort}
+MYSQL_PORT=${mysqlPort}
 ${sslEnabled ? `HTTPS_PORT=${httpsPort}
 SSL_ENABLED=true` : `SSL_ENABLED=false`}
 

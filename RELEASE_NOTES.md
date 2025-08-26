@@ -1,5 +1,49 @@
 # 🚀 REDAXO Multi-Instances Manager - Release Notes
 
+## 📦 Version 1.5.2 - MySQL External Access Enhancement
+*Veröffentlicht: 27. August 2025*
+
+### 🔧 Bug Fixes & Improvements
+- **🔌 MySQL External Access**: Vollständige MySQL Port-Mapping für externe Datenbankverbindungen implementiert
+- **📊 Login Information Enhancement**: Separate Bereiche für interne (Container-zu-Container) und externe (localhost:port) Datenbankverbindungen
+- **🏗️ Custom Instances MySQL Ports**: Automatische Zuweisung freier MySQL Ports für alle Custom Instances
+- **⚡ Port Management**: Verbesserte automatische Zuweisung freier MySQL Ports für alle Instanztypen
+
+### ✨ Enhanced Features
+- **🔑 Dual Database Credentials**: 
+  - **Interne Verbindungen**: Container-zu-Container (z.B. `mysql:3306`)
+  - **Externe Verbindungen**: Host-zu-Container (z.B. `localhost:33061`)
+- **📋 Extended Copy Functionality**: 10+ Copy-Buttons für alle Datenbankverbindungsparameter
+  - Internal/External Host, Port, Database, User, Password
+  - Ein-Klick-Kopieren für beide Verbindungstypen
+- **🎯 Smart Instance Detection**: Automatische Erkennung von Custom vs. REDAXO Instanzen für korrekte Credential-Anzeige
+- **🗄️ Free Port Assignment**: Intelligente MySQL Port-Zuweisung verhindert Port-Konflikte
+
+### 🔧 Technical Improvements
+- Enhanced `DockerService.getLoginInfo()` mit External Port Extraction aus docker-compose.yml
+- Erweiterte `getLoginInfoHtml()` mit separaten Internal/External Database Sections
+- Verbesserte `DockerComposeGenerator` mit MySQL Port Parameter Support
+- Optimierte Port-Mapping Erkennung für alle Instanz-Typen
+
+### 💾 Database Connection Examples
+```
+# Interne Verbindung (Container-zu-Container)
+Host: mysql
+Port: 3306
+Database: redaxo
+User: redaxo
+Password: [generiert]
+
+# Externe Verbindung (Host-zu-Container)  
+Host: localhost
+Port: 33061 (automatisch zugewiesen)
+Database: redaxo
+User: redaxo
+Password: [generiert]
+```
+
+---
+
 ## 📦 Version 1.5.1 - Activity Bar Icon Update
 *Veröffentlicht: 26. August 2025*
 

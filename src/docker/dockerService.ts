@@ -145,8 +145,9 @@ export class DockerService {
             const dbRootPassword = PortManager.generateRandomPassword();
             const dbPassword = PortManager.generateRandomPassword(12);
             const [httpPort, httpsPort] = await PortManager.findAvailablePortRange();
+            const mysqlPort = await PortManager.findAvailablePort(3306);
             
-            this.log(`🌐 Zugewiesene Ports - HTTP: ${httpPort}, HTTPS: ${httpsPort}`);
+            this.log(`🌐 Zugewiesene Ports - HTTP: ${httpPort}, HTTPS: ${httpsPort}, MySQL: ${mysqlPort}`);
             
             // Setup SSL certificates
             this.log(`🔒 Setting up SSL certificates with mkcert...`);
@@ -155,12 +156,12 @@ export class DockerService {
             
             // Create docker-compose.yml
             this.log(`⚙️  Creating Docker Compose configuration...`);
-            const dockerComposeContent = DockerComposeGenerator.generate(options, dbPassword, dbRootPassword, httpPort, httpsPort, sslEnabled);
+            const dockerComposeContent = DockerComposeGenerator.generate(options, dbPassword, dbRootPassword, httpPort, httpsPort, mysqlPort, sslEnabled);
             await fs.writeFile(path.join(instancePath, 'docker-compose.yml'), dockerComposeContent);
             
             // Create .env file
             this.log(`📝 Creating environment configuration...`);
-            const envContent = DockerComposeGenerator.generateEnvFile(options, dbPassword, dbRootPassword, httpPort, httpsPort, sslEnabled);
+            const envContent = DockerComposeGenerator.generateEnvFile(options, dbPassword, dbRootPassword, httpPort, httpsPort, mysqlPort, sslEnabled);
             await fs.writeFile(path.join(instancePath, '.env'), envContent);
             
             // Create data directories
@@ -432,28 +433,57 @@ export class DockerService {
             const composePath = path.join(instancePath, 'docker-compose.yml');
             const composeContent = await fs.readFile(composePath, 'utf8');
             
+            // Check if this is a custom instance by looking for docker-compose.yml structure
+            const isCustomInstance = composeContent.includes(`${instanceName}_web`) && composeContent.includes(`${instanceName}_db`);
+            
             // Extract ports from docker-compose
             const httpPortMatch = composeContent.match(/"(\d+):80"/);
             const httpsPortMatch = composeContent.match(/"(\d+):443"/);
+            const mysqlPortMatch = composeContent.match(/"(\d+):3306"/);
             
             const httpPort = httpPortMatch ? httpPortMatch[1] : '80';
             const httpsPort = httpsPortMatch ? httpsPortMatch[1] : '443';
+            const mysqlPort = mysqlPortMatch ? mysqlPortMatch[1] : null;
             
             // Build URLs
             const sslEnabled = envVars.SSL_ENABLED === 'true';
             const frontendUrl = `http://localhost:${httpPort}`;
-            const backendUrl = `http://localhost:${httpPort}/redaxo`;
+            const backendUrl = isCustomInstance ? `http://localhost:${httpPort}` : `http://localhost:${httpPort}/redaxo`;
             let frontendUrlHttps = null;
             let backendUrlHttps = null;
             
             if (sslEnabled) {
                 frontendUrlHttps = `https://${instanceName}.local:${httpsPort}`;
-                backendUrlHttps = `https://${instanceName}.local:${httpsPort}/redaxo`;
+                backendUrlHttps = isCustomInstance ? `https://${instanceName}.local:${httpsPort}` : `https://${instanceName}.local:${httpsPort}/redaxo`;
+            }
+
+            // Database credentials based on instance type
+            let dbHost, dbName, dbUser, dbPassword, dbExternalHost, dbExternalPort;
+            if (isCustomInstance) {
+                // Custom instances use instanceName for all DB credentials
+                dbHost = `${instanceName}_db`;
+                dbName = instanceName;
+                dbUser = instanceName;
+                dbPassword = instanceName;
+                // Extract custom instance MySQL port from docker-compose.yml
+                const customPortMatch = composeContent.match(/"(\d+):3306"/);
+                dbExternalHost = 'localhost';
+                dbExternalPort = customPortMatch ? customPortMatch[1] : '3306';
+            } else {
+                // Standard REDAXO instances use standard credentials
+                dbHost = envVars.DB_HOST || 'mysql';
+                dbName = envVars.DB_NAME || 'redaxo';
+                dbUser = envVars.DB_USER || 'redaxo';
+                dbPassword = envVars.DB_PASSWORD || envVars.MYSQL_PASSWORD || 'N/A';
+                // External connection
+                dbExternalHost = 'localhost';
+                dbExternalPort = envVars.MYSQL_PORT || '3306';
             }
             
             return {
                 running: isRunning,
                 instanceName: instanceName,
+                instanceType: isCustomInstance ? 'custom' : 'redaxo',
                 
                 // URLs
                 frontendUrl,
@@ -461,20 +491,24 @@ export class DockerService {
                 frontendUrlHttps,
                 backendUrlHttps,
                 
-                // Login credentials
-                adminUser: 'admin',
-                adminPassword: envVars.DB_PASSWORD || envVars.MYSQL_PASSWORD || 'N/A',
+                // Login credentials (only for REDAXO instances)
+                adminUser: isCustomInstance ? 'N/A (Custom Instance)' : 'admin',
+                adminPassword: isCustomInstance ? 'N/A (Custom Instance)' : (envVars.DB_PASSWORD || envVars.MYSQL_PASSWORD || 'N/A'),
                 
-                // Database info
-                dbHost: envVars.DB_HOST || 'mysql',
-                dbName: envVars.DB_NAME || 'redaxo',
-                dbUser: envVars.DB_USER || 'redaxo',
-                dbPassword: envVars.DB_PASSWORD || envVars.MYSQL_PASSWORD || 'N/A',
+                // Database info (internal)
+                dbHost,
+                dbName,
+                dbUser,
+                dbPassword,
+                
+                // Database info (external connection)
+                dbExternalHost,
+                dbExternalPort,
                 
                 // System info
                 phpVersion: envVars.PHP_VERSION || 'N/A',
                 mariadbVersion: envVars.MARIADB_VERSION || 'N/A',
-                releaseType: envVars.RELEASE_TYPE || 'standard',
+                releaseType: envVars.RELEASE_TYPE || (isCustomInstance ? 'custom' : 'standard'),
                 httpPort,
                 httpsPort: sslEnabled ? httpsPort : null,
                 sslEnabled

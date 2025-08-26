@@ -22,6 +22,7 @@ suite('Docker Compose SSL Configuration Test Suite', () => {
             'rootpass',
             8080,
             8443,
+            3306,
             true // SSL enabled
         );
         
@@ -55,6 +56,7 @@ suite('Docker Compose SSL Configuration Test Suite', () => {
             'rootpass', 
             8080,
             8443,
+            3307,
             false // SSL disabled
         );
         
