@@ -2,6 +2,8 @@
 
 👉 Für macOs und Linux
 
+Based on: [Docker image for REDAXO](https://github.com/FriendsOfREDAXO/docker-redaxo) Danke Dirk! 🙏
+
 ![Screenshot](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/blob/main/screenshot.png?raw=true)
 
 Eine  TreeView (Seitenleiste)
@@ -169,4 +171,4 @@ F5  # Development Host starten
 
 ---
 
-**Made by [FriendsOfREDAXO](https://github.com/FriendsOfREDAXO) - Danke Dirk! 🙏**
+**Made by [FriendsOfREDAXO](https://github.com/FriendsOfREDAXO) 
