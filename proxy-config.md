@@ -1,4 +1,4 @@
-# Reverse Proxy Setup für REDAXO Multi-Instances
+# Todo: Reverse Proxy Setup für REDAXO Multi-Instances
 
 ## nginx Reverse Proxy (Empfohlen)
 
@@ -86,12 +86,3 @@ docker ps --format "table {{.Names}}\t{{.Ports}}" | grep redaxo- | while read li
 done
 ```
 
-## Welche Lösung empfiehlst du?
-
-**Für die Extension würde ich empfehlen:**
-
-1. **Kurzfristig:** URLs mit Ports anzeigen (wie jetzt gefixt)
-2. **Langfristig:** Traefik-Integration in die Extension einbauen
-3. **Optional:** nginx-Setup-Command in der Extension
-
-Was denkst du - soll ich eine dieser Lösungen implementieren?
