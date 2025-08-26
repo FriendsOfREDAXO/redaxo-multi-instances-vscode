@@ -1,5 +1,9 @@
 # 🚀 REDAXO Multi-Instances Manager 
 
+
+![Screenshot](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/blob/main/screenshot.png?raw=true)
+
+
 👉 Für macOs und Linux
 
 Eine mächtige VS Code Extension zur Verwaltung mehrerer REDAXO-Instanzen ("Custom Instances") mit Docker, SSL-Support und modernem Dashboard.
