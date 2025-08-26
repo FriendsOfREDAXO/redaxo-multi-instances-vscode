@@ -4,9 +4,9 @@
 
 ![Screenshot](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/blob/main/screenshot.png?raw=true)
 
-Eine mächt### TreeView (Seitenleiste)
-- �️ **Server-Symbol** = REDAXO-Instanz (Grün=läuft, Gelb=gestoppt, Rot=Fehler)
-- � **Paket-Symbol** = Custom-Instanz (Grün=läuft, Gelb=gestoppt, Rot=Fehler)
+Eine  TreeView (Seitenleiste)
+- **Server-Symbol** = REDAXO-Instanz (Grün=läuft, Gelb=gestoppt, Rot=Fehler)
+- **Paket-Symbol** = Custom-Instanz (Grün=läuft, Gelb=gestoppt, Rot=Fehler)
 - **● / ○** in Beschreibung = Status (gefüllt=läuft, leer=gestoppt)
 - **Klick auf Instanz** öffnet Aktionsmenü (intuitiver Zugriff)
 - Rechtsklick für Kontext-Menü (wie gehabt)
@@ -89,7 +89,7 @@ npm run compile
 
 ### 🎯 Unterschied: REDAXO-Instanz vs. Custom Instance
 - **🆕 + Button (Create Instance)**: Vollständige REDAXO-Installation, sofort nutzbar
-- **📦 Custom Instance**: Leere PHP-Instanz für eigene Projekte oder manuelle REDAXO-Installation
+- **📦 Custom Instance**: Leere PHP-Instanz für eigene Projekte (ja auch das CMS mit dem W oder Laravel) oder manuelle REDAXO-Installation
 
 ### 🚀 REDAXO Loader für Custom Instances
 Für Custom Instances mit automatischer REDAXO-Installation:
@@ -169,4 +169,4 @@ F5  # Development Host starten
 
 ---
 
-**Made with ❤️ by [FriendsOfREDAXO](https://github.com/FriendsOfREDAXO) - Danke Dirk! 🙏**
+**Made by [FriendsOfREDAXO](https://github.com/FriendsOfREDAXO) - Danke Dirk! 🙏**
