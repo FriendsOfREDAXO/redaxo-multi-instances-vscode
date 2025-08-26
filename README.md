@@ -1,4 +1,4 @@
-# 🚀 REDAXO Multi-Instances Manager (v1.1.0)
+# 🚀 REDAXO Multi-Instances Manager 
 
 👉 Für macOs und Linux
 
