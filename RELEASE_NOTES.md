@@ -1,39 +1,56 @@
-## 🚀 REDAXO Multi-Instances Manager v1.3.0
+# 🚀 REDAXO Multi-Instances Manager - Release Notes
 
-### 🆕 New Features
-- 🎯 **Visual Instance Type Distinction**: TreeView zeigt jetzt deutlich REDAXO vs Custom Instanzen
-  - 🔧 Custom Instanzen: `package` Icon + "Custom" Label
-  - 🏗️ REDAXO Instanzen: `server-environment` Icon + "REDAXO" Label
-  - 📄 Erweiterte Tooltips mit Instance-Type-Information
+## 📦 Version 1.5.1 - Activity Bar Icon Update
+*Veröffentlicht: 26. August 2025*
+
+### 🎨 Visual Improvements
+- **Neues Activity Bar Icon**: Großes, fettes "R" für bessere Erkennbarkeit
+- **Icon Optimierung**: Perfekt sichtbar in VS Code Activity Bar bei allen Theme-Farben
+- **Brand Recognition**: Klares REDAXO Branding in der VS Code Sidebar
+
+### 📊 Technische Details
+- Activity Bar Icon: `resources/activity-bar-icon.svg`
+- Monochrome SVG für automatische Theme-Anpassung
+- 16x16px optimiert für perfekte Darstellung
+
+---
+
+## 📦 Version 1.5.0 - Container Resource Monitoring
+*Veröffentlicht: 26. August 2025*
+
+### 🆕 New Features (v1.5.0)
+- **📊 Container-Ressourcen-Monitor**: Live-Anzeige von CPU und RAM-Verbrauch direkt in der TreeView
+  - Ressourcen werden automatisch alle 30 Sekunden aktualisiert
+  - Kompakte Anzeige in der TreeView-Beschreibung: `📊 2.1% CPU, 5.3% RAM`
+  - Detaillierte Ressourcen-Info im Tooltip mit Web/DB-Container-Aufschlüsselung
+  - Asynchrone Laden mit sofortigem TreeView-Update
+- **🔧 Smart Container-Log-Management**: Korrekte Container-Namen für alle Instanz-Typen
+  - Custom Instances: `instancename_web` / `instancename_db`
+  - REDAXO Instances: `redaxo-instancename` / `redaxo-instancename_db`
+  - Benutzer-Auswahl zwischen Web- und Database-Container-Logs
+  - Automatische Erkennung des Instanz-Typs für korrekte Container-Namen
+- **⚡ Auto-Refresh TreeView**: Automatische Aktualisierung der TreeView alle 30 Sekunden
+  - Live-Updates der Ressourcen-Informationen
+  - Bessere Performance durch asynchrone Ressourcen-Laden
+  - Sofortige Anzeige-Updates nach Ressourcen-Laden
+
+### 🔧 Technical Improvements (v1.5.0)
+- **ResourceMonitor-Klasse**: Vollständige Docker-Stats-Integration mit CPU/RAM-Monitoring
+- **Enhanced TreeView**: Erweiterte Tooltips und Beschreibungen mit Live-Ressourcen-Daten
+- **Container-Name-Resolver**: Intelligente Erkennung der korrekten Container-Namen
+- **Memory-Optimized**: Effiziente Ressourcen-Abfrage ohne Performance-Impact
+
+### 🔄 Previous Features (v1.4.0)
+- �️ **Intuitive Click Behavior**: Instanzen-Klick öffnet Aktionsmenü statt Browser
+- ❓ **Comprehensive Help System**: Detaillierte Hilfe-Sektion mit allen Features
+- 🚀 **REDAXO Loader Integration**: Download-Link und Anleitung für automatische REDAXO-Installation
+
+### 🔄 Previous Features (v1.3.0)
+- 🎯 **Visual Instance Type Distinction**: TreeView zeigt deutlich REDAXO vs Custom Instanzen
 - 📋 **Copy Buttons für Login-Informationen**: Ein-Klick-Kopieren für URLs, Credentials etc.
-- 🏠 **Verbesserte Hosts File Integration**: 
-  - Intelligente Hosts-Datei-Verwaltung mit Duplikat-Erkennung
-  - Automatische Validierung und Bereinigung bestehender Einträge
-  - Benutzerfreundlicher Dialog mit Optionen
-
-### 🔧 Technical Improvements  
-- 🔒 **SSL Certificate Mounting Fix**: SSL-Zertifikate werden jetzt korrekt in `/etc/apache2/ssl` gemountet (nicht mehr in system CA store)
-- ⚡ **Unified PHP Configuration**: Konsistente PHP-Limits über alle Instance-Typen hinweg
-  - 2048M memory_limit, 512M upload/post limits
-  - Optimierte OPcache-Einstellungen für bessere Performance
-- 🐳 **Docker Setup Optimization**: Verbesserte Template-Generierung für konsistente Umgebungen
-- 📦 **Dynamic Release Script**: Automatische Versionserkennung aus package.json
-- ⚠️ **REDAXO Console Parameter Fix**: Korrigierte `--servername` Parameter für Apache-Kompatibilität
-
-### 🛠️ Bug Fixes
-- ✅ Apache Container Startup Issues mit REDAXO Console behoben
-- ✅ SSL-Zertifikat-Mounting in korrekten Apache-Pfad
-- ✅ PHP-Limits Inkonsistenzen zwischen Standard/Custom Instanzen behoben
-- ✅ Duplicate Hosts-Einträge werden vermieden
-- ✅ Release-Script mit dynamischer Versionserkennung
-
-### 🔄 Changes since v1.1.0
-- ✅ Umbenennung "Empty Instance" → "Custom Instance" (bereits in 1.1.0)
-- 🎯 **NEU**: Visuelle Unterscheidung von Instance-Typen in TreeView
-- 📋 **NEU**: Copy-Buttons für alle wichtigen URLs und Credentials
-- 🔒 **FIXED**: SSL Certificate Mounting-Probleme behoben
-- ⚡ **IMPROVED**: Einheitliche PHP-Konfiguration über alle Instance-Typen
-- 🏠 **ENHANCED**: Intelligente Hosts-Datei-Verwaltung
+- 🏠 **Verbesserte Hosts File Integration**: Intelligente Hosts-Datei-Verwaltung
+- 🔒 **SSL Certificate Mounting Fix**: Korrekte SSL-Pfade
+- ⚡ **Unified PHP Configuration**: Konsistente PHP-Limits über alle Instance-Typen
 
 ### ✨ Core Features (weiterhin verfügbar)
 - 🏗️ Multi-Instance Management für REDAXO & Custom PHP-Projekte
@@ -52,7 +69,28 @@
 1. Sidebar öffnen → Instanz erstellen (REDAXO oder Custom)
 2. PHP & MariaDB Version auswählen  
 3. Optional SSL aktivieren
-4. Browser öffnen (Frontend/Backend URLs mit Copy-Button)
+4. **NEU**: Klick auf Instanz öffnet Aktionsmenü
+5. **NEU**: Live-Ressourcen in TreeView anzeigen (📊 CPU/RAM)
+6. Browser, Info-Panel oder andere Aktionen wählen
+
+### 📊 Ressourcen-Monitor Features
+- **Live-Anzeige**: CPU und RAM direkt in der TreeView-Beschreibung
+- **Auto-Update**: Ressourcen aktualisieren sich alle 30 Sekunden  
+- **Detaillierte Info**: Hover über Instanz für erweiterte Ressourcen-Details
+- **Container-spezifisch**: Separate Anzeige für Web- und DB-Container
+- **Performance**: Effiziente Ressourcen-Abfrage ohne Verzögerung
+
+### 🔧 Container-Log-Verbesserungen
+- **Smart Container-Namen**: Automatische Erkennung der korrekten Container-Namen
+- **Custom Instances**: `instancename_web` und `instancename_db`
+- **REDAXO Instances**: `redaxo-instancename` und `redaxo-instancename_db`
+- **Log-Auswahl**: Wählen zwischen Web- und Database-Container-Logs
+
+### 🆕 REDAXO Loader für Custom Instances
+1. [REDAXO Loader](https://redaxo.org/loader) herunterladen
+2. In `project/public/` Ordner der Custom Instance kopieren
+3. Instance im Browser öffnen
+4. REDAXO Version auswählen und automatisch installieren
 
 ### 🌐 Beispiel URLs
 - HTTP: `http://localhost:8080`
@@ -66,43 +104,3 @@
 
 ### ❤️ Community
 GitHub Issues & REDAXO Slack – siehe README für Details.
-
----
-
-## 🚀 REDAXO Multi-Instances Manager v1.1.0
-
-### 🔄 Changes since v1.0.0
-- ✅ Umbenennung "Empty Instance" → "Custom Instance"
-- �️ Entfernt: "Database Information" Command & Kontextmenü
-- 🧭 Verbessert: Pfad-Erkennung für Workspace/Finder (unterstützt jetzt project/ & project/public)
-- 🧪 Aufräumen: Alte Test- und Template-Dateien entfernt
-- 🔧 Versionierung & Branding aktualisiert
-- 🐘 PHP Auswahl eingeschränkt auf 7.4 + 8.1–8.5
-- 🐬 MariaDB auf 11.3 konsolidiert (nur aktuelle Version wählbar)
-
-### ✨ Core Features (unverändert)
-- 🏗️ Multi-Instance Management
-- 🔒 SSL/HTTPS mit mkcert
-- 🐳 Docker Compose Setup
-- 🔑 Login-Informationen Panel
-- 📦 Custom Instance Projektstruktur (project/public)
-
-### 📥 Installation
-1. VSIX herunterladen
-2. VS Code → `Cmd+Shift+P` → "Extensions: Install from VSIX"
-3. Datei auswählen
-
-### 🏁 Quick Start
-1. Sidebar öffnen → Instanz erstellen
-2. PHP & MariaDB auswählen
-3. Optional SSL aktivieren
-4. Browser öffnen (Frontend/Backend)
-
-### 🌐 Beispiel URLs
-- HTTP: `http://localhost:8080`
-- Backend: `http://localhost:8080/redaxo`
-- HTTPS (mit Hosts-Eintrag): `https://instancename.local:8443`
-
-### ❤️ Community
-GitHub Issues & REDAXO Slack – siehe README.
-

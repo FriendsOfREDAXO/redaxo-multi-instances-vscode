@@ -4,6 +4,7 @@ import * as fs from 'fs/promises';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { DockerService } from './docker/dockerService';
+import { ResourceMonitor } from './docker/resourceMonitor';
 import { InstancesProvider } from './providers/instancesProvider';
 import { EmptyInstanceProvider } from './emptyInstance/emptyInstanceProvider';
 
@@ -66,6 +67,154 @@ function registerCommands(context: vscode.ExtensionContext) {
         // Instance Management
         vscode.commands.registerCommand('redaxo-instances.refresh', () => {
             instancesProvider.refresh();
+        }),
+
+        vscode.commands.registerCommand('redaxo-instances.showInstanceContextMenu', async (instanceName: string) => {
+            const instance = instancesProvider.getInstance(instanceName);
+            if (!instance) {
+                return;
+            }
+
+            // Create QuickPick with all available actions for the instance
+            const quickPick = vscode.window.createQuickPick();
+            quickPick.title = `Instance Actions: ${instanceName}`;
+            quickPick.placeholder = 'Select an action to perform';
+
+            const items = [];
+
+            // Control actions
+            if (instance.running) {
+                items.push({
+                    label: '$(stop) Stop Instance',
+                    description: 'Stop the running instance',
+                    command: 'redaxo-instances.stopInstance'
+                });
+            } else {
+                items.push({
+                    label: '$(play) Start Instance',
+                    description: 'Start the stopped instance',
+                    command: 'redaxo-instances.startInstance'
+                });
+            }
+
+            // Browser actions (only for running instances)
+            if (instance.running) {
+                items.push({
+                    label: '$(link-external) Open Frontend',
+                    description: 'Open frontend in browser',
+                    command: 'redaxo-instances.openInBrowser'
+                });
+                items.push({
+                    label: '$(gear) Open Backend',
+                    description: 'Open REDAXO backend in browser',
+                    command: 'redaxo-instances.openBackend'
+                });
+            }
+
+            // Always available actions
+            items.push(
+                {
+                    label: '$(terminal) Open Container Terminal',
+                    description: 'Open terminal inside container',
+                    command: 'redaxo-instances.openTerminal'
+                },
+                {
+                    label: '$(output) Show Container Logs',
+                    description: 'View container logs',
+                    command: 'redaxo-instances.showLogs'
+                },
+                {
+                    label: '$(key) Login Information',
+                    description: 'Show login credentials and database info',
+                    command: 'redaxo-instances.getLoginInfo'
+                },
+                {
+                    label: '$(cloud-upload) Import Dump',
+                    description: 'Import database dump',
+                    command: 'redaxo-instances.importDump'
+                },
+                {
+                    label: '$(shield) Setup HTTPS/SSL',
+                    description: 'Configure SSL certificate',
+                    command: 'redaxo-instances.setupSSL'
+                },
+                {
+                    label: '$(tools) Repair Instance',
+                    description: 'Repair instance configuration',
+                    command: 'redaxo-instances.repairInstance'
+                },
+                {
+                    label: '$(globe) Add to Hosts File',
+                    description: 'Add domain to hosts file',
+                    command: 'redaxo-instances.updateHosts'
+                },
+                {
+                    label: '$(folder) Open Workspace in VS Code',
+                    description: 'Open instance folder as workspace',
+                    command: 'redaxo-instances.openWorkspace'
+                },
+                {
+                    label: '$(folder-opened) Open in Finder',
+                    description: 'Open instance folder in Finder',
+                    command: 'redaxo-instances.openInFinder'
+                },
+                {
+                    label: '$(trash) Delete Instance',
+                    description: 'Delete instance permanently',
+                    command: 'redaxo-instances.deleteInstance'
+                }
+            );
+
+            quickPick.items = items;
+
+            quickPick.onDidChangeSelection(selection => {
+                if (selection[0]) {
+                    const selectedItem = selection[0] as any;
+                    quickPick.hide();
+                    vscode.commands.executeCommand(selectedItem.command, instanceName);
+                }
+            });
+
+            quickPick.onDidHide(() => quickPick.dispose());
+            quickPick.show();
+        }),
+
+        vscode.commands.registerCommand('redaxo-instances.showHelp', async () => {
+            const panel = vscode.window.createWebviewPanel(
+                'redaxoHelp',
+                'REDAXO Multi-Instances - Help & Documentation',
+                vscode.ViewColumn.One,
+                {
+                    enableScripts: true,
+                    retainContextWhenHidden: true
+                }
+            );
+
+            // Handle messages from webview
+            panel.webview.onDidReceiveMessage(
+                message => {
+                    if (message.command === 'executeCommand') {
+                        vscode.commands.executeCommand(message.value);
+                    }
+                }
+            );
+
+            panel.webview.html = getHelpHtml();
+        }),
+
+        vscode.commands.registerCommand('redaxo-instances.openReadme', async () => {
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (workspaceFolder) {
+                const readmePath = vscode.Uri.joinPath(workspaceFolder.uri, 'README.md');
+                try {
+                    await vscode.commands.executeCommand('markdown.showPreview', readmePath);
+                } catch (error) {
+                    // Fallback: open as text file
+                    await vscode.window.showTextDocument(readmePath);
+                }
+            } else {
+                vscode.window.showInformationMessage('README ist nur in einem Workspace verfügbar.');
+            }
         }),
 
         vscode.commands.registerCommand('redaxo-instances.changeInstancesPath', async () => {
@@ -317,26 +466,49 @@ function registerCommands(context: vscode.ExtensionContext) {
 
         vscode.commands.registerCommand('redaxo-instances.showLogs', async (instanceItem?: any) => {
             let instanceName: string | undefined;
+            let instanceType: 'redaxo' | 'custom' = 'redaxo';
             
-            // Extract instance name from different input types
+            // Extract instance name and type from different input types
             if (typeof instanceItem === 'string') {
                 instanceName = instanceItem;
             } else if (instanceItem && instanceItem.instance && instanceItem.instance.name) {
                 instanceName = instanceItem.instance.name;
+                instanceType = instanceItem.instance.instanceType === 'custom' ? 'custom' : 'redaxo';
             } else if (instanceItem && instanceItem.name) {
                 instanceName = instanceItem.name;
             }
             
             if (!instanceName) {
                 instanceName = await selectInstance('Select instance to show logs:');
+                if (instanceName) {
+                    // Try to get instance type from provider
+                    const instances = await dockerService.listInstances();
+                    const foundInstance = instances.find(i => i.name === instanceName);
+                    if (foundInstance) {
+                        instanceType = foundInstance.instanceType === 'custom' ? 'custom' : 'redaxo';
+                    }
+                }
             }
+            
             if (instanceName) {
-                const terminal = vscode.window.createTerminal({
-                    name: `Logs: REDAXO ${instanceName}`,
-                    cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+                const containerNames = ResourceMonitor.getContainerNames(instanceName, instanceType);
+                
+                // Ask user which container logs to show
+                const containerChoice = await vscode.window.showQuickPick([
+                    { label: '🌐 Web Container', description: containerNames.web, value: containerNames.web },
+                    { label: '🗄️ Database Container', description: containerNames.db, value: containerNames.db }
+                ], {
+                    placeHolder: `Select container for ${instanceName} logs`
                 });
-                terminal.show();
-                terminal.sendText(`docker logs -f redaxo-${instanceName}`);
+                
+                if (containerChoice) {
+                    const terminal = vscode.window.createTerminal({
+                        name: `Logs: ${instanceName} (${containerChoice.label.replace(/[🌐🗄️]\s/, '')})`,
+                        cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+                    });
+                    terminal.show();
+                    terminal.sendText(`docker logs -f ${containerChoice.value}`);
+                }
             }
         }),
 
@@ -1159,6 +1331,412 @@ function getLoginInfoHtml(instanceName: string, loginInfo: any): string {
                             }, 2000);
                         });
                     }
+                }
+            </script>
+        </body>
+        </html>
+    `;
+}
+
+function getHelpHtml(): string {
+    return `
+        <!DOCTYPE html>
+        <html lang="de">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>REDAXO Multi-Instances Help</title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+                    line-height: 1.6;
+                    margin: 0;
+                    padding: 20px;
+                    background-color: var(--vscode-editor-background);
+                    color: var(--vscode-editor-foreground);
+                }
+                
+                .container {
+                    max-width: 800px;
+                    margin: 0 auto;
+                }
+                
+                .header {
+                    text-align: center;
+                    margin-bottom: 2rem;
+                    padding: 2rem;
+                    background: var(--vscode-editor-selectionBackground);
+                    border-radius: 8px;
+                }
+                
+                .header h1 {
+                    margin: 0 0 0.5rem 0;
+                    font-size: 2.5rem;
+                    color: var(--vscode-textPreformat-foreground);
+                }
+                
+                .header p {
+                    margin: 0;
+                    font-size: 1.1rem;
+                    opacity: 0.8;
+                }
+                
+                .section {
+                    margin: 2rem 0;
+                    padding: 1.5rem;
+                    background: var(--vscode-input-background);
+                    border-left: 4px solid var(--vscode-textLink-foreground);
+                    border-radius: 4px;
+                }
+                
+                .section h2 {
+                    margin: 0 0 1rem 0;
+                    color: var(--vscode-textLink-foreground);
+                    font-size: 1.4rem;
+                }
+                
+                .feature-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                    gap: 1rem;
+                    margin: 1rem 0;
+                }
+                
+                .feature-item {
+                    padding: 1rem;
+                    background: var(--vscode-editor-selectionBackground);
+                    border-radius: 4px;
+                    border: 1px solid var(--vscode-input-border);
+                }
+                
+                .feature-item h3 {
+                    margin: 0 0 0.5rem 0;
+                    color: var(--vscode-textPreformat-foreground);
+                    font-size: 1.1rem;
+                }
+                
+                .feature-item p {
+                    margin: 0;
+                    font-size: 0.9rem;
+                    opacity: 0.8;
+                }
+                
+                .comparison-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 1rem 0;
+                }
+                
+                .comparison-table th,
+                .comparison-table td {
+                    padding: 0.8rem;
+                    text-align: left;
+                    border-bottom: 1px solid var(--vscode-input-border);
+                }
+                
+                .comparison-table th {
+                    background: var(--vscode-editor-selectionBackground);
+                    color: var(--vscode-textLink-foreground);
+                    font-weight: 600;
+                }
+                
+                .comparison-table tr:hover {
+                    background: var(--vscode-list-hoverBackground);
+                }
+                
+                .status-indicator {
+                    display: inline-block;
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 50%;
+                    margin-right: 8px;
+                }
+                
+                .status-running { background-color: #22c55e; }
+                .status-stopped { background-color: #ef4444; }
+                .status-ssl { background-color: #f59e0b; }
+                
+                .command-list {
+                    list-style: none;
+                    padding: 0;
+                }
+                
+                .command-list li {
+                    background: var(--vscode-editor-selectionBackground);
+                    margin: 0.5rem 0;
+                    padding: 0.8rem;
+                    border-radius: 4px;
+                    border-left: 3px solid var(--vscode-textLink-foreground);
+                }
+                
+                .command-list code {
+                    background: var(--vscode-textCodeBlock-background);
+                    padding: 0.2rem 0.4rem;
+                    border-radius: 3px;
+                    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+                }
+                
+                .highlight {
+                    background: var(--vscode-editor-findMatchHighlightBackground);
+                    padding: 0.2rem 0.4rem;
+                    border-radius: 3px;
+                    font-weight: 600;
+                }
+                
+                .quick-actions {
+                    display: flex;
+                    gap: 1rem;
+                    flex-wrap: wrap;
+                    margin: 1rem 0;
+                }
+                
+                .quick-action {
+                    padding: 0.5rem 1rem;
+                    background: var(--vscode-button-background);
+                    color: var(--vscode-button-foreground);
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    text-decoration: none;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                
+                .quick-action:hover {
+                    background: var(--vscode-button-hoverBackground);
+                }
+                
+                @media (max-width: 600px) {
+                    .feature-grid {
+                        grid-template-columns: 1fr;
+                    }
+                    
+                    .quick-actions {
+                        flex-direction: column;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🚀 REDAXO Multi-Instances</h1>
+                    <p>Vollständige Anleitung und Hilfe für die VS Code Extension</p>
+                </div>
+
+                <div class="section">
+                    <h2>Schnellzugriff</h2>
+                    <div class="quick-actions">
+                        <button class="quick-action" onclick="executeCommand('redaxo-instances.createInstance')">
+                            Neue Instanz
+                        </button>
+                        <button class="quick-action" onclick="executeCommand('redaxo-instances.refresh')">
+                            Aktualisieren
+                        </button>
+                        <button class="quick-action" onclick="executeCommand('redaxo-instances.changeInstancesPath')">
+                            Instanzen-Ordner ändern
+                        </button>
+                        <button class="quick-action" onclick="executeCommand('redaxo-instances.openReadme')">
+                            README anzeigen
+                        </button>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>🎯 Unterschied: Custom Instance vs. + Button</h2>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Funktion</th>
+                                <th>🆕 + Button (Create Instance)</th>
+                                <th>🛠️ Custom Instance (Empty Instance)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Zweck</strong></td>
+                                <td>Vollständige REDAXO-Installation</td>
+                                <td>Leere Entwicklungsumgebung</td>
+                            </tr>
+                            <tr>
+                                <td><strong>REDAXO vorinstalliert</strong></td>
+                                <td>✅ Ja, automatisch installiert</td>
+                                <td>❌ Nein, nur PHP + MariaDB</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Sofort nutzbar</strong></td>
+                                <td>✅ Ja, nach Installation</td>
+                                <td>❌ Nein, manueller Setup nötig</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Ideal für</strong></td>
+                                <td>REDAXO-Projekte, Demos, Tests</td>
+                                <td>Custom PHP Apps, Experimente</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Konfiguration</strong></td>
+                                <td>Automatisch (DB, Config)</td>
+                                <td>Komplett manuell</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="section">
+                    <h2>📊 TreeView Symbole</h2>
+                    <div class="feature-grid">
+                        <div class="feature-item">
+                            <h3>🖥️ REDAXO Instanzen</h3>
+                            <p><strong>Grünes Server-Symbol:</strong> REDAXO-Instanz läuft<br>
+                            <strong>Gelbes Server-Symbol:</strong> REDAXO-Instanz gestoppt<br>
+                            <strong>Rotes Error-Symbol:</strong> REDAXO-Instanz hat Fehler</p>
+                        </div>
+                        <div class="feature-item">
+                            <h3>📦 Custom Instanzen</h3>
+                            <p><strong>Grünes Paket-Symbol:</strong> Custom-Instanz läuft<br>
+                            <strong>Gelbes Paket-Symbol:</strong> Custom-Instanz gestoppt<br>
+                            <strong>Rotes Error-Symbol:</strong> Custom-Instanz hat Fehler</p>
+                        </div>
+                        <div class="feature-item">
+                            <h3>⚡ Status in Beschreibung</h3>
+                            <p><strong>● (ausgefüllter Kreis):</strong> Instanz läuft<br>
+                            <strong>○ (leerer Kreis):</strong> Instanz gestoppt<br>
+                            Plus PHP Version, MariaDB und Ports</p>
+                        </div>
+                        <div class="feature-item">
+                            <h3>� Sonderzustände</h3>
+                            <p><strong>Loading-Symbol (drehend):</strong> Instanz wird erstellt<br>
+                            <strong>📁 Ordner-Symbol:</strong> Kategorien (Running/Stopped)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>⌨️ Bedienung</h2>
+                    <div class="feature-grid">
+                        <div class="feature-item">
+                            <h3>🖱️ Einfacher Klick</h3>
+                            <p>Öffnet Aktionsmenü mit allen verfügbaren Optionen</p>
+                        </div>
+                        <div class="feature-item">
+                            <h3>🖱️ Rechtsklick</h3>
+                            <p>Zeigt klassisches Kontextmenü (wie gehabt)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>🔧 Wichtige VS Code Kommandos</h2>
+                    <ul class="command-list">
+                        <li><code>REDAXO: Create New Instance</code> - Neue REDAXO-Instanz erstellen</li>
+                        <li><code>REDAXO: Show Dashboard</code> - Dashboard öffnen</li>
+                        <li><code>REDAXO: Show Login Info</code> - Login-Daten anzeigen</li>
+                        <li><code>REDAXO: Setup HTTPS/SSL</code> - SSL für Instanz einrichten</li>
+                        <li><code>REDAXO: Start/Stop Instance</code> - Instanzen verwalten</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <h2>📥 REDAXO Loader für Custom Instances</h2>
+                    <p>Für Custom Instances, die Sie später mit REDAXO ausstatten möchten:</p>
+                    
+                    <div class="feature-grid">
+                        <div class="feature-item">
+                            <h3>🚀 REDAXO Loader</h3>
+                            <p>Der REDAXO Loader lädt automatisch die neueste REDAXO Version von GitHub herunter und installiert sie.</p>
+                            <p><strong>Download:</strong> <a href="https://redaxo.org/loader" target="_blank">redaxo_loader.php</a></p>
+                        </div>
+                        <div class="feature-item">
+                            <h3>📁 Installation</h3>
+                            <p><strong>1.</strong> REDAXO Loader herunterladen<br>
+                            <strong>2.</strong> In den <code>project/public/</code> Ordner der Custom Instance kopieren<br>
+                            <strong>3.</strong> Instance im Browser öffnen<br>
+                            <strong>4.</strong> REDAXO Version auswählen und installieren</p>
+                        </div>
+                        <div class="feature-item">
+                            <h3>⚡ Vorteile</h3>
+                            <p>• Automatischer Download von GitHub<br>
+                            • Immer die neueste Version<br>
+                            • Keine manuellen Downloads<br>
+                            • Professionelle Installation</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>🔒 SSL/HTTPS Setup (Optional)</h2>
+                    <p>Für lokale HTTPS-Entwicklung mit vertrauenswürdigen Zertifikaten:</p>
+                    
+                    <div class="feature-grid">
+                        <div class="feature-item">
+                            <h3>macOS Installation</h3>
+                            <p><code>brew install mkcert nss</code><br><code>mkcert -install</code></p>
+                        </div>
+                        <div class="feature-item">
+                            <h3>Linux Installation</h3>
+                            <p><code>sudo apt install libnss3-tools</code><br>Dann mkcert binary herunterladen</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>� Troubleshooting</h2>
+                    <div class="quick-actions">
+                        <button class="quick-action" onclick="executeCommand('redaxo-instances.createInstance')">
+                            ➕ Neue Instanz
+                        </button>
+                        <button class="quick-action" onclick="executeCommand('redaxo-instances.refresh')">
+                            🔄 Aktualisieren
+                        </button>
+                        <button class="quick-action" onclick="executeCommand('redaxo-instances.changeInstancesPath')">
+                            � Instanzen-Ordner ändern
+                        </button>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>🔧 Troubleshooting</h2>
+                    <div class="feature-grid">
+                        <div class="feature-item">
+                            <h3>Container startet nicht</h3>
+                            <p>Logs prüfen: Rechtsklick auf Instanz → "Show Container Logs"</p>
+                        </div>
+                        <div class="feature-item">
+                            <h3>Port bereits belegt</h3>
+                            <p>Docker-Container stoppen oder andere Ports in der Konfiguration wählen</p>
+                        </div>
+                        <div class="feature-item">
+                            <h3>SSL funktioniert nicht</h3>
+                            <p>mkcert neu installieren oder Repair Instance nutzen</p>
+                        </div>
+                        <div class="feature-item">
+                            <h3>Domain nicht erreichbar</h3>
+                            <p>Hosts-Datei prüfen oder automatisch hinzufügen lassen</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>💡 Tipps & Tricks</h2>
+                    <ul>
+                        <li><span class="highlight">Automatische Ports</span>: Die Extension findet automatisch freie Ports</li>
+                        <li><span class="highlight">Login-Info</span>: Alle Zugangsdaten werden automatisch angezeigt</li>
+                        <li><span class="highlight">Workspace Integration</span>: Instanz-Ordner direkt in VS Code öffnen</li>
+                        <li><span class="highlight">Terminal Zugriff</span>: Container-Shell direkt aus VS Code</li>
+                        <li><span class="highlight">Database Dumps</span>: Einfacher Import über die Extension</li>
+                    </ul>
+                </div>
+            </div>
+
+            <script>
+                const vscode = acquireVsCodeApi();
+                
+                function executeCommand(command) {
+                    vscode.postMessage({
+                        command: 'executeCommand',
+                        value: command
+                    });
                 }
             </script>
         </body>

@@ -1,8 +1,29 @@
-# Change Log
+# Chan# Changelog
+
+## [1.5.1] - 2025-08-26
+
+### 🎨 Changed
+- **Activity Bar Icon**: Neues großes, fettes "R" Icon für bessere Sichtbarkeit
+- **Visual Branding**: Optimierte REDAXO Erkennbarkeit in VS Code Activity Bar
+- **Icon Format**: Monochrome SVG mit automatischer Theme-Anpassung
+
+## [1.5.0] - 2025-08-26e Log
 
 All notable changes to the "redaxo-multi-instances-manager" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+
+## [1.4.0] - 2025-08-26
+
+### Added
+- **Help & Documentation System**: Comprehensive help page with quick start guide
+- **Intuitive Instance Interaction**: Single-click on instances now opens action menu
+- **Built-in Help Button**: Question mark icon in toolbar for easy access to documentation
+- **Instance Type Comparison**: Clear explanation of Custom Instance vs. Create Instance difference
+
+### Changed
+- **Instance Click Behavior**: Single-click now shows action menu instead of opening browser
+- Right-click context menu still available for power users
 
 ## [1.3.0] - 2025-08-26
 

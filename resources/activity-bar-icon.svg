@@ -1,0 +1,7 @@
+<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+  <!-- REDAXO Activity Bar Icon - Big Bold R -->
+  <g fill="currentColor">
+    <!-- Großes dickes R -->
+    <path d="M3 2 L3 14 L5.5 14 L5.5 9.5 L8 9.5 L10.5 14 L13.5 14 L10.5 9 C11.5 8.5 12 7.5 12 6 C12 4 10.5 2 8 2 L3 2 Z M5.5 4.5 L8 4.5 C8.8 4.5 9.5 5.2 9.5 6 C9.5 6.8 8.8 7.5 8 7.5 L5.5 7.5 L5.5 4.5 Z" stroke="none"/>
+  </g>
+</svg>

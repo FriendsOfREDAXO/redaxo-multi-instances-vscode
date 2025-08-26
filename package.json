@@ -2,7 +2,7 @@
   "name": "redaxo-multi-instances-manager",
   "displayName": "REDAXO Multi-Instances Manager",
   "description": "Complete REDAXO multi-instance management with Docker containers, SSL support, and automatic port management integrated into VS Code",
-  "version": "1.3.0",
+  "version": "1.5.1",
   "publisher": "skerbis",
   "icon": "resources/icon.png",
   "repository": {
@@ -112,9 +112,17 @@
         "icon": "$(refresh)"
       },
       {
-        "command": "redaxo-instances.showPortUsage",
-        "title": "Show Port Usage",
-        "icon": "$(symbol-network)"
+        "command": "redaxo-instances.showInstanceContextMenu",
+        "title": "Show Instance Actions"
+      },
+      {
+        "command": "redaxo-instances.showHelp",
+        "title": "Show Help & Documentation",
+        "icon": "$(question)"
+      },
+      {
+        "command": "redaxo-instances.openReadme",
+        "title": "Open README"
       }
     ],
     "views": {
@@ -139,7 +147,7 @@
         {
           "id": "redaxo-instances",
           "title": "REDAXO Multi-Instances",
-          "icon": "$(server)"
+          "icon": "resources/activity-bar-icon.svg"
         }
       ]
     },
@@ -161,7 +169,7 @@
           "group": "navigation"
         },
         {
-          "command": "redaxo-instances.showPortUsage",
+          "command": "redaxo-instances.showHelp",
           "when": "view == redaxo-instances.instancesView",
           "group": "navigation"
         }

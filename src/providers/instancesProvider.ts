@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { RedaxoInstance } from '../types/redaxo';
+import { ResourceMonitor, InstanceResources } from '../docker/resourceMonitor';
 import { DockerService } from '../docker/dockerService';
 
 // Union type for all tree view items
@@ -10,32 +12,28 @@ export class InstancesProvider implements vscode.TreeDataProvider<TreeViewItem> 
     readonly onDidChangeTreeData: vscode.Event<TreeViewItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
     private instances: RedaxoInstance[] = [];
-    private dockerService: DockerService;
     private statusBarItem: vscode.StatusBarItem;
+    private refreshTimer: NodeJS.Timeout | undefined;
 
-    constructor(dockerService: DockerService) {
-        this.dockerService = dockerService;
-        
-        // Create status bar item
+    constructor(private dockerService: DockerService) {
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
         this.statusBarItem.command = 'redaxo-instances.refresh';
-        this.statusBarItem.text = '$(refresh) REDAXO';
-        this.statusBarItem.tooltip = 'REDAXO Instances - Click to refresh';
         this.statusBarItem.show();
         
-        this.refresh();
-        
-        // Auto-refresh every 30 seconds if enabled
-        const autoRefresh = vscode.workspace.getConfiguration('redaxo-instances').get('autoRefresh', true);
-        if (autoRefresh) {
-            setInterval(() => this.refresh(), 30000);
-        }
+        // Auto-refresh every 30 seconds to update resources
+        this.refreshTimer = setInterval(() => {
+            this.refresh();
+        }, 30000);
     }
 
-    refresh(): void {
-        this.loadInstances();
-        this._onDidChangeTreeData.fire();
+    async refresh(): Promise<void> {
+        this.instances = await this.dockerService.listInstances();
         this.updateStatusBar();
+        this._onDidChangeTreeData.fire();
+    }
+
+    refreshItem(item?: TreeViewItem): void {
+        this._onDidChangeTreeData.fire(item);
     }
 
     private async loadInstances(): Promise<void> {
@@ -80,20 +78,18 @@ export class InstancesProvider implements vscode.TreeDataProvider<TreeViewItem> 
             const items: TreeViewItem[] = [];
             
             if (runningInstances.length > 0) {
-                items.push(new CategoryItem('Running Instances', runningInstances.length));
+                items.push(new CategoryItem('🟢 Running Instances', runningInstances.length));
                 runningInstances.forEach(instance => {
-                    items.push(new RedaxoInstanceItem(instance, 'running-instance'));
-                });
-            }
-            
-            if (stoppedInstances.length > 0) {
-                items.push(new CategoryItem('Stopped Instances', stoppedInstances.length));
-                stoppedInstances.forEach(instance => {
-                    items.push(new RedaxoInstanceItem(instance, 'stopped-instance'));
+                    items.push(new RedaxoInstanceItem(instance, this, 'running-instance'));
                 });
             }
 
-            return Promise.resolve(items);
+            if (stoppedInstances.length > 0) {
+                items.push(new CategoryItem('⚫ Stopped Instances', stoppedInstances.length));
+                stoppedInstances.forEach(instance => {
+                    items.push(new RedaxoInstanceItem(instance, this, 'stopped-instance'));
+                });
+            }            return Promise.resolve(items);
         }
 
         return Promise.resolve([]);
@@ -109,28 +105,55 @@ export class InstancesProvider implements vscode.TreeDataProvider<TreeViewItem> 
 
     dispose(): void {
         this.statusBarItem.dispose();
+        if (this.refreshTimer) {
+            clearInterval(this.refreshTimer);
+        }
     }
 }
 
 export class RedaxoInstanceItem extends vscode.TreeItem {
     public readonly instance: RedaxoInstance;
+    private resources: InstanceResources | null = null;
+    private provider?: InstancesProvider;
 
-    constructor(instance: RedaxoInstance, contextPrefix?: string) {
+    constructor(instance: RedaxoInstance, provider?: InstancesProvider, contextPrefix?: string) {
         super(instance.name, vscode.TreeItemCollapsibleState.None);
         
         this.instance = instance;
+        this.provider = provider;
         this.tooltip = this.generateTooltip(instance);
         this.description = this.generateDescription(instance);
         this.contextValue = contextPrefix || (instance.running ? 'instance-running' : 'instance-stopped');
         this.iconPath = this.getIconPath(instance);
         
-        // Add command for double-click action
-        if (instance.running && instance.frontendUrl) {
-            this.command = {
-                command: 'redaxo-instances.openInBrowser',
-                title: 'Open in Browser',
-                arguments: [instance.name]
-            };
+        // Add command to show context menu on single click
+        this.command = {
+            command: 'redaxo-instances.showInstanceContextMenu',
+            title: 'Show Instance Actions',
+            arguments: [instance.name]
+        };
+
+        // Load resources asynchronously if instance is running
+        if (instance.running) {
+            this.loadResources();
+        }
+    }
+
+    private async loadResources(): Promise<void> {
+        try {
+            const instanceType = this.instance.instanceType === 'custom' ? 'custom' : 'redaxo';
+            this.resources = await ResourceMonitor.getInstanceResources(this.instance.name, instanceType);
+            
+            // Update tooltip and description with resource info
+            this.tooltip = this.generateTooltip(this.instance);
+            this.description = this.generateDescription(this.instance);
+            
+            // Trigger TreeView refresh
+            if (this.provider) {
+                this.provider.refreshItem(this);
+            }
+        } catch (error) {
+            console.error(`Error loading resources for ${this.instance.name}:`, error);
         }
     }
 
@@ -160,6 +183,21 @@ export class RedaxoInstanceItem extends vscode.TreeItem {
         if (instance.backendUrlHttps) {
             tooltip += `\nAdmin (HTTPS): ${instance.backendUrlHttps}`;
         }
+
+        // Add resource information if available
+        if (this.resources && instance.running) {
+            tooltip += '\n\n📊 Resources:';
+            if (this.resources.total) {
+                tooltip += `\n  CPU: ${this.resources.total.cpu}`;
+                tooltip += `\n  Memory: ${this.resources.total.memory}`;
+            }
+            if (this.resources.web) {
+                tooltip += `\n  Web: ${this.resources.web.memoryUsage}`;
+            }
+            if (this.resources.db) {
+                tooltip += `\n  DB: ${this.resources.db.memoryUsage}`;
+            }
+        }
         
         if (instance.running) {
             tooltip += '\n\nDouble-click to open in browser';
@@ -182,6 +220,11 @@ export class RedaxoInstanceItem extends vscode.TreeItem {
             const httpsUrl = new URL(instance.frontendUrlHttps);
             const httpsPort = httpsUrl.port || '443';
             description += ` | HTTPS:${httpsPort}`;
+        }
+
+        // Add compact resource info if available and running
+        if (this.resources && instance.running && this.resources.total) {
+            description += ` | 📊 ${this.resources.total.cpu} CPU, ${this.resources.total.memory} RAM`;
         }
         
         return description;
