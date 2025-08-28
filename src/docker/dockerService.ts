@@ -304,11 +304,15 @@ export class DockerService {
                 status: await this.getInstanceStatus(instanceName),
                 phpVersion: config.PHP_VERSION || '8.2',
                 mariadbVersion: config.MARIADB_VERSION || 'latest',
-                port: parseInt(config.HTTP_PORT) || 8080,
-                frontendUrl: config.BASE_URL || `http://localhost:${config.HTTP_PORT || 8080}`,
-                backendUrl: config.BACKEND_URL || `http://localhost:${config.HTTP_PORT || 8080}/redaxo`,
+                port: parseInt(config.HTTP_PORT) || 8080, // Backward compatibility
+                httpPort: parseInt(config.HTTP_PORT) || 8080,
+                httpsPort: config.SSL_ENABLED === 'true' ? (parseInt(config.HTTPS_PORT) || 8443) : undefined,
+                frontendUrl: `http://localhost:${config.HTTP_PORT || 8080}`,
+                backendUrl: `http://localhost:${config.HTTP_PORT || 8080}/redaxo`,
                 frontendUrlHttps: config.SSL_ENABLED === 'true' ? `https://${instanceName}.local:${config.HTTPS_PORT || 8443}` : undefined,
                 backendUrlHttps: config.SSL_ENABLED === 'true' ? `https://${instanceName}.local:${config.HTTPS_PORT || 8443}/redaxo` : undefined,
+                frontendUrlHttpsLocalhost: config.SSL_ENABLED === 'true' ? `https://localhost:${config.HTTPS_PORT || 8443}` : undefined,
+                backendUrlHttpsLocalhost: config.SSL_ENABLED === 'true' ? `https://localhost:${config.HTTPS_PORT || 8443}/redaxo` : undefined,
                 instanceType: instanceType
             };
         } catch (error) {

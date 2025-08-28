@@ -162,29 +162,22 @@ export class RedaxoInstanceItem extends vscode.TreeItem {
         const typeLabel = instance.instanceType === 'custom' ? 'Custom Instance' : 'REDAXO Instance';
         let tooltip = `${instance.name}\nType: ${typeLabel}\nStatus: ${status}\nPHP: ${instance.phpVersion}\nMariaDB: ${instance.mariadbVersion}`;
         
-        if (instance.port) {
-            tooltip += `\nHTTP Port: ${instance.port}`;
+        // Add port information
+        if (instance.httpPort) {
+            tooltip += `\nHTTP Port: ${instance.httpPort}`;
+        }
+        
+        if (instance.httpsPort) {
+            tooltip += `\nHTTPS Port: ${instance.httpsPort}`;
         }
         
         if (instance.frontendUrl) {
             tooltip += `\nHTTP: ${instance.frontendUrl}`;
         }
-        
-        // Add HTTPS information if available
-        if (instance.frontendUrlHttps) {
-            tooltip += `\nHTTPS: ${instance.frontendUrlHttps}`;
-        }
-        
+
         if (instance.backendUrl) {
             tooltip += `\nAdmin: ${instance.backendUrl}`;
-        }
-        
-        // Add HTTPS Admin URL if available
-        if (instance.backendUrlHttps) {
-            tooltip += `\nAdmin (HTTPS): ${instance.backendUrlHttps}`;
-        }
-
-        // Add resource information if available
+        }// Add resource information if available
         if (this.resources && instance.running) {
             tooltip += '\n\n📊 Resources:';
             if (this.resources.total) {

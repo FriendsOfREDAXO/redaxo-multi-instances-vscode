@@ -1305,6 +1305,24 @@ function getLoginInfoHtml(instanceName: string, loginInfo: any): string {
                     </div>
                 </div>
                 
+                <h4>🔑 Root User (Container-Internal)</h4>
+                <div class="info-item">
+                    <span class="info-label">Username:</span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="db-root-user">root</strong></span>
+                        <button class="copy-button" onclick="copyDbRootUser()">📋 Copy</button>
+                        <span class="copy-feedback" id="dbrootuser-copy-feedback">Copied!</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Password:</span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="db-root-password">${loginInfo.dbRootPassword}</strong></span>
+                        <button class="copy-button" onclick="copyDbRootPassword()">📋 Copy</button>
+                        <span class="copy-feedback" id="dbrootpassword-copy-feedback">Copied!</span>
+                    </div>
+                </div>
+                
                 <h3>🌐 External Access (from localhost/phpMyAdmin/tools)</h3>
                 <div class="info-item">
                     <span class="info-label">Host:</span>
@@ -1344,6 +1362,24 @@ function getLoginInfoHtml(instanceName: string, loginInfo: any): string {
                         <span class="info-value"><strong id="db-password-ext">${loginInfo.dbPassword}</strong></span>
                         <button class="copy-button" onclick="copyDbPasswordExt()">📋 Copy</button>
                         <span class="copy-feedback" id="dbpassword-ext-copy-feedback">Copied!</span>
+                    </div>
+                </div>
+                
+                <h4>🔑 Root User (External Access)</h4>
+                <div class="info-item">
+                    <span class="info-label">Username:</span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="db-root-user-ext">root</strong></span>
+                        <button class="copy-button" onclick="copyDbRootUserExt()">📋 Copy</button>
+                        <span class="copy-feedback" id="dbrootuser-ext-copy-feedback">Copied!</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Password:</span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="db-root-password-ext">${loginInfo.dbRootPassword}</strong></span>
+                        <button class="copy-button" onclick="copyDbRootPasswordExt()">📋 Copy</button>
+                        <span class="copy-feedback" id="dbrootpassword-ext-copy-feedback">Copied!</span>
                     </div>
                 </div>
                 
@@ -1625,6 +1661,78 @@ function getLoginInfoHtml(instanceName: string, loginInfo: any): string {
                             }, 2000);
                         }).catch(err => {
                             console.error('Failed to copy external db port: ', err);
+                            fallbackCopy(value, feedbackElement);
+                        });
+                    }
+                }
+
+                function copyDbRootUser() {
+                    const element = document.getElementById('db-root-user');
+                    const feedbackElement = document.getElementById('dbrootuser-copy-feedback');
+                    
+                    if (element) {
+                        const value = element.textContent;
+                        navigator.clipboard.writeText(value).then(() => {
+                            feedbackElement.classList.add('show');
+                            setTimeout(() => {
+                                feedbackElement.classList.remove('show');
+                            }, 2000);
+                        }).catch(err => {
+                            console.error('Failed to copy db root user: ', err);
+                            fallbackCopy(value, feedbackElement);
+                        });
+                    }
+                }
+
+                function copyDbRootPassword() {
+                    const element = document.getElementById('db-root-password');
+                    const feedbackElement = document.getElementById('dbrootpassword-copy-feedback');
+                    
+                    if (element) {
+                        const value = element.textContent;
+                        navigator.clipboard.writeText(value).then(() => {
+                            feedbackElement.classList.add('show');
+                            setTimeout(() => {
+                                feedbackElement.classList.remove('show');
+                            }, 2000);
+                        }).catch(err => {
+                            console.error('Failed to copy db root password: ', err);
+                            fallbackCopy(value, feedbackElement);
+                        });
+                    }
+                }
+
+                function copyDbRootUserExt() {
+                    const element = document.getElementById('db-root-user-ext');
+                    const feedbackElement = document.getElementById('dbrootuser-ext-copy-feedback');
+                    
+                    if (element) {
+                        const value = element.textContent;
+                        navigator.clipboard.writeText(value).then(() => {
+                            feedbackElement.classList.add('show');
+                            setTimeout(() => {
+                                feedbackElement.classList.remove('show');
+                            }, 2000);
+                        }).catch(err => {
+                            console.error('Failed to copy db root user ext: ', err);
+                            fallbackCopy(value, feedbackElement);
+                        });
+                    }
+                }
+
+                function copyDbRootPasswordExt() {
+                    const element = document.getElementById('db-root-password-ext');
+                    const feedbackElement = document.getElementById('dbrootpassword-ext-copy-feedback');
+                    
+                    if (element) {
+                        const value = element.textContent;
+                        navigator.clipboard.writeText(value).then(() => {
+                            feedbackElement.classList.add('show');
+                            setTimeout(() => {
+                                feedbackElement.classList.remove('show');
+                            }, 2000);
+                        }).catch(err => {
+                            console.error('Failed to copy db root password ext: ', err);
                             fallbackCopy(value, feedbackElement);
                         });
                     }

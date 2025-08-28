@@ -4,13 +4,17 @@ export interface RedaxoInstance {
     created?: string;
     phpVersion: string;
     mariadbVersion: string;
-    port?: number;
+    port?: number; // HTTP Port for backward compatibility
+    httpPort?: number;
+    httpsPort?: number;
     frontendUrl: string;
     backendUrl: string;
     primaryFrontendUrl?: string;
     primaryBackendUrl?: string;
     frontendUrlHttps?: string;
     backendUrlHttps?: string;
+    frontendUrlHttpsLocalhost?: string;  // For direct context menu access
+    backendUrlHttpsLocalhost?: string;   // For direct context menu access
     phpmyadminUrl?: string;
     mailpitUrl?: string;
     containerId?: string;
