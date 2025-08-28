@@ -1,6 +1,41 @@
 # 🚀 REDAXO Multi-Instances Manager - Release Notes
 
-## 📦 Version 1.6.3 - Modern Login-Info & Auto-SSL
+## 📦 Version 1.6.4 - Database Port Mapping Final Fix
+*Veröffentlicht: 29. August 2025*
+
+### 🔧 Critical Bug Fixes
+- **🎯 Fixed External Port Display**: Database externe Ports werden jetzt korrekt angezeigt (3307 vs 3306)
+- **🔗 Variable Name Consistency**: Template-Variable-Mapping zwischen dockerService und extension korrigiert
+- **📊 Complete Root Credentials**: Root-Credentials jetzt vollständig in External Access Tab verfügbar
+
+### 🏆 Technical Fixes
+- **Correct Property Mapping**: `dbExternalPort` und `dbExternalHost` statt `dbPortExternal`/`dbHostExternal`
+- **Docker Port Extraction**: MySQL Ports aus docker-compose.yml werden korrekt extrahiert und angezeigt
+- **Consistent Database Info**: Einheitliche Darstellung interner (3306) vs externer (gemappter) Ports
+
+---
+
+## 📦 Version 1.6.3 - Database Port Mapping & Root Credentials Fix
+*Veröffentlicht: 29. August 2025*
+
+### 🔧 Critical Bug Fixes
+- **🎯 Database Port Mapping**: Externe DB-Ports werden jetzt korrekt aus docker-compose.yml extrahiert (z.B. 3307 statt 3306)
+- **📊 Root Credentials in External Tab**: Root-User Credentials sind jetzt auch im "External Access" Tab verfügbar
+- **🔗 Variable Name Consistency**: Behoben Variable-Mapping zwischen dockerService und extension (dbExternalPort/dbExternalHost)
+
+### ✨ Enhanced Database Access
+- **🌐 External Connection**: Externe DB-Verbindungen zeigen jetzt den korrekten gemappten Host-Port (localhost:3307)
+- **📦 Internal Connection**: Interne DB-Verbindungen verwenden weiterhin Container-Port (mysql:3306)
+- **👤 Complete Root Access**: Root-Credentials in beiden Tabs (Container-Internal & External Access)
+
+### 🔧 Technical Fixes
+- **Regex Port Extraction**: Korrekte Extraktion externer Ports aus docker-compose.yml Port-Mappings
+- **Template Variable Mapping**: `dbExternalPort` und `dbExternalHost` korrekt gemappt
+- **Consistent UI**: Einheitliche Root-Credentials Darstellung in beiden Database-Tabs
+
+---
+
+## 📦 Version 1.6.2 - Modern Login-Info & Auto-SSL
 *Veröffentlicht: 28. August 2025*
 
 ### 🎨 Modern Login-Info Webview

@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.6.4] - 2025-08-29
+
+### 🔧 Bug Fixes
+- **Database Port Mapping**: Fixed external port display to show correct mapped ports from docker-compose.yml
+- **Root Credentials**: Added root database credentials to External Access tab
+- **Variable Consistency**: Fixed template variable mapping between dockerService and webview rendering
+
+### 🏆 Technical Improvements
+- **Correct Property Names**: Fixed `dbExternalPort`/`dbExternalHost` vs `dbPortExternal`/`dbHostExternal` mismatch
+- **Port Extraction**: MySQL ports correctly extracted from docker-compose.yml port mappings
+- **Database Info Display**: Proper differentiation between internal (3306) and external (mapped) ports
+
+## [1.6.3] - 2025-08-29
+
+### 🔧 Critical Bug Fixes
+- **Database Port Mapping**: External DB ports correctly extracted from docker-compose.yml  
+- **Root Credentials Display**: Root credentials available in both Container-Internal and External Access tabs
+- **Variable Name Consistency**: Fixed variable mapping between dockerService and extension
+
 ## [1.6.2] - 2025-08-28
 
 ### 🔧 Critical Fixes
