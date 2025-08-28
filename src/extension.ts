@@ -531,18 +531,84 @@ function registerCommands(context: vscode.ExtensionContext) {
                     const loginInfo = await dockerService.getLoginInfo(instanceName);
                     const panel = vscode.window.createWebviewPanel(
                         'redaxoLoginInfo',
-                        `Login Information - ${instanceName}`,
+                        `🔑 Login Info - ${instanceName}`,
                         vscode.ViewColumn.One,
                         {
                             enableScripts: true,
-                            retainContextWhenHidden: true
+                            retainContextWhenHidden: true,
+                            localResourceRoots: [
+                                vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'loginInfo')
+                            ]
                         }
                     );
 
-                    panel.webview.html = getLoginInfoHtml(instanceName, loginInfo);
+                    panel.webview.html = await getModernLoginInfoHtml(panel.webview, context, instanceName, loginInfo);
                 } catch (error: any) {
                     vscode.window.showErrorMessage(`Failed to get login info: ${error.message}`);
                 }
+            }
+        }),
+
+        // Modern Login Info Command (Preview) - Simple test version
+        vscode.commands.registerCommand('redaxo-instances.showModernLoginInfo', async (instanceItem?: any) => {
+            let instanceName: string = 'demo-instance';
+            
+            // Handle both string and RedaxoInstanceItem parameter
+            if (typeof instanceItem === 'string') {
+                instanceName = instanceItem;
+            } else if (instanceItem && typeof instanceItem === 'object' && instanceItem.label) {
+                instanceName = instanceItem.label;
+            } else {
+                const input = await vscode.window.showInputBox({
+                    prompt: 'Enter instance name for modern login info preview',
+                    placeHolder: 'e.g., my-redaxo-site',
+                    value: 'demo-instance'
+                });
+                if (input) {
+                    instanceName = input;
+                }
+            }
+
+            // Create modern login info webview directly
+            const panel = vscode.window.createWebviewPanel(
+                'redaxoModernLoginInfo',
+                `🎨 Modern Login Info - ${instanceName}`,
+                vscode.ViewColumn.One,
+                {
+                    enableScripts: true,
+                    retainContextWhenHidden: true,
+                    localResourceRoots: [
+                        vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'loginInfo')
+                    ]
+                }
+            );
+
+            try {
+                // Get mock login info for demo
+                const mockLoginInfo = {
+                    running: true,
+                    frontendUrl: 'http://localhost:8080',
+                    backendUrl: 'http://localhost:8080/redaxo',
+                    instanceType: 'redaxo',
+                    adminUser: 'admin',
+                    adminPassword: 'redaxo123',
+                    dbHost: `db_${instanceName}`,
+                    dbName: 'redaxo',
+                    dbUser: 'redaxo',
+                    dbPassword: 'redaxo123',
+                    dbRootPassword: 'rootpassword123',
+                    dbExternalHost: 'localhost',
+                    dbExternalPort: 3306
+                };
+
+                panel.webview.html = await getModernLoginInfoHtml(panel.webview, context, instanceName, mockLoginInfo);
+            } catch (error: any) {
+                panel.webview.html = `
+                    <html><body style="color: #ff6b6b; padding: 20px; font-family: monospace;">
+                        <h2>Error loading modern login info</h2>
+                        <p>${error.message}</p>
+                    </body></html>
+                `;
             }
         }),
 
@@ -1109,654 +1175,6 @@ function getHostsInstructionsHtml(instanceName: string): string {
     `;
 }
 
-function getLoginInfoHtml(instanceName: string, loginInfo: any): string {
-    const statusIcon = loginInfo.running ? '🟢' : '🔴';
-    const statusText = loginInfo.running ? 'Running' : 'Stopped';
-    
-    return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Login Information - ${instanceName}</title>
-            <style>
-                body {
-                    font-family: var(--vscode-font-family);
-                    background: var(--vscode-editor-background);
-                    color: var(--vscode-editor-foreground);
-                    padding: 20px;
-                    line-height: 1.6;
-                }
-                .status-header {
-                    background: var(--vscode-widget-background);
-                    border: 1px solid var(--vscode-widget-border);
-                    border-radius: 4px;
-                    padding: 20px;
-                    margin-bottom: 20px;
-                    text-align: center;
-                }
-                .info-section {
-                    background: var(--vscode-widget-background);
-                    border: 1px solid var(--vscode-widget-border);
-                    border-radius: 4px;
-                    padding: 20px;
-                    margin-bottom: 20px;
-                }
-                .info-item {
-                    display: flex;
-                    justify-content: space-between;
-                    padding: 8px 0;
-                    border-bottom: 1px solid var(--vscode-widget-border);
-                }
-                .info-item:last-child {
-                    border-bottom: none;
-                }
-                .info-label {
-                    font-weight: bold;
-                    color: var(--vscode-textLink-foreground);
-                    min-width: 140px;
-                }
-                .info-value {
-                    font-family: var(--vscode-editor-font-family);
-                    user-select: all;
-                    word-break: break-all;
-                }
-                .login-box {
-                    background: var(--vscode-inputValidation-infoBackground);
-                    border: 1px solid var(--vscode-inputValidation-infoBorder);
-                    border-radius: 4px;
-                    padding: 15px;
-                    margin: 15px 0;
-                }
-                .url-link {
-                    color: var(--vscode-textLink-foreground);
-                    text-decoration: underline;
-                    cursor: pointer;
-                }
-                .url-link:hover {
-                    color: var(--vscode-textLink-activeForeground);
-                }
-                .copy-button {
-                    margin-left: 8px;
-                    padding: 4px 8px;
-                    background: var(--vscode-button-secondaryBackground);
-                    color: var(--vscode-button-secondaryForeground);
-                    border: 1px solid var(--vscode-button-border);
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 12px;
-                }
-                .copy-button:hover {
-                    background: var(--vscode-button-secondaryHoverBackground);
-                }
-                .copy-button:active {
-                    background: var(--vscode-button-secondaryBackground);
-                    transform: scale(0.95);
-                }
-                .credential-container {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-                .copy-feedback {
-                    font-size: 12px;
-                    color: var(--vscode-charts-green);
-                    opacity: 0;
-                    transition: opacity 0.3s ease;
-                }
-                .copy-feedback.show {
-                    opacity: 1;
-                }
-                h1, h2 { color: var(--vscode-textLink-foreground); }
-            </style>
-        </head>
-        <body>
-            <div class="status-header">
-                <h1>${statusIcon} ${instanceName}</h1>
-                <p><strong>Status:</strong> ${statusText}</p>
-            </div>
-            
-            <div class="info-section">
-                <h2>🌐 Access URLs</h2>
-                <div class="info-item">
-                    <span class="info-label">Frontend (HTTP):</span>
-                    <span class="info-value"><a href="${loginInfo.frontendUrl}" class="url-link">${loginInfo.frontendUrl}</a></span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Backend (HTTP):</span>
-                    <span class="info-value"><a href="${loginInfo.backendUrl}" class="url-link">${loginInfo.backendUrl}</a></span>
-                </div>
-                ${loginInfo.frontendUrlHttps ? `
-                <div class="info-item">
-                    <span class="info-label">Frontend (HTTPS):</span>
-                    <span class="info-value"><a href="${loginInfo.frontendUrlHttps}" class="url-link">${loginInfo.frontendUrlHttps}</a> 🔒</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Backend (HTTPS):</span>
-                    <span class="info-value"><a href="${loginInfo.backendUrlHttps}" class="url-link">${loginInfo.backendUrlHttps}</a> 🔒</span>
-                </div>` : ''}
-            </div>
-            
-            <div class="login-box">
-                ${loginInfo.instanceType === 'custom' ? `
-                <h2>🔧 Custom Instance</h2>
-                <p><em>⚠️ This is a Custom Instance. No REDAXO backend credentials available.</em></p>
-                <p><em>💡 Install REDAXO manually or use your own application.</em></p>
-                ` : `
-                <h2>🔑 REDAXO Backend Login</h2>
-                <div class="info-item">
-                    <span class="info-label">Username:</span>
-                    <div class="credential-container">
-                        <span class="info-value"><strong id="admin-username">${loginInfo.adminUser}</strong></span>
-                        <button class="copy-button" onclick="copyUsername()">📋 Copy</button>
-                        <span class="copy-feedback" id="username-copy-feedback">Copied!</span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Password:</span>
-                    <div class="credential-container">
-                        <span class="info-value"><strong id="admin-password">${loginInfo.adminPassword}</strong></span>
-                        <button class="copy-button" onclick="copyPassword()">📋 Copy</button>
-                        <span class="copy-feedback" id="password-copy-feedback">Copied!</span>
-                    </div>
-                </div>
-                <p><em>💡 These credentials are automatically generated for each instance.</em></p>
-                `}
-            </div>
-            
-            <div class="info-section">
-                <h2>🗄️ Database Connection</h2>
-                <h3>📦 Container-Internal (from within containers)</h3>
-                <div class="info-item">
-                    <span class="info-label">Host:</span>
-                    <div class="credential-container">
-                        <span class="info-value"><strong id="db-host">${loginInfo.dbHost}</strong></span>
-                        <button class="copy-button" onclick="copyDbHost()">📋 Copy</button>
-                        <span class="copy-feedback" id="dbhost-copy-feedback">Copied!</span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Port:</span>
-                    <div class="credential-container">
-                        <span class="info-value"><strong>3306</strong></span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Database:</span>
-                    <div class="credential-container">
-                        <span class="info-value"><strong id="db-name">${loginInfo.dbName}</strong></span>
-                        <button class="copy-button" onclick="copyDbName()">📋 Copy</button>
-                        <span class="copy-feedback" id="dbname-copy-feedback">Copied!</span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Username:</span>
-                    <div class="credential-container">
-                        <span class="info-value"><strong id="db-user">${loginInfo.dbUser}</strong></span>
-                        <button class="copy-button" onclick="copyDbUser()">📋 Copy</button>
-                        <span class="copy-feedback" id="dbuser-copy-feedback">Copied!</span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Password:</span>
-                    <div class="credential-container">
-                        <span class="info-value"><strong id="db-password">${loginInfo.dbPassword}</strong></span>
-                        <button class="copy-button" onclick="copyDbPassword()">📋 Copy</button>
-                        <span class="copy-feedback" id="dbpassword-copy-feedback">Copied!</span>
-                    </div>
-                </div>
-                
-                <h4>🔑 Root User (Container-Internal)</h4>
-                <div class="info-item">
-                    <span class="info-label">Username:</span>
-                    <div class="credential-container">
-                        <span class="info-value"><strong id="db-root-user">root</strong></span>
-                        <button class="copy-button" onclick="copyDbRootUser()">📋 Copy</button>
-                        <span class="copy-feedback" id="dbrootuser-copy-feedback">Copied!</span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Password:</span>
-                    <div class="credential-container">
-                        <span class="info-value"><strong id="db-root-password">${loginInfo.dbRootPassword}</strong></span>
-                        <button class="copy-button" onclick="copyDbRootPassword()">📋 Copy</button>
-                        <span class="copy-feedback" id="dbrootpassword-copy-feedback">Copied!</span>
-                    </div>
-                </div>
-                
-                <h3>🌐 External Access (from localhost/phpMyAdmin/tools)</h3>
-                <div class="info-item">
-                    <span class="info-label">Host:</span>
-                    <div class="credential-container">
-                        <span class="info-value"><strong id="db-external-host">${loginInfo.dbExternalHost}</strong></span>
-                        <button class="copy-button" onclick="copyDbExternalHost()">📋 Copy</button>
-                        <span class="copy-feedback" id="dbexternalhost-copy-feedback">Copied!</span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Port:</span>
-                    <div class="credential-container">
-                        <span class="info-value"><strong id="db-external-port">${loginInfo.dbExternalPort}</strong></span>
-                        <button class="copy-button" onclick="copyDbExternalPort()">📋 Copy</button>
-                        <span class="copy-feedback" id="dbexternalport-copy-feedback">Copied!</span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Database:</span>
-                    <div class="credential-container">
-                        <span class="info-value"><strong id="db-name-ext">${loginInfo.dbName}</strong></span>
-                        <button class="copy-button" onclick="copyDbNameExt()">📋 Copy</button>
-                        <span class="copy-feedback" id="dbname-ext-copy-feedback">Copied!</span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Username:</span>
-                    <div class="credential-container">
-                        <span class="info-value"><strong id="db-user-ext">${loginInfo.dbUser}</strong></span>
-                        <button class="copy-button" onclick="copyDbUserExt()">📋 Copy</button>
-                        <span class="copy-feedback" id="dbuser-ext-copy-feedback">Copied!</span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Password:</span>
-                    <div class="credential-container">
-                        <span class="info-value"><strong id="db-password-ext">${loginInfo.dbPassword}</strong></span>
-                        <button class="copy-button" onclick="copyDbPasswordExt()">📋 Copy</button>
-                        <span class="copy-feedback" id="dbpassword-ext-copy-feedback">Copied!</span>
-                    </div>
-                </div>
-                
-                <h4>🔑 Root User (External Access)</h4>
-                <div class="info-item">
-                    <span class="info-label">Username:</span>
-                    <div class="credential-container">
-                        <span class="info-value"><strong id="db-root-user-ext">root</strong></span>
-                        <button class="copy-button" onclick="copyDbRootUserExt()">📋 Copy</button>
-                        <span class="copy-feedback" id="dbrootuser-ext-copy-feedback">Copied!</span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Password:</span>
-                    <div class="credential-container">
-                        <span class="info-value"><strong id="db-root-password-ext">${loginInfo.dbRootPassword}</strong></span>
-                        <button class="copy-button" onclick="copyDbRootPasswordExt()">📋 Copy</button>
-                        <span class="copy-feedback" id="dbrootpassword-ext-copy-feedback">Copied!</span>
-                    </div>
-                </div>
-                
-                ${loginInfo.phpmyadminUrl ? `
-                <div class="info-item">
-                    <span class="info-label">phpMyAdmin:</span>
-                    <span class="info-value"><a href="${loginInfo.phpmyadminUrl}" class="url-link">${loginInfo.phpmyadminUrl}</a></span>
-                </div>` : ''}
-                <p><em>💡 ${loginInfo.mysqlPort ? 'Use external credentials for tools like phpMyAdmin, MySQL Workbench, etc.' : 'Custom instances expose MySQL port, standard instances use internal networking only.'}</em></p>
-            </div>
-            
-            <div class="info-section">
-                <h2>⚙️ System Information</h2>
-                <div class="info-item">
-                    <span class="info-label">Instance Type:</span>
-                    <span class="info-value">${loginInfo.instanceType === 'custom' ? 'Custom Instance' : 'REDAXO Instance'}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">PHP Version:</span>
-                    <span class="info-value">${loginInfo.phpVersion}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">MariaDB Version:</span>
-                    <span class="info-value">${loginInfo.mariadbVersion}</span>
-                </div>
-            </div>
-            
-            <p><em>📋 Click on any value to select and copy it.</em></p>
-            
-            <script>
-                function copyUsername() {
-                    const usernameElement = document.getElementById('admin-username');
-                    const feedbackElement = document.getElementById('username-copy-feedback');
-                    
-                    if (usernameElement) {
-                        const username = usernameElement.textContent;
-                        navigator.clipboard.writeText(username).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy username: ', err);
-                            // Fallback for older browsers
-                            const textArea = document.createElement('textarea');
-                            textArea.value = username;
-                            document.body.appendChild(textArea);
-                            textArea.select();
-                            document.execCommand('copy');
-                            document.body.removeChild(textArea);
-                            
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        });
-                    }
-                }
-
-                function copyPassword() {
-                    const passwordElement = document.getElementById('admin-password');
-                    const feedbackElement = document.getElementById('password-copy-feedback');
-                    
-                    if (passwordElement) {
-                        const password = passwordElement.textContent;
-                        navigator.clipboard.writeText(password).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy password: ', err);
-                            // Fallback for older browsers
-                            const textArea = document.createElement('textarea');
-                            textArea.value = password;
-                            document.body.appendChild(textArea);
-                            textArea.select();
-                            document.execCommand('copy');
-                            document.body.removeChild(textArea);
-                            
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        });
-                    }
-                }
-
-                function copyDbHost() {
-                    const element = document.getElementById('db-host');
-                    const feedbackElement = document.getElementById('dbhost-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db host: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbName() {
-                    const element = document.getElementById('db-name');
-                    const feedbackElement = document.getElementById('dbname-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db name: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbUser() {
-                    const element = document.getElementById('db-user');
-                    const feedbackElement = document.getElementById('dbuser-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db user: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbPassword() {
-                    const element = document.getElementById('db-password');
-                    const feedbackElement = document.getElementById('dbpassword-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db password: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbExternalHost() {
-                    const element = document.getElementById('db-external-host');
-                    const feedbackElement = document.getElementById('dbexternalhost-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db external host: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbExternalPort() {
-                    const element = document.getElementById('db-external-port');
-                    const feedbackElement = document.getElementById('dbexternalport-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db external port: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbNameExt() {
-                    const element = document.getElementById('db-name-ext');
-                    const feedbackElement = document.getElementById('dbname-ext-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db name ext: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbUserExt() {
-                    const element = document.getElementById('db-user-ext');
-                    const feedbackElement = document.getElementById('dbuser-ext-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db user ext: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbPasswordExt() {
-                    const element = document.getElementById('db-password-ext');
-                    const feedbackElement = document.getElementById('dbpassword-ext-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db password ext: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbHostExternal() {
-                    const element = document.getElementById('db-host-external');
-                    const feedbackElement = document.getElementById('dbhostexternal-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy external db host: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbPortExternal() {
-                    const element = document.getElementById('db-port-external');
-                    const feedbackElement = document.getElementById('dbportexternal-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy external db port: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbRootUser() {
-                    const element = document.getElementById('db-root-user');
-                    const feedbackElement = document.getElementById('dbrootuser-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db root user: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbRootPassword() {
-                    const element = document.getElementById('db-root-password');
-                    const feedbackElement = document.getElementById('dbrootpassword-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db root password: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbRootUserExt() {
-                    const element = document.getElementById('db-root-user-ext');
-                    const feedbackElement = document.getElementById('dbrootuser-ext-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db root user ext: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbRootPasswordExt() {
-                    const element = document.getElementById('db-root-password-ext');
-                    const feedbackElement = document.getElementById('dbrootpassword-ext-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db root password ext: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function fallbackCopy(text, feedbackElement) {
-                    const textArea = document.createElement('textarea');
-                    textArea.value = text;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                    
-                    feedbackElement.classList.add('show');
-                    setTimeout(() => {
-                        feedbackElement.classList.remove('show');
-                    }, 2000);
-                }
-            </script>
-        </body>
-        </html>
-    `;
-}
-
 function getHelpHtml(): string {
     return `
         <!DOCTYPE html>
@@ -2161,6 +1579,91 @@ function getHelpHtml(): string {
         </body>
         </html>
     `;
+}
+
+/**
+ * Generate modern login info HTML with glass morphism design
+ */
+/**
+ * Generate modern login info HTML with glass morphism design using template system
+ */
+async function getModernLoginInfoHtml(webview: vscode.Webview, context: vscode.ExtensionContext, instanceName: string, loginInfo: any): Promise<string> {
+    // Import synchronous fs for template reading
+    const fsSync = require('fs');
+    
+    // Get URIs for CSS and JS files
+    const cssUri = webview.asWebviewUri(
+        vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'loginInfo', 'loginInfo.css')
+    );
+    const jsUri = webview.asWebviewUri(
+        vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'loginInfo', 'loginInfo.js')
+    );
+    
+    // Read the HTML template
+    const templatePath = vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'loginInfo', 'loginInfo.html').fsPath;
+    let htmlTemplate = fsSync.readFileSync(templatePath, 'utf8');
+    
+    // Prepare template variables
+    const status = loginInfo.running ? 'running' : 'stopped';
+    const statusIcon = loginInfo.running ? '🟢' : '🔴';
+    const statusText = loginInfo.running ? 'Running' : 'Stopped';
+    
+    // Handle HTTPS URLs
+    const httpsUrls = loginInfo.frontendUrlHttps ? 
+        `<div class="url-item">
+            <div class="url-label">Frontend (HTTPS)</div>
+            <div class="url-value">
+                <a href="${loginInfo.frontendUrlHttps}" class="url-link">${loginInfo.frontendUrlHttps}</a>
+                <span class="https-badge">🔒</span>
+                <button class="copy-btn micro-btn" data-copy="${loginInfo.frontendUrlHttps}">
+                    <span class="copy-icon">📋</span>
+                </button>
+            </div>
+        </div>
+        <div class="url-item">
+            <div class="url-label">Backend (HTTPS)</div>
+            <div class="url-value">
+                <a href="${loginInfo.backendUrlHttps}" class="url-link">${loginInfo.backendUrlHttps}</a>
+                <span class="https-badge">🔒</span>
+                <button class="copy-btn micro-btn" data-copy="${loginInfo.backendUrlHttps}">
+                    <span class="copy-icon">📋</span>
+                </button>
+            </div>
+        </div>` : '';
+    
+    // Replace template variables
+    htmlTemplate = htmlTemplate
+        .replace(/{{INSTANCE_NAME}}/g, instanceName)
+        .replace(/{{CSS_URI}}/g, cssUri.toString())
+        .replace(/{{JS_URI}}/g, jsUri.toString())
+        .replace(/{{STATUS}}/g, status)
+        .replace(/{{STATUS_ICON}}/g, statusIcon)
+        .replace(/{{STATUS_TEXT}}/g, statusText)
+        .replace(/{{FRONTEND_URL}}/g, loginInfo.frontendUrl || 'http://localhost:' + (loginInfo.httpPort || '80'))
+        .replace(/{{BACKEND_URL}}/g, loginInfo.backendUrl || 'http://localhost:' + (loginInfo.httpPort || '80') + '/redaxo/index.php')
+        .replace(/{{FRONTEND_HTTPS_URL}}/g, `https://${instanceName}.local`)
+        .replace(/{{BACKEND_HTTPS_URL}}/g, `https://${instanceName}.local/redaxo`)
+        .replace(/{{HTTPS_URLS}}/g, httpsUrls)
+        .replace(/{{CONTAINER_NAME}}/g, loginInfo.containerName || instanceName)
+        .replace(/{{HTTP_PORT}}/g, loginInfo.httpPort || 'Not set')
+        .replace(/{{HTTPS_PORT}}/g, loginInfo.httpsPort || '')
+        .replace(/{{INSTANCE_TYPE}}/g, loginInfo.instanceType || 'Standard')
+        .replace(/{{CUSTOM_INSTANCE}}/g, loginInfo.instanceType === 'custom' ? 'custom' : 'redaxo')
+        // REDAXO Admin Credentials
+        .replace(/{{ADMIN_USER}}/g, 'admin')
+        .replace(/{{ADMIN_PASSWORD}}/g, 'admin')
+        // Database Credentials
+        .replace(/{{DB_HOST_INTERNAL}}/g, loginInfo.dbHost || 'mysql')
+        .replace(/{{DB_HOST_EXTERNAL}}/g, loginInfo.dbHostExternal || 'localhost')
+        .replace(/{{DB_NAME}}/g, loginInfo.dbName || instanceName || 'redaxo')
+        .replace(/{{DB_USER}}/g, loginInfo.dbUser || 'redaxo')
+        .replace(/{{DB_PASSWORD}}/g, loginInfo.dbPassword || 'redaxo')
+        .replace(/{{DB_ROOT_PASSWORD}}/g, loginInfo.dbRootPassword || 'root')
+        .replace(/{{DB_PORT}}/g, loginInfo.dbPort || '3306')
+        .replace(/{{DB_PORT_EXTERNAL}}/g, loginInfo.dbPort || '3306')
+        .replace(/{{DB_PORT_EXTERNAL}}/g, loginInfo.dbPortExternal || '3306');
+    
+    return htmlTemplate;
 }
 
 // getDatabaseInfoHtml entfernt

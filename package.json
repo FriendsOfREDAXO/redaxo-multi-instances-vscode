@@ -77,6 +77,11 @@
         "icon": "$(key)"
       },
       {
+        "command": "redaxo-instances.showModernLoginInfo",
+        "title": "🎨 Modern Login Info (Preview)",
+        "icon": "$(preview)"
+      },
+      {
         "command": "redaxo-instances.importDump",
         "title": "Import Dump",
         "icon": "$(cloud-upload)"
@@ -211,14 +216,19 @@
           "group": "4_info@1"
         },
         {
-          "command": "redaxo-instances.importDump",
+          "command": "redaxo-instances.showModernLoginInfo",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
           "group": "4_info@2"
         },
         {
-          "command": "redaxo-instances.setupSSL",
+          "command": "redaxo-instances.importDump",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
           "group": "4_info@3"
+        },
+        {
+          "command": "redaxo-instances.setupSSL",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "group": "4_info@4"
         },
         {
           "command": "redaxo-instances.repairInstance",

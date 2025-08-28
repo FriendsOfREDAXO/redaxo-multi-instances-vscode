@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔑 Login Info - {{INSTANCE_NAME}}</title>
+    <link rel="stylesheet" href="{{CSS_URI}}">
+</head>
+<body>
+    <div class="container">
+        <!-- Status Header with Glass Morphism -->
+        <div class="glass-card status-header animate-in">
+            <div class="status-icon-wrapper">
+                <div class="status-icon">{{STATUS_ICON}}</div>
+                <div class="status-pulse running"></div>
+            </div>
+            <div class="header-content">
+                <h1 class="instance-title">{{INSTANCE_NAME}}</h1>
+                <p class="status-text">{{STATUS_TEXT}}</p>
+            </div>
+        </div>
+
+        <!-- Quick Access URLs -->
+        <div class="glass-card access-urls animate-in" style="animation-delay: 0.1s">
+            <div class="card-header">
+                <div class="card-icon">🌐</div>
+                <h2>Access URLs</h2>
+            </div>
+            <div class="url-grid">
+                <div class="url-item">
+                    <div class="url-label">Frontend (HTTP)</div>
+                    <div class="url-value">
+                        <a href="{{FRONTEND_URL}}" class="url-link">{{FRONTEND_URL}}</a>
+                        <button class="copy-btn micro-btn" data-copy="{{FRONTEND_URL}}">
+                            <span class="copy-icon">📋</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="url-item">
+                    <div class="url-label">Backend (HTTP)</div>
+                    <div class="url-value">
+                        <a href="{{BACKEND_URL}}" class="url-link">{{BACKEND_URL}}</a>
+                        <button class="copy-btn micro-btn" data-copy="{{BACKEND_URL}}">
+                            <span class="copy-icon">📋</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="url-item">
+                    <div class="url-label">Frontend (HTTPS) <span class="url-note">⚠️ Requires hosts entry</span></div>
+                    <div class="url-value">
+                        <a href="{{FRONTEND_HTTPS_URL}}" class="url-link">{{FRONTEND_HTTPS_URL}}</a>
+                        <button class="copy-btn micro-btn" data-copy="{{FRONTEND_HTTPS_URL}}">
+                            <span class="copy-icon">📋</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="url-item">
+                    <div class="url-label">Backend (HTTPS) <span class="url-note">⚠️ Requires hosts entry</span></div>
+                    <div class="url-value">
+                        <a href="{{BACKEND_HTTPS_URL}}" class="url-link">{{BACKEND_HTTPS_URL}}</a>
+                        <button class="copy-btn micro-btn" data-copy="{{BACKEND_HTTPS_URL}}">
+                            <span class="copy-icon">📋</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="hosts-info">
+                <div class="info-icon">💡</div>
+                <div class="info-text">
+                    <strong>HTTPS URLs require hosts file entry:</strong><br>
+                    <code>127.0.0.1 {{INSTANCE_NAME}}.local</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- REDAXO Login Credentials -->
+        <div class="glass-card redaxo-login animate-in" style="animation-delay: 0.2s">
+            <div class="card-header">
+                <div class="card-icon">🔑</div>
+                <h2>REDAXO Backend Login</h2>
+            </div>
+            <div class="login-grid">
+                <div class="login-item">
+                    <div class="login-label">Username</div>
+                    <div class="login-value">
+                        <span class="login-credential">{{ADMIN_USER}}</span>
+                        <button class="copy-btn micro-btn" data-copy="{{ADMIN_USER}}">
+                            <span class="copy-icon">📋</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="login-item">
+                    <div class="login-label">Password</div>
+                    <div class="login-value">
+                        <span class="login-credential password-field hidden">{{ADMIN_PASSWORD}}</span>
+                        <span class="login-credential password-placeholder">••••••••</span>
+                        <button class="copy-btn micro-btn" data-copy="{{ADMIN_PASSWORD}}">
+                            <span class="copy-icon">📋</span>
+                        </button>
+                        <button class="toggle-visibility micro-btn" data-target="password-field">
+                            <span class="visibility-icon">�</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Database Connection -->
+        <div class="glass-card database-section animate-in" style="animation-delay: 0.3s">
+            <div class="card-header">
+                <div class="card-icon">🗄️</div>
+                <h2>Database Connection</h2>
+            </div>
+            
+            <!-- Container-Internal Tab -->
+            <div class="tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" data-tab="internal">
+                        <span class="tab-icon">📦</span>
+                        Container-Internal
+                    </button>
+                    <button class="tab-btn" data-tab="external">
+                        <span class="tab-icon">🌐</span>
+                        External Access
+                    </button>
+                </div>
+
+                <div class="tab-content active" id="tab-internal">
+                    <div class="db-grid">
+                        <div class="db-item">
+                            <label>Host</label>
+                            <div class="credential-field">
+                                <span class="credential-value">{{DB_HOST_INTERNAL}}</span>
+                                <button class="copy-btn micro-btn" data-copy="{{DB_HOST_INTERNAL}}">
+                                    <span class="copy-icon">📋</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="db-item">
+                            <label>Port</label>
+                            <div class="credential-field">
+                                <span class="credential-value">3306</span>
+                                <button class="copy-btn micro-btn" data-copy="3306">
+                                    <span class="copy-icon">📋</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="db-item">
+                            <label>Database</label>
+                            <div class="credential-field">
+                                <span class="credential-value">{{DB_NAME}}</span>
+                                <button class="copy-btn micro-btn" data-copy="{{DB_NAME}}">
+                                    <span class="copy-icon">📋</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="db-item">
+                            <label>Username</label>
+                            <div class="credential-field">
+                                <span class="credential-value">{{DB_USER}}</span>
+                                <button class="copy-btn micro-btn" data-copy="{{DB_USER}}">
+                                    <span class="copy-icon">📋</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="db-item">
+                            <label>Password</label>
+                            <div class="credential-field">
+                                <span class="credential-value db-password hidden">{{DB_PASSWORD}}</span>
+                                <span class="credential-value password-placeholder">••••••••</span>
+                                <button class="copy-btn micro-btn" data-copy="{{DB_PASSWORD}}">
+                                    <span class="copy-icon">📋</span>
+                                </button>
+                                <button class="toggle-visibility micro-btn" data-target="db-password">
+                                    <span class="visibility-icon">�</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Root User Section -->
+                    <div class="root-section">
+                        <h4 class="root-title">🔑 Root User</h4>
+                        <div class="db-grid">
+                            <div class="db-item">
+                                <label>Username</label>
+                                <div class="credential-field">
+                                    <span class="credential-value">root</span>
+                                    <button class="copy-btn micro-btn" data-copy="root">
+                                        <span class="copy-icon">📋</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="db-item">
+                                <label>Password</label>
+                                <div class="credential-field">
+                                    <span class="credential-value root-password hidden">{{DB_ROOT_PASSWORD}}</span>
+                                    <span class="credential-value password-placeholder">••••••••</span>
+                                    <button class="copy-btn micro-btn" data-copy="{{DB_ROOT_PASSWORD}}">
+                                        <span class="copy-icon">📋</span>
+                                    </button>
+                                    <button class="toggle-visibility micro-btn" data-target="root-password">
+                                        <span class="visibility-icon">�</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-external">
+                    <div class="db-grid">
+                        <div class="db-item">
+                            <label>Host</label>
+                            <div class="credential-field">
+                                <span class="credential-value">{{DB_HOST_EXTERNAL}}</span>
+                                <button class="copy-btn micro-btn" data-copy="{{DB_HOST_EXTERNAL}}">
+                                    <span class="copy-icon">📋</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="db-item">
+                            <label>Port</label>
+                            <div class="credential-field">
+                                <span class="credential-value">{{DB_PORT_EXTERNAL}}</span>
+                                <button class="copy-btn micro-btn" data-copy="{{DB_PORT_EXTERNAL}}">
+                                    <span class="copy-icon">📋</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="db-item">
+                            <label>Database</label>
+                            <div class="credential-field">
+                                <span class="credential-value">{{DB_NAME}}</span>
+                                <button class="copy-btn micro-btn" data-copy="{{DB_NAME}}">
+                                    <span class="copy-icon">📋</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="db-item">
+                            <label>Username</label>
+                            <div class="credential-field">
+                                <span class="credential-value">{{DB_USER}}</span>
+                                <button class="copy-btn micro-btn" data-copy="{{DB_USER}}">
+                                    <span class="copy-icon">📋</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="db-item">
+                            <label>Password</label>
+                            <div class="credential-field">
+                                <span class="credential-value db-password-ext hidden">{{DB_PASSWORD}}</span>
+                                <span class="credential-value password-placeholder">••••••••</span>
+                                <button class="copy-btn micro-btn" data-copy="{{DB_PASSWORD}}">
+                                    <span class="copy-icon">📋</span>
+                                </button>
+                                <button class="toggle-visibility micro-btn" data-target="db-password-ext">
+                                    <span class="visibility-icon">🙈</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Copy Feedback Toast -->
+        <div class="copy-toast" id="copy-toast">
+            <div class="toast-icon">✅</div>
+            <div class="toast-message">Copied to clipboard!</div>
+        </div>
+    </div>
+
+    <script src="{{JS_URI}}"></script>
+</body>
+</html>
