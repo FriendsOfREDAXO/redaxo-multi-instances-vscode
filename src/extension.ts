@@ -149,11 +149,6 @@ function registerCommands(context: vscode.ExtensionContext) {
                     command: 'redaxo-instances.updateHosts'
                 },
                 {
-                    label: '$(settings-gear) Manage Hosts File',
-                    description: 'Clean duplicates, show entries',
-                    command: 'redaxo-instances.manageHosts'
-                },
-                {
                     label: '$(folder) Open Workspace in VS Code',
                     description: 'Open instance folder as workspace',
                     command: 'redaxo-instances.openWorkspace'
@@ -439,9 +434,7 @@ function registerCommands(context: vscode.ExtensionContext) {
             if (instanceName) {
                 const instance = await dockerService.getInstance(instanceName);
                 if (instance && instance.running) {
-                    // Use primary URL (HTTPS if SSL enabled, HTTP otherwise)
-                    const url = instance.primaryBackendUrl || instance.backendUrl;
-                    vscode.env.openExternal(vscode.Uri.parse(url));
+                    vscode.env.openExternal(vscode.Uri.parse(instance.backendUrl));
                 } else {
                     vscode.window.showWarningMessage(`Instance "${instanceName}" is not running`);
                 }
@@ -656,60 +649,6 @@ function registerCommands(context: vscode.ExtensionContext) {
             }
         }),
 
-        // Hosts File Management
-        vscode.commands.registerCommand('redaxo-instances.manageHosts', async () => {
-            const choice = await vscode.window.showQuickPick([
-                {
-                    label: '$(eye) Show Hosts File',
-                    description: 'View current hosts file entries',
-                    action: 'show'
-                },
-                {
-                    label: '$(tools) Clean Duplicates',
-                    description: 'Remove duplicate .local entries',
-                    action: 'clean'
-                },
-                {
-                    label: '$(refresh) Reset Local Entries',
-                    description: 'Remove all .local entries and recreate',
-                    action: 'reset'
-                }
-            ], {
-                placeHolder: 'Select hosts file action'
-            });
-
-            if (choice) {
-                const terminal = vscode.window.createTerminal({
-                    name: 'Hosts Manager',
-                });
-                terminal.show();
-
-                switch (choice.action) {
-                    case 'show':
-                        terminal.sendText('echo "📋 Current .local entries in hosts file:"');
-                        terminal.sendText('cat /etc/hosts | grep -n "local" || echo "No .local entries found"');
-                        break;
-                    case 'clean':
-                        terminal.sendText('echo "🧹 Cleaning duplicate .local entries..."');
-                        terminal.sendText('# First, backup the hosts file');
-                        terminal.sendText('sudo cp /etc/hosts /etc/hosts.backup.$(date +%Y%m%d_%H%M%S)');
-                        terminal.sendText('# Remove duplicates while preserving order');
-                        terminal.sendText('sudo awk \'!seen[$0]++\' /etc/hosts | sudo tee /etc/hosts.tmp && sudo mv /etc/hosts.tmp /etc/hosts');
-                        terminal.sendText('echo "✅ Duplicates cleaned. Showing remaining .local entries:"');
-                        terminal.sendText('cat /etc/hosts | grep "local"');
-                        break;
-                    case 'reset':
-                        terminal.sendText('echo "🔄 Resetting all .local entries..."');
-                        terminal.sendText('# Backup current hosts file');
-                        terminal.sendText('sudo cp /etc/hosts /etc/hosts.backup.$(date +%Y%m%d_%H%M%S)');
-                        terminal.sendText('# Remove all .local entries');
-                        terminal.sendText('sudo sed -i.bak "/\\.local/d" /etc/hosts');
-                        terminal.sendText('echo "✅ All .local entries removed. Use the extension to add them back."');
-                        break;
-                }
-            }
-        }),
-
         // Update hosts file for local domains
         vscode.commands.registerCommand('redaxo-instances.updateHosts', async (instanceItem?: any) => {
             let instanceName: string | undefined;
@@ -724,7 +663,7 @@ function registerCommands(context: vscode.ExtensionContext) {
             }
             
             if (instanceName) {
-                // Check if entry already exists with exact pattern matching
+                // Check if entry already exists
                 const hostEntry = `127.0.0.1 ${instanceName}.local`;
                 let entryExists = false;
                 
@@ -732,38 +671,26 @@ function registerCommands(context: vscode.ExtensionContext) {
                     const { exec } = require('child_process');
                     const { promisify } = require('util');
                     const execPromise = promisify(exec);
-                    // Use exact pattern matching to avoid false positives
-                    const { stdout } = await execPromise(`grep -c "^127\\.0\\.0\\.1[[:space:]]\\+${instanceName}\\.local[[:space:]]*$" /etc/hosts || echo "0"`);
-                    entryExists = parseInt(stdout.trim()) > 0;
+                    await execPromise(`grep -q "${instanceName}.local" /etc/hosts`);
+                    entryExists = true;
                 } catch {
                     // Entry doesn't exist
-                    entryExists = false;
                 }
 
                 if (entryExists) {
-                    const choice = await vscode.window.showInformationMessage(
+                    vscode.window.showInformationMessage(
                         `${instanceName}.local is already in your hosts file! ✅`,
                         'Show Hosts File',
-                        'Clean Duplicates',
                         'OK'
-                    );
-                    
-                    if (choice === 'Show Hosts File') {
-                        const terminal = vscode.window.createTerminal({
-                            name: `Hosts File - ${instanceName}`,
-                        });
-                        terminal.show();
-                        terminal.sendText('cat /etc/hosts | grep -E "(local|127\\.0\\.0\\.1)"');
-                    } else if (choice === 'Clean Duplicates') {
-                        const terminal = vscode.window.createTerminal({
-                            name: `Clean Hosts - ${instanceName}`,
-                        });
-                        terminal.show();
-                        terminal.sendText(`# Cleaning duplicate entries for ${instanceName}.local`);
-                        terminal.sendText(`sudo sed -i.bak "/^127\\.0\\.0\\.1[[:space:]]\\+${instanceName}\\.local[[:space:]]*$/d" /etc/hosts`);
-                        terminal.sendText(`echo "127.0.0.1 ${instanceName}.local" | sudo tee -a /etc/hosts`);
-                        vscode.window.showInformationMessage('Duplicate cleanup commands sent to terminal. Please run them.');
-                    }
+                    ).then(choice => {
+                        if (choice === 'Show Hosts File') {
+                            const terminal = vscode.window.createTerminal({
+                                name: `Hosts File - ${instanceName}`,
+                            });
+                            terminal.show();
+                            terminal.sendText('cat /etc/hosts | grep -E "(local|127\\.0\\.0\\.1)"');
+                        }
+                    });
                     return;
                 }
 
@@ -1192,486 +1119,20 @@ function getLoginInfoHtml(instanceName: string, loginInfo: any): string {
         <head>
             <title>Login Information - ${instanceName}</title>
             <style>
-                :root {
-                    --glass-bg: rgba(255, 255, 255, 0.03);
-                    --glass-border: rgba(255, 255, 255, 0.08);
-                    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-                    --glass-hover: rgba(255, 255, 255, 0.06);
-                    --accent: #4facfe;
-                    --success: #00f2fe;
-                    --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                }
-
                 body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    font-family: var(--vscode-font-family);
                     background: var(--vscode-editor-background);
                     color: var(--vscode-editor-foreground);
-                    margin: 0;
-                    padding: 16px;
-                    line-height: 1.5;
-                    overflow-x: hidden;
+                    padding: 20px;
+                    line-height: 1.6;
                 }
-                
-                .dashboard-container {
-                    max-width: 900px;
-                    margin: 0 auto;
-                    animation: slideUp 0.5s ease-out;
-                }
-                
-                .dashboard-header {
-                    text-align: center;
-                    background: var(--glass-bg);
-                    backdrop-filter: blur(24px);
-                    border-radius: 20px;
-                    padding: 24px;
-                    margin-bottom: 20px;
-                    border: 1px solid var(--glass-border);
-                    box-shadow: var(--glass-shadow);
-                    position: relative;
-                    overflow: hidden;
-                }
-                
-                .dashboard-header::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    height: 2px;
-                    background: var(--gradient);
-                }
-                
-                .dashboard-header h1 {
-                    margin: 0 0 12px 0;
-                    font-size: 22px;
-                    font-weight: 600;
-                    background: var(--gradient);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    background-clip: text;
-                }
-                
-                .status-badge {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    padding: 6px 16px;
-                    border-radius: 16px;
-                    font-size: 12px;
-                    font-weight: 600;
-                    backdrop-filter: blur(12px);
-                    border: 1px solid var(--glass-border);
-                }
-                
-                .status-running {
-                    background: rgba(79, 172, 254, 0.15);
-                    color: var(--accent);
-                    border-color: rgba(79, 172, 254, 0.3);
-                }
-                
-                .status-stopped {
-                    background: rgba(255, 107, 107, 0.15);
-                    color: #ff6b6b;
-                    border-color: rgba(255, 107, 107, 0.3);
-                }
-                
-                .card-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                    gap: 16px;
-                    margin-bottom: 20px;
-                }
-                
-                .card {
-                    background: var(--glass-bg);
-                    backdrop-filter: blur(24px);
-                    border-radius: 16px;
-                    padding: 18px;
-                    border: 1px solid var(--glass-border);
-                    box-shadow: var(--glass-shadow);
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    position: relative;
-                    overflow: hidden;
-                }
-                
-                .card::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    height: 1px;
-                    background: var(--gradient);
-                    opacity: 0;
-                    transition: opacity 0.3s ease;
-                }
-                
-                .card:hover {
-                    transform: translateY(-3px);
-                    background: var(--glass-hover);
-                    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
-                }
-                
-                .card:hover::before {
-                    opacity: 1;
-                }
-                
-                .card-header {
-                    display: flex;
-                    align-items: center;
-                    margin-bottom: 16px;
-                    padding-bottom: 12px;
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-                }
-                
-                .card-title {
-                    font-size: 13px;
-                    font-weight: 700;
-                    opacity: 0.8;
-                    text-transform: uppercase;
-                    letter-spacing: 0.8px;
-                    margin: 0;
-                }
-                
-                .card-icon {
-                    width: 28px;
-                    height: 28px;
-                    border-radius: 8px;
-                    background: var(--gradient);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin-right: 12px;
-                    font-size: 14px;
-                }
-                
-                .credential-items {
-                    display: grid;
-                    gap: 6px;
-                }
-                
-                .credential-item {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 10px 14px;
-                    background: rgba(255, 255, 255, 0.02);
-                    border-radius: 10px;
-                    border: 1px solid rgba(255, 255, 255, 0.03);
-                    transition: all 0.2s ease;
-                    min-height: 32px;
-                }
-                
-                .credential-item:hover {
-                    background: rgba(255, 255, 255, 0.06);
-                    border-color: rgba(255, 255, 255, 0.08);
-                }
-                
-                .credential-item.primary-url {
-                    background: rgba(79, 172, 254, 0.08);
-                    border-color: rgba(79, 172, 254, 0.2);
-                }
-                
-                .credential-item.primary-url:hover {
-                    background: rgba(79, 172, 254, 0.12);
-                    border-color: rgba(79, 172, 254, 0.3);
-                }
-                
-                .credential-label {
-                    font-size: 11px;
-                    font-weight: 600;
-                    opacity: 0.7;
-                    min-width: 70px;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                }
-                
-                .credential-item.primary-url .credential-label {
-                    color: var(--accent);
-                    opacity: 1;
-                }
-                
-                .credential-value {
-                    font-family: 'SF Mono', Monaco, monospace;
-                    font-size: 11px;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    flex: 1;
-                    justify-content: flex-end;
-                }
-                
-                .url-link {
-                    color: var(--accent);
-                    text-decoration: none;
-                    padding: 4px 8px;
-                    border-radius: 6px;
-                    background: rgba(79, 172, 254, 0.1);
-                    border: 1px solid rgba(79, 172, 254, 0.2);
-                    transition: all 0.2s ease;
-                    font-size: 11px;
-                }
-                
-                .url-link:hover {
-                    background: rgba(79, 172, 254, 0.2);
-                    border-color: rgba(79, 172, 254, 0.4);
-                    transform: scale(1.02);
-                }
-                
-                .ssl-indicator {
-                    background: linear-gradient(135deg, var(--accent) 0%, var(--success) 100%);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    background-clip: text;
-                    font-weight: 700;
-                }
-                
-                .copy-btn {
-                    background: rgba(255, 255, 255, 0.08);
-                    border: 1px solid rgba(255, 255, 255, 0.15);
-                    border-radius: 6px;
-                    padding: 4px 6px;
-                    cursor: pointer;
-                    font-size: 10px;
-                    transition: all 0.2s ease;
-                    backdrop-filter: blur(8px);
-                    min-width: 20px;
-                    height: 20px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: var(--vscode-editor-foreground);
-                }
-                
-                .copy-btn:hover {
-                    background: rgba(255, 255, 255, 0.15);
-                    border-color: rgba(255, 255, 255, 0.25);
-                    transform: scale(1.1);
-                }
-                
-                .copy-btn:active {
-                    transform: scale(0.9);
-                    background: var(--gradient);
-                    border-color: transparent;
-                }
-                
-                @keyframes slideUp {
-                    from {
-                        opacity: 0;
-                        transform: translateY(30px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-                
-                @keyframes shimmer {
-                    0% { background-position: -200px 0; }
-                    100% { background-position: calc(200px + 100%) 0; }
-                }
-                
-                .shimmer {
-                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
-                    background-size: 200px 100%;
-                    animation: shimmer 2s infinite;
-                }
-                
-                @media (max-width: 768px) {
-                    .card-grid {
-                        grid-template-columns: 1fr;
-                    }
-                    
-                    .credential-item {
-                        flex-direction: column;
-                        align-items: stretch;
-                        gap: 8px;
-                        padding: 12px;
-                    }
-                    
-                    .credential-value {
-                        justify-content: space-between;
-                    }
-                    
-                    .credential-label {
-                        min-width: unset;
-                    }
-                }
-            </style>
-                }
-                
-                .card-icon {
-                    font-size: 1.8em;
-                    margin-right: 12px;
-                    width: 40px;
-                    text-align: center;
-                }
-                
-                .card-title {
-                    font-size: 1.4em;
-                    font-weight: 600;
-                    color: var(--vscode-textLink-foreground);
-                    margin: 0;
-                }
-                
-                /* Credential Items */
-                .credential-section {
-                    margin-bottom: 25px;
-                }
-                
-                .section-subtitle {
-                    font-size: 1.1em;
-                    font-weight: 600;
-                    color: var(--vscode-textLink-foreground);
-                    margin: 0 0 15px 0;
-                    padding: 10px 15px;
-                    background: var(--vscode-button-secondaryBackground);
-                    border-radius: 8px;
-                    border-left: 4px solid var(--vscode-textLink-foreground);
-                }
-                
-                .credential-item {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 12px 15px;
-                    margin-bottom: 8px;
-                    background: var(--vscode-input-background);
-                    border: 1px solid var(--vscode-input-border);
-                    border-radius: 8px;
-                    transition: all 0.2s ease;
-                    position: relative;
-                }
-                
-                .credential-item:hover {
-                    background: var(--vscode-list-hoverBackground);
-                    transform: translateX(5px);
-                }
-                
-                .credential-label {
-                    font-weight: 600;
-                    color: var(--vscode-textLink-foreground);
-                    min-width: 100px;
-                    font-size: 0.9em;
-                }
-                
-                .credential-value {
-                    font-family: var(--vscode-editor-font-family);
-                    font-weight: bold;
-                    color: var(--vscode-editor-foreground);
-                    user-select: all;
-                    flex: 1;
-                    margin: 0 15px;
-                    padding: 6px 10px;
-                    background: var(--vscode-editor-background);
-                    border-radius: 4px;
-                    border: 1px solid var(--vscode-widget-border);
-                }
-                
-                /* Enhanced Copy Buttons */
-                .copy-button {
-                    padding: 8px 12px;
-                    background: var(--vscode-button-background);
-                    color: var(--vscode-button-foreground);
-                    border: none;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-size: 12px;
-                    font-weight: 500;
-                    transition: all 0.2s ease;
-                    white-space: nowrap;
-                }
-                
-                .copy-button:hover {
-                    background: var(--vscode-button-hoverBackground);
-                    transform: scale(1.05);
-                }
-                
-                .copy-button:active {
-                    transform: scale(0.95);
-                }
-                
-                .copy-feedback {
-                    font-size: 11px;
-                    color: var(--vscode-charts-green);
-                    font-weight: bold;
-                    opacity: 0;
-                    transition: opacity 0.3s ease;
-                    position: absolute;
-                    right: -60px;
-                    top: 50%;
-                    transform: translateY(-50%);
+                .status-header {
                     background: var(--vscode-widget-background);
-                    padding: 4px 8px;
+                    border: 1px solid var(--vscode-widget-border);
                     border-radius: 4px;
-                    border: 1px solid var(--vscode-charts-green);
-                    white-space: nowrap;
-                }
-                
-                .copy-feedback.show {
-                    opacity: 1;
-                }
-                
-                /* URL Links */
-                .url-link {
-                    color: var(--vscode-textLink-foreground);
-                    text-decoration: none;
-                    font-weight: 600;
-                    padding: 8px 12px;
-                    border-radius: 6px;
-                    background: var(--vscode-button-secondaryBackground);
-                    transition: all 0.2s ease;
-                    display: inline-block;
-                    margin: 2px;
-                }
-                
-                .url-link:hover {
-                    background: var(--vscode-button-secondaryHoverBackground);
-                    color: var(--vscode-textLink-activeForeground);
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-                }
-                
-                /* Special Card Colors */
-                .urls-card::before {
-                    background: linear-gradient(90deg, #4CAF50, #2196F3);
-                }
-                
-                .login-card::before {
-                    background: linear-gradient(90deg, #2196F3, #673AB7);
-                }
-                
-                .database-card::before {
-                    background: linear-gradient(90deg, #FF5722, #FF9800);
-                }
-                
-                .system-card::before {
-                    background: linear-gradient(90deg, #9C27B0, #E91E63);
-                }
-                
-                /* Responsive Design */
-                @media (max-width: 768px) {
-                    .card-grid {
-                        grid-template-columns: 1fr;
-                    }
-                    
-                    .dashboard-header h1 {
-                        font-size: 2em;
-                    }
-                    
-                    .credential-item {
-                        flex-direction: column;
-                        align-items: stretch;
-                    }
-                    
-                    .credential-label {
-                        margin-bottom: 8px;
-                    }
-                    
-                    .credential-value {
-                        margin: 0 0 10px 0;
-                    }
-                }
+                    padding: 20px;
+                    margin-bottom: 20px;
+                    text-align: center;
                 }
                 .info-section {
                     background: var(--vscode-widget-background);
@@ -1749,238 +1210,187 @@ function getLoginInfoHtml(instanceName: string, loginInfo: any): string {
             </style>
         </head>
         <body>
-            <div class="dashboard-container">
-                <div class="dashboard-header">
-                    <h1>${statusIcon} ${instanceName}</h1>
-                    <div class="status-badge ${loginInfo.running ? 'status-running' : 'status-stopped'}">
-                        ${statusText}
+            <div class="status-header">
+                <h1>${statusIcon} ${instanceName}</h1>
+                <p><strong>Status:</strong> ${statusText}</p>
+            </div>
+            
+            <div class="info-section">
+                <h2>🌐 Access URLs</h2>
+                <div class="info-item">
+                    <span class="info-label">Frontend (HTTP):</span>
+                    <span class="info-value"><a href="${loginInfo.frontendUrl}" class="url-link">${loginInfo.frontendUrl}</a></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Backend (HTTP):</span>
+                    <span class="info-value"><a href="${loginInfo.backendUrl}" class="url-link">${loginInfo.backendUrl}</a></span>
+                </div>
+                ${loginInfo.frontendUrlHttps ? `
+                <div class="info-item">
+                    <span class="info-label">Frontend (HTTPS):</span>
+                    <span class="info-value"><a href="${loginInfo.frontendUrlHttps}" class="url-link">${loginInfo.frontendUrlHttps}</a> 🔒</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Backend (HTTPS):</span>
+                    <span class="info-value"><a href="${loginInfo.backendUrlHttps}" class="url-link">${loginInfo.backendUrlHttps}</a> 🔒</span>
+                </div>` : ''}
+            </div>
+            
+            <div class="login-box">
+                ${loginInfo.instanceType === 'custom' ? `
+                <h2>🔧 Custom Instance</h2>
+                <p><em>⚠️ This is a Custom Instance. No REDAXO backend credentials available.</em></p>
+                <p><em>💡 Install REDAXO manually or use your own application.</em></p>
+                ` : `
+                <h2>🔑 REDAXO Backend Login</h2>
+                <div class="info-item">
+                    <span class="info-label">Username:</span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="admin-username">${loginInfo.adminUser}</strong></span>
+                        <button class="copy-button" onclick="copyUsername()">📋 Copy</button>
+                        <span class="copy-feedback" id="username-copy-feedback">Copied!</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Password:</span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="admin-password">${loginInfo.adminPassword}</strong></span>
+                        <button class="copy-button" onclick="copyPassword()">📋 Copy</button>
+                        <span class="copy-feedback" id="password-copy-feedback">Copied!</span>
+                    </div>
+                </div>
+                <p><em>💡 These credentials are automatically generated for each instance.</em></p>
+                `}
+            </div>
+            
+            <div class="info-section">
+                <h2>🗄️ Database Connection</h2>
+                <h3>📦 Container-Internal (from within containers)</h3>
+                <div class="info-item">
+                    <span class="info-label">Host:</span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="db-host">${loginInfo.dbHost}</strong></span>
+                        <button class="copy-button" onclick="copyDbHost()">📋 Copy</button>
+                        <span class="copy-feedback" id="dbhost-copy-feedback">Copied!</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Port:</span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong>3306</strong></span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Database:</span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="db-name">${loginInfo.dbName}</strong></span>
+                        <button class="copy-button" onclick="copyDbName()">📋 Copy</button>
+                        <span class="copy-feedback" id="dbname-copy-feedback">Copied!</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Username:</span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="db-user">${loginInfo.dbUser}</strong></span>
+                        <button class="copy-button" onclick="copyDbUser()">📋 Copy</button>
+                        <span class="copy-feedback" id="dbuser-copy-feedback">Copied!</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Password:</span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="db-password">${loginInfo.dbPassword}</strong></span>
+                        <button class="copy-button" onclick="copyDbPassword()">📋 Copy</button>
+                        <span class="copy-feedback" id="dbpassword-copy-feedback">Copied!</span>
                     </div>
                 </div>
                 
-                <div class="card-grid">
-                    <!-- URLs Card -->
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="card-icon">🌐</div>
-                            <h3 class="card-title">Access URLs</h3>
-                        </div>
-                        <div class="credential-items">
-                            <div class="credential-item primary-url">
-                                <span class="credential-label">Primary:</span>
-                                <span class="credential-value">
-                                    <a href="${loginInfo.primaryBackendUrl}" class="url-link">${loginInfo.primaryBackendUrl} <span class="ssl-indicator">${loginInfo.sslEnabled ? '🔒' : ''}</span></a>
-                                    <button class="copy-btn" onclick="copyToClipboard('${loginInfo.primaryBackendUrl}')">📋</button>
-                                </span>
-                            </div>
-                            <div class="credential-item">
-                                <span class="credential-label">HTTP:</span>
-                                <span class="credential-value">
-                                    <a href="${loginInfo.backendUrl}" class="url-link">${loginInfo.backendUrl}</a>
-                                    <button class="copy-btn" onclick="copyToClipboard('${loginInfo.backendUrl}')">📋</button>
-                                </span>
-                            </div>
-                            ${loginInfo.backendUrlHttps ? `
-                            <div class="credential-item">
-                                <span class="credential-label">HTTPS:</span>
-                                <span class="credential-value">
-                                    <a href="${loginInfo.backendUrlHttps}" class="url-link">${loginInfo.backendUrlHttps} <span class="ssl-indicator">🔒</span></a>
-                                    <button class="copy-btn" onclick="copyToClipboard('${loginInfo.backendUrlHttps}')">📋</button>
-                                </span>
-                            </div>` : ''}
-                        </div>
+                <h3>🌐 External Access (from localhost/phpMyAdmin/tools)</h3>
+                <div class="info-item">
+                    <span class="info-label">Host:</span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="db-external-host">${loginInfo.dbExternalHost}</strong></span>
+                        <button class="copy-button" onclick="copyDbExternalHost()">📋 Copy</button>
+                        <span class="copy-feedback" id="dbexternalhost-copy-feedback">Copied!</span>
                     </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Port:</span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="db-external-port">${loginInfo.dbExternalPort}</strong></span>
+                        <button class="copy-button" onclick="copyDbExternalPort()">📋 Copy</button>
+                        <span class="copy-feedback" id="dbexternalport-copy-feedback">Copied!</span>
                     </div>
-                    
-                    <!-- Login Card -->
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="card-icon">🔑</div>
-                            <h3 class="card-title">${loginInfo.instanceType === 'custom' ? 'Custom' : 'Login'}</h3>
-                        </div>
-                        <div class="credential-items">
-                            ${loginInfo.instanceType === 'custom' ? `
-                            <div class="credential-item">
-                                <span class="credential-label">Type:</span>
-                                <span class="credential-value">Custom Instance</span>
-                            </div>
-                            ` : `
-                            <div class="credential-item">
-                                <span class="credential-label">User:</span>
-                                <span class="credential-value">
-                                    ${loginInfo.adminUser}
-                                    <button class="copy-btn" onclick="copyToClipboard('${loginInfo.adminUser}')">📋</button>
-                                </span>
-                            </div>
-                            <div class="credential-item">
-                                <span class="credential-label">Pass:</span>
-                                <span class="credential-value">
-                                    ${loginInfo.adminPassword}
-                                    <button class="copy-btn" onclick="copyToClipboard('${loginInfo.adminPassword}')">📋</button>
-                                </span>
-                            </div>
-                            `}
-                        </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Database:</span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="db-name-ext">${loginInfo.dbName}</strong></span>
+                        <button class="copy-button" onclick="copyDbNameExt()">📋 Copy</button>
+                        <span class="copy-feedback" id="dbname-ext-copy-feedback">Copied!</span>
                     </div>
-                    
-                    <!-- Database Card -->
-                    <div class="card database-card">
-                        <div class="card-header">
-                            <div class="card-icon">🗄️</div>
-                            <h2 class="card-title">Database Connection</h2>
-                        </div>
-                        
-                        <div class="credential-section">
-                            <div class="section-subtitle">📦 Container-Internal</div>
-                            <div class="credential-item">
-                                <span class="credential-label">Host:</span>
-                                <span class="credential-value" id="db-host">${loginInfo.dbHost}</span>
-                                <button class="copy-button" onclick="copyDbHost()">📋 Copy</button>
-                                <span class="copy-feedback" id="dbhost-copy-feedback">Copied!</span>
-                            </div>
-                            <div class="credential-item">
-                                <span class="credential-label">Port:</span>
-                                <span class="credential-value">3306</span>
-                            </div>
-                            <div class="credential-item">
-                                <span class="credential-label">Database:</span>
-                                <span class="credential-value" id="db-name">${loginInfo.dbName}</span>
-                                <button class="copy-button" onclick="copyDbName()">📋 Copy</button>
-                                <span class="copy-feedback" id="dbname-copy-feedback">Copied!</span>
-                            </div>
-                            
-                            <div class="section-subtitle">👤 Standard User</div>
-                            <div class="credential-item">
-                                <span class="credential-label">Username:</span>
-                                <span class="credential-value" id="db-user">${loginInfo.dbUser}</span>
-                                <button class="copy-button" onclick="copyDbUser()">📋 Copy</button>
-                                <span class="copy-feedback" id="dbuser-copy-feedback">Copied!</span>
-                            </div>
-                            <div class="credential-item">
-                                <span class="credential-label">Password:</span>
-                                <span class="credential-value" id="db-password">${loginInfo.dbPassword}</span>
-                                <button class="copy-button" onclick="copyDbPassword()">📋 Copy</button>
-                                <span class="copy-feedback" id="dbpassword-copy-feedback">Copied!</span>
-                            </div>
-                            
-                            <div class="section-subtitle">🔑 Root User</div>
-                            <div class="credential-item">
-                                <span class="credential-label">Username:</span>
-                                <span class="credential-value" id="db-root-user">root</span>
-                                <button class="copy-button" onclick="copyDbRootUser()">📋 Copy</button>
-                                <span class="copy-feedback" id="dbrootuser-copy-feedback">Copied!</span>
-                            </div>
-                            <div class="credential-item">
-                                <span class="credential-label">Password:</span>
-                                <span class="credential-value" id="db-root-password">${loginInfo.dbRootPassword}</span>
-                                <button class="copy-button" onclick="copyDbRootPassword()">📋 Copy</button>
-                                <span class="copy-feedback" id="dbrootpassword-copy-feedback">Copied!</span>
-                            </div>
-                        </div>
-                        
-                        <div class="credential-section">
-                            <div class="section-subtitle">🌐 External Access</div>
-                            <div class="credential-item">
-                                <span class="credential-label">Host:</span>
-                                <span class="credential-value" id="db-external-host">${loginInfo.dbExternalHost}</span>
-                                <button class="copy-button" onclick="copyDbExternalHost()">📋 Copy</button>
-                                <span class="copy-feedback" id="dbexternalhost-copy-feedback">Copied!</span>
-                            </div>
-                            <div class="credential-item">
-                                <span class="credential-label">Port:</span>
-                                <span class="credential-value" id="db-external-port">${loginInfo.dbExternalPort}</span>
-                                <button class="copy-button" onclick="copyDbExternalPort()">📋 Copy</button>
-                                <span class="copy-feedback" id="dbexternalport-copy-feedback">Copied!</span>
-                            </div>
-                            <div class="credential-item">
-                                <span class="credential-label">Database:</span>
-                                <span class="credential-value" id="db-name-ext">${loginInfo.dbName}</span>
-                                <button class="copy-button" onclick="copyDbNameExt()">📋 Copy</button>
-                                <span class="copy-feedback" id="dbname-ext-copy-feedback">Copied!</span>
-                            </div>
-                            
-                            <div class="section-subtitle">👤 Standard User</div>
-                            <div class="credential-item">
-                                <span class="credential-label">Username:</span>
-                                <span class="credential-value" id="db-user-ext">${loginInfo.dbUser}</span>
-                                <button class="copy-button" onclick="copyDbUserExt()">📋 Copy</button>
-                                <span class="copy-feedback" id="dbuser-ext-copy-feedback">Copied!</span>
-                            </div>
-                            <div class="credential-item">
-                                <span class="credential-label">Password:</span>
-                                <span class="credential-value" id="db-password-ext">${loginInfo.dbPassword}</span>
-                                <button class="copy-button" onclick="copyDbPasswordExt()">📋 Copy</button>
-                                <span class="copy-feedback" id="dbpassword-ext-copy-feedback">Copied!</span>
-                            </div>
-                            
-                            <div class="section-subtitle">🔑 Root User</div>
-                            <div class="credential-item">
-                                <span class="credential-label">Username:</span>
-                                <span class="credential-value" id="db-root-user-ext">root</span>
-                                <button class="copy-button" onclick="copyDbRootUserExt()">📋 Copy</button>
-                                <span class="copy-feedback" id="dbrootuser-ext-copy-feedback">Copied!</span>
-                            </div>
-                            <div class="credential-item">
-                                <span class="credential-label">Password:</span>
-                                <span class="credential-value" id="db-root-password-ext">${loginInfo.dbRootPassword}</span>
-                                <button class="copy-button" onclick="copyDbRootPasswordExt()">📋 Copy</button>
-                                <span class="copy-feedback" id="dbrootpassword-ext-copy-feedback">Copied!</span>
-                            </div>
-                        </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Username:</span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="db-user-ext">${loginInfo.dbUser}</strong></span>
+                        <button class="copy-button" onclick="copyDbUserExt()">📋 Copy</button>
+                        <span class="copy-feedback" id="dbuser-ext-copy-feedback">Copied!</span>
                     </div>
-                    
-                    <!-- System Info Card -->
-                    <div class="card system-card">
-                        <div class="card-header">
-                            <div class="card-icon">⚙️</div>
-                            <h2 class="card-title">System Information</h2>
-                        </div>
-                        <div class="credential-item">
-                            <span class="credential-label">Instance Type:</span>
-                            <span class="credential-value">${loginInfo.instanceType === 'custom' ? 'Custom Instance' : 'REDAXO Instance'}</span>
-                        </div>
-                        <div class="credential-item">
-                            <span class="credential-label">PHP Version:</span>
-                            <span class="credential-value">${loginInfo.phpVersion}</span>
-                        </div>
-                        <div class="credential-item">
-                            <span class="credential-label">MariaDB Version:</span>
-                            <span class="credential-value">${loginInfo.mariadbVersion}</span>
-                        </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Password:</span>
+                    <div class="credential-container">
+                        <span class="info-value"><strong id="db-password-ext">${loginInfo.dbPassword}</strong></span>
+                        <button class="copy-button" onclick="copyDbPasswordExt()">📋 Copy</button>
+                        <span class="copy-feedback" id="dbpassword-ext-copy-feedback">Copied!</span>
                     </div>
+                </div>
+                
+                ${loginInfo.phpmyadminUrl ? `
+                <div class="info-item">
+                    <span class="info-label">phpMyAdmin:</span>
+                    <span class="info-value"><a href="${loginInfo.phpmyadminUrl}" class="url-link">${loginInfo.phpmyadminUrl}</a></span>
+                </div>` : ''}
+                <p><em>💡 ${loginInfo.mysqlPort ? 'Use external credentials for tools like phpMyAdmin, MySQL Workbench, etc.' : 'Custom instances expose MySQL port, standard instances use internal networking only.'}</em></p>
+            </div>
+            
+            <div class="info-section">
+                <h2>⚙️ System Information</h2>
+                <div class="info-item">
+                    <span class="info-label">Instance Type:</span>
+                    <span class="info-value">${loginInfo.instanceType === 'custom' ? 'Custom Instance' : 'REDAXO Instance'}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">PHP Version:</span>
+                    <span class="info-value">${loginInfo.phpVersion}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">MariaDB Version:</span>
+                    <span class="info-value">${loginInfo.mariadbVersion}</span>
                 </div>
             </div>
             
+            <p><em>📋 Click on any value to select and copy it.</em></p>
+            
             <script>
-                function copyToClipboard(text) {
-                    navigator.clipboard.writeText(text).then(() => {
-                        // Show feedback
-                        const event = new CustomEvent('copy-success', { detail: text });
-                        document.dispatchEvent(event);
-                        
-                        // Visual feedback on button
-                        const buttons = document.querySelectorAll('.copy-btn');
-                        buttons.forEach(btn => {
-                            if (btn.onclick && btn.onclick.toString().includes(text)) {
-                                btn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                                btn.textContent = '✓';
-                                setTimeout(() => {
-                                    btn.style.background = '';
-                                    btn.textContent = '📋';
-                                }, 1000);
-                            }
-                        });
-                    }).catch(err => {
-                        console.error('Copy failed:', err);
-                        // Fallback for older browsers
-                        const textArea = document.createElement('textarea');
-                        textArea.value = text;
-                        document.body.appendChild(textArea);
-                        textArea.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(textArea);
-                    });
-                }
-            </script>
+                function copyUsername() {
+                    const usernameElement = document.getElementById('admin-username');
+                    const feedbackElement = document.getElementById('username-copy-feedback');
+                    
+                    if (usernameElement) {
+                        const username = usernameElement.textContent;
+                        navigator.clipboard.writeText(username).then(() => {
+                            feedbackElement.classList.add('show');
+                            setTimeout(() => {
+                                feedbackElement.classList.remove('show');
+                            }, 2000);
+                        }).catch(err => {
+                            console.error('Failed to copy username: ', err);
+                            // Fallback for older browsers
+                            const textArea = document.createElement('textarea');
+                            textArea.value = username;
+                            document.body.appendChild(textArea);
                             textArea.select();
                             document.execCommand('copy');
                             document.body.removeChild(textArea);
@@ -2179,78 +1589,6 @@ function getLoginInfoHtml(instanceName: string, loginInfo: any): string {
                             }, 2000);
                         }).catch(err => {
                             console.error('Failed to copy db password ext: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbRootUser() {
-                    const element = document.getElementById('db-root-user');
-                    const feedbackElement = document.getElementById('dbrootuser-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db root user: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbRootPassword() {
-                    const element = document.getElementById('db-root-password');
-                    const feedbackElement = document.getElementById('dbrootpassword-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db root password: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbRootUserExt() {
-                    const element = document.getElementById('db-root-user-ext');
-                    const feedbackElement = document.getElementById('dbrootuser-ext-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db root user ext: ', err);
-                            fallbackCopy(value, feedbackElement);
-                        });
-                    }
-                }
-
-                function copyDbRootPasswordExt() {
-                    const element = document.getElementById('db-root-password-ext');
-                    const feedbackElement = document.getElementById('dbrootpassword-ext-copy-feedback');
-                    
-                    if (element) {
-                        const value = element.textContent;
-                        navigator.clipboard.writeText(value).then(() => {
-                            feedbackElement.classList.add('show');
-                            setTimeout(() => {
-                                feedbackElement.classList.remove('show');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy db root password ext: ', err);
                             fallbackCopy(value, feedbackElement);
                         });
                     }
