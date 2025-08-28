@@ -1,5 +1,114 @@
 # 🚀 REDAXO Multi-Instances Manager - Release Notes
 
+## 📦 Version 1.6.2 - Hosts & SSL Management Fixes
+*Veröffentlicht: 28. August 2025*
+
+### 🔧 Critical Production Fixes
+- **🏠 Hosts File Reliability**: Behebung von "bereits existiert" Fehlern durch exakte Pattern-Matching
+- **🔒 SSL_ERROR_RX_RECORD_TOO_LONG Fix**: Vollständige HTTP-zu-HTTPS Redirect-Lösung eliminiert Mixed-Protocol Fehler  
+- **🎯 Precise Host Detection**: Neue `grep` Pattern verhindern False-Positives bei ähnlichen Hostnamen
+- **🧹 Duplicate Prevention**: Automatische Cleanup-Routinen entfernen doppelte hosts-Einträge
+
+### ✨ New Management Tools
+- **⚙️ Hosts File Manager**: Vollständiges Management-Tool zugänglich über Quick Actions
+  - **📋 Show Hosts File**: Übersicht aller .local Einträge mit Zeilennummern
+  - **🧹 Clean Duplicates**: Intelligente Duplikat-Entfernung mit Backup-Erstellung
+  - **🔄 Reset Local Entries**: Komplettes Reset mit manueller Neukonfiguration
+- **🔧 Enhanced SSL Setup**: Separate VirtualHosts für HTTP/HTTPS mit korrekten Redirects
+- **⚡ Smart Cleanup**: Automatische hosts-Bereinigung vor Hinzufügen neuer Einträge
+
+### 🛡️ Security & Infrastructure
+- **🎯 Exact Pattern Matching**: `^127\.0\.0\.1[[:space:]]+instancename\.local[[:space:]]*$`
+- **🔒 SSL Protocol Separation**: 
+  - HTTP VirtualHost (Port 80): Redirect zu HTTPS
+  - HTTPS VirtualHost (Port 443): Vollständige SSL-Konfiguration
+- **📦 Apache Module Management**: Dynamische SSL-Modul Aktivierung basierend auf Instance-Konfiguration
+- **💾 Automatic Backups**: hosts-Datei Backups mit Timestamp vor jeder Änderung
+
+### 🔧 Technical Implementation  
+- **🏗️ cleanupHostsFile() Function**: Proaktive Duplikat-Entfernung
+- **🌐 Enhanced Apache Config**: HTTP-zu-HTTPS Redirects verhindern Browser-Fehler
+- **⚠️ Improved Error Handling**: Robuste Fehlerbehandlung bei hosts-Operationen
+- **📊 Bundle Optimization**: 234 KiB mit vollständigen Host-Management Features
+
+---
+
+## 📦 Version 1.6.1 - Complete MySQL Root User Access
+*Veröffentlicht: 28. August 2025*
+
+### 🔑 Enhanced Database Administration
+- **🚀 Complete MySQL Root User Support**: Vollständiger MySQL Root-User Zugang für beide Instanztypen (REDAXO und Custom Instances)
+- **👤 Dual User Management**: Separate Bereiche für Standard User und Root User in sowohl internen als auch externen Verbindungen
+- **📋 Enhanced Copy Functionality**: 16+ Copy-Buttons für alle Database-Credentials inklusive Root-User Authentifizierung
+- **🔧 Unified Database Access**: Einheitliche Root-User Funktionalität für alle Instance-Typen
+
+### ✨ Advanced UI Features
+- **🎯 Clear User Separation**: 
+  - **Standard User**: REDAXO Instances (`redaxo`), Custom Instances (`instanceName`)
+  - **Root User**: Beide Typen (`root`) mit entsprechenden Passwörtern
+- **🌐 Complete Connection Coverage**: 
+  - **Container-Internal**: mysql:3306 mit Standard und Root Credentials
+  - **External Access**: localhost:port mit Standard und Root Credentials
+- **📊 Enhanced Security**: Vollständiger Zugang zu MySQL Root-Funktionalität für erweiterte Database-Administration
+- **⚡ Streamlined Workflow**: Ein-Klick-Kopieren für alle User-Typen und Verbindungsarten
+
+### 🔧 Technical Excellence
+- **🏗️ DockerService Enhancement**: 
+  - Erweiterte `getLoginInfo()` Funktion mit `dbRootPassword` Support
+  - Automatische Root Password Detection aus Environment Variables
+  - REDAXO Instances: `DB_ROOT_PASSWORD` oder `MYSQL_ROOT_PASSWORD`
+  - Custom Instances: Hardcoded `'root'` Password
+- **💻 JavaScript Functions**: 4 neue Copy-Funktionen für Root-User Credentials (intern/extern)
+- **📦 Optimized Integration**: Effiziente Bundle-Integration (218 KiB) ohne Performance-Impact
+- **🔒 Security Compliant**: Sichere Passwort-Handling für beide User-Typen
+
+### 🏆 Database Credentials Overview
+
+#### **🚀 Standard REDAXO Instances:**
+```
+Standard User: redaxo / [generiert]
+Root User: root / [DB_ROOT_PASSWORD]
+```
+
+#### **🔧 Custom Instances:**
+```
+Standard User: [instanceName] / [instanceName]  
+Root User: root / root
+```
+
+### 💡 What This Means for You
+- **✅ Complete Database Control**: Voller MySQL Root-Zugang für alle Instances
+- **✅ Enhanced Administration**: Erweiterte Database-Management Möglichkeiten
+- **✅ Streamlined Workflow**: Einheitliche Credential-Verwaltung für alle Instance-Typen
+- **✅ Copy-Ready**: Alle Credentials mit einem Klick kopierbar für externe Tools
+
+## 📦 Version 1.6.0 - Simplified REDAXO Setup Revolution
+*Veröffentlicht: 28. August 2025*
+
+### 🚀 Major Breakthrough: Simplified Installation
+- **⚡ Native Docker Image Integration**: Komplett vereinfachte REDAXO Installation durch Nutzung der eingebauten Auto-Setup Funktionalität des FriendsOfREDAXO Docker Images
+- **🔧 Eliminated Installation Conflicts**: Behebt dauerhaft "User admin already exists" Fehler durch Wegfall komplexer Database-Cleanup Routinen
+- **🏗️ Streamlined Architecture**: Drastische Code-Vereinfachung - von komplexem Database-Management zu eleganter Environment-Variable Konfiguration
+- **📦 Optimized Bundle**: Bundle-Größe reduziert von 215 KiB auf 212 KiB durch Code-Optimierung
+
+### ✨ Enhanced User Experience
+- **🎯 Simplified Setup Process**: Setup-Script fokussiert sich auf essenzielle Login-Informationen statt technisches Database-Management
+- **🔒 Preserved SSL/HTTPS**: Alle SSL-Zertifikat und HTTPS-Funktionen bleiben vollständig erhalten und funktional
+- **⚙️ Environment Variable Optimization**: Perfekt abgestimmte REDAXO_* Environment Variables für nahtlose Auto-Installation
+- **🛠️ Maintainable Codebase**: Deutlich einfachere und wartbarere Code-Struktur für zukünftige Entwicklungen
+
+### 🔧 Technical Excellence
+- **🐋 100% Docker Compatibility**: Voll kompatibel mit friendsofredaxo/docker-redaxo Auto-Setup Features und Best Practices
+- **🔐 SSL Configuration Preserved**: Komplette Beibehaltung aller mkcert-basierten SSL-Konfigurationen und Apache-Einstellungen
+- **💾 Database Persistence**: MySQL Volume-Persistenz funktioniert jetzt konfliktfrei mit der Auto-Installation
+- **🎨 Clean Code Architecture**: Entfernung redundanter Database-Cleanup Logik zugunsten nativer Docker Image Funktionalität
+
+### 🏆 What This Means for You
+- **✅ Zero Installation Conflicts**: Keine "admin already exists" Fehler mehr
+- **✅ Faster Setup**: Docker Image übernimmt die gesamte REDAXO Installation automatisch
+- **✅ SSL Still Works**: Alle HTTPS-Features funktionieren weiterhin perfekt
+- **✅ Easier Maintenance**: Einfachere Codebasis bedeutet stabilere Updates
+
 ## 📦 Version 1.5.2 - MySQL External Access Enhancement
 *Veröffentlicht: 27. August 2025*
 

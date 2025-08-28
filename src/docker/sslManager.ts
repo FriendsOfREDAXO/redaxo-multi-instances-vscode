@@ -50,7 +50,17 @@ export class SSLManager {
         // Always use standard document root
         const documentRoot = '/var/www/html';
         
-        return `<VirtualHost *:443>
+        return `# HTTP to HTTPS Redirect
+<VirtualHost *:80>
+    ServerName ${instanceName}.local
+    
+    # Redirect all HTTP traffic to HTTPS
+    RewriteEngine On
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</VirtualHost>
+
+# HTTPS Virtual Host
+<VirtualHost *:443>
     ServerName ${instanceName}.local
     DocumentRoot ${documentRoot}
     
@@ -107,34 +117,49 @@ export class SSLManager {
 
     private static async addToHostsFile(instanceName: string): Promise<void> {
         try {
-            // Check if entry already exists (check both variations)
-            const checkCommand = `grep -E "(^|\s)${instanceName}\.local(\s|$)" /etc/hosts`;
-            try {
-                const { stdout } = await execPromise(checkCommand);
-                if (stdout.trim()) {
-                    this.log(`✅ ${instanceName}.local already exists in hosts file`);
-                    this.log(`📋 Current entry: ${stdout.trim()}`);
-                    return;
-                }
-            } catch {
-                // Entry doesn't exist, continue
+            // First, clean up any duplicate entries for this instance
+            await SSLManager.cleanupHostsFile(instanceName);
+            
+            // Check if entry already exists with exact match
+            const checkCommand = `grep -c "^127\\.0\\.0\\.1[[:space:]]\\+${instanceName}\\.local[[:space:]]*$" /etc/hosts || true`;
+            const { stdout } = await execPromise(checkCommand);
+            const entryCount = parseInt(stdout.trim());
+            
+            if (entryCount > 0) {
+                this.log(`✅ ${instanceName}.local already exists in hosts file (${entryCount} entries)`);
+                return;
             }
             
             // Add to hosts file (this will prompt for sudo if needed)
             this.log(`📝 Adding ${instanceName}.local to hosts file...`);
-            const addCommand = `echo "# REDAXO Multi-Instance
-127.0.0.1 ${instanceName}.local" | sudo tee -a /etc/hosts`;
+            const addCommand = `echo "127.0.0.1 ${instanceName}.local" | sudo tee -a /etc/hosts`;
             
-            const { stdout } = await execPromise(addCommand);
-            if (stdout.includes('127.0.0.1')) {
+            const { stdout: addOutput } = await execPromise(addCommand);
+            if (addOutput.includes('127.0.0.1')) {
                 this.log(`✅ Added ${instanceName}.local to hosts file`);
-                this.log(`🔍 Verifying: ${stdout.trim()}`);
+                this.log(`🔍 Verifying: ${addOutput.trim()}`);
             }
             
         } catch (error: any) {
             this.log(`⚠️  Could not add to hosts file automatically: ${error.message}`);
             this.log(`💡 You can manually add "127.0.0.1 ${instanceName}.local" to your /etc/hosts file`);
-            this.log(`⚠️  You may need to manually add "127.0.0.1 ${instanceName}.local" to your /etc/hosts file`);
+        }
+    }
+
+    /**
+     * Clean up duplicate entries for an instance in hosts file
+     */
+    private static async cleanupHostsFile(instanceName: string): Promise<void> {
+        try {
+            const cleanupCommand = `
+                # Remove duplicate entries for ${instanceName}.local
+                sudo sed -i.bak "/^127\\.0\\.0\\.1[[:space:]]\\+${instanceName}\\.local[[:space:]]*$/d" /etc/hosts
+            `;
+            await execPromise(cleanupCommand);
+            this.log(`🧹 Cleaned up any existing entries for ${instanceName}.local`);
+        } catch (error: any) {
+            // Ignore cleanup errors, not critical
+            this.log(`ℹ️  Cleanup note: ${error.message}`);
         }
     }
 }

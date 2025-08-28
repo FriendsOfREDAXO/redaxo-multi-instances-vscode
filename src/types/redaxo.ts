@@ -7,6 +7,8 @@ export interface RedaxoInstance {
     port?: number;
     frontendUrl: string;
     backendUrl: string;
+    primaryFrontendUrl?: string;
+    primaryBackendUrl?: string;
     frontendUrlHttps?: string;
     backendUrlHttps?: string;
     phpmyadminUrl?: string;

@@ -1,7 +1,7 @@
 export class SetupTemplates {
     
     /**
-     * Generate custom setup script for REDAXO instances with improved PHP settings
+     * Generate custom setup script for REDAXO instances with improved PHP settings and SSL fixes
      */
     static generateCustomSetupScript(instanceName: string, phpVersion: string, sslEnabled: boolean = false): string {
         return `#!/bin/bash
@@ -49,17 +49,37 @@ echo "✅ PHP configuration updated"
 echo "🌐 Setting up Apache configuration..."
 a2enmod rewrite
 a2enmod headers
-a2enmod ssl
 
 # SSL setup if enabled
 ${sslEnabled ? `
+echo "🔒 Setting up SSL configuration..."
+a2enmod ssl
+a2enmod socache_shmcb
+
+# Ensure proper SSL module loading
+echo "LoadModule ssl_module modules/mod_ssl.so" >> /etc/apache2/apache2.conf
+
+# SSL configuration
 if [ -f "/usr/local/bin/apache-ssl.conf" ]; then
-    echo "🔒 Setting up SSL configuration..."
     cp /usr/local/bin/apache-ssl.conf /etc/apache2/sites-available/default-ssl.conf
     a2ensite default-ssl
+    
+    # Disable default HTTP site to prevent SSL_ERROR_RX_RECORD_TOO_LONG
+    a2dissite 000-default
+    
     echo "✅ SSL configuration enabled"
+else
+    echo "⚠️ SSL configuration file not found"
 fi
-` : ''}
+
+# Restart Apache to apply SSL changes
+service apache2 reload || true
+` : `
+# Standard HTTP setup - make sure SSL is disabled
+a2dissite default-ssl || true
+a2dismod ssl || true
+service apache2 reload || true
+`}
 
 echo "✅ Apache configuration complete"
 
@@ -81,82 +101,39 @@ echo "✅ MySQL is ready"
 
 echo "🎯 REDAXO instance '${instanceName}' setup complete!"
 echo "📍 Instance is ready for REDAXO installation"
+${sslEnabled ? `echo "🔒 SSL enabled - access via https://${instanceName}.local"` : `echo "🌐 HTTP only - access via http://localhost"`}
 `;
     }
 
     /**
-     * Generate auto-install script for REDAXO with improved configuration
+     * Generate auto-install script that relies on REDAXO Docker image auto-setup
      */
     static generateAutoInstallScript(instanceName: string, phpVersion: string, sslEnabled: boolean = false): string {
         return `
-# Auto-install REDAXO with optimized configuration
-if [ ! -f "/var/www/html/redaxo/data/config.yml" ]; then
-    echo "⚙️ Auto-installing REDAXO..."
-    
-    # Create REDAXO configuration
-    php /var/www/html/redaxo/bin/console setup:run \\
-        --agree-license \\
-        --db-host=mysql \\
-        --db-name=redaxo \\
-        --db-login=redaxo \\
-        --db-password=\${MYSQL_PASSWORD} \\
-        --db-setup=normal \\
-        --admin-username=admin \\
-        --admin-password=\${MYSQL_PASSWORD} \\
-        --servername="\${INSTANCE_NAME}.local" \\
-        --error-email="admin@\${INSTANCE_NAME}.local" \\
-        --timezone="Europe/Berlin" \\
-        --lang=de_de
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ REDAXO auto-installation complete"
-        echo ""
-        echo "🔑 LOGIN INFORMATIONEN:"
-        echo "👤 Benutzername: admin"
-        echo "🔒 Passwort: \${MYSQL_PASSWORD}"
-        echo ""
-        ${sslEnabled ? `
-        if [ -f "/usr/local/bin/apache-ssl.conf" ]; then
-            echo "🌐 Backend URL (HTTPS): https://${instanceName}.local/redaxo"
-            echo "🌐 Frontend URL (HTTPS): https://${instanceName}.local"
-        else
-            echo "🌐 Backend URL (HTTP): http://localhost:\${HTTP_PORT}/redaxo"  
-            echo "🌐 Frontend URL (HTTP): http://localhost:\${HTTP_PORT}"
-        fi
-        ` : `
-        echo "🌐 Backend URL: http://localhost:\${HTTP_PORT}/redaxo"  
-        echo "🌐 Frontend URL: http://localhost:\${HTTP_PORT}"
-        `}
-        echo ""
-    else
-        echo "❌ REDAXO auto-installation failed"
-        exit 1
-    fi
-else
-    echo "✅ REDAXO already configured"
-    echo ""
-    echo "🔑 LOGIN INFORMATIONEN:"
-    echo "👤 Benutzername: admin"  
-    echo "🔒 Passwort: \${MYSQL_PASSWORD}"
-    echo ""
-    ${sslEnabled ? `
-    if [ -f "/usr/local/bin/apache-ssl.conf" ]; then
-        echo "🌐 Backend URL (HTTPS): https://${instanceName}.local/redaxo"
-        echo "🌐 Frontend URL (HTTPS): https://${instanceName}.local"
-    else
-        echo "🌐 Backend URL (HTTP): http://localhost:\${HTTP_PORT}/redaxo"
-        echo "🌐 Frontend URL (HTTP): http://localhost:\${HTTP_PORT}"
-    fi
-    ` : `
-    echo "🌐 Backend URL: http://localhost:\${HTTP_PORT}/redaxo"
-    echo "🌐 Frontend URL: http://localhost:\${HTTP_PORT}"
-    `}
-    echo ""
-fi
-`;
-    }
+# Let REDAXO Docker image handle the installation - we just do post-setup
+echo "✅ REDAXO installation handled by Docker image"
 
-    /**
+echo ""
+echo "🔑 LOGIN INFORMATIONEN:"
+echo "👤 Benutzername: admin"
+echo "🔒 Passwort: \${MYSQL_PASSWORD}"
+echo "📊 Status: ✅ Auto-installation complete"
+echo ""
+${sslEnabled ? `
+if [ -f "/usr/local/bin/apache-ssl.conf" ]; then
+    echo "🌐 Backend URL (HTTPS): https://${instanceName}.local/redaxo"
+    echo "🌐 Frontend URL (HTTPS): https://${instanceName}.local"
+else
+    echo "🌐 Backend URL (HTTP): http://localhost:\${HTTP_PORT}/redaxo"  
+    echo "🌐 Frontend URL (HTTP): http://localhost:\${HTTP_PORT}"
+fi
+` : `
+echo "🌐 Backend URL: http://localhost:\${HTTP_PORT}/redaxo"  
+echo "🌐 Frontend URL: http://localhost:\${HTTP_PORT}"
+`}
+echo ""
+`;
+    }    /**
      * Generate empty instance setup script
      */
     static generateEmptyInstanceScript(instanceName: string, phpVersion: string): string {

@@ -445,7 +445,7 @@ export class DockerService {
             const httpsPort = httpsPortMatch ? httpsPortMatch[1] : '443';
             const mysqlPort = mysqlPortMatch ? mysqlPortMatch[1] : null;
             
-            // Build URLs
+            // Build URLs with correct port selection based on SSL
             const sslEnabled = envVars.SSL_ENABLED === 'true';
             const frontendUrl = `http://localhost:${httpPort}`;
             const backendUrl = isCustomInstance ? `http://localhost:${httpPort}` : `http://localhost:${httpPort}/redaxo`;
@@ -456,15 +456,20 @@ export class DockerService {
                 frontendUrlHttps = `https://${instanceName}.local:${httpsPort}`;
                 backendUrlHttps = isCustomInstance ? `https://${instanceName}.local:${httpsPort}` : `https://${instanceName}.local:${httpsPort}/redaxo`;
             }
+            
+            // Primary URLs - use HTTPS if SSL is enabled, otherwise HTTP
+            const primaryFrontendUrl = sslEnabled ? frontendUrlHttps : frontendUrl;
+            const primaryBackendUrl = sslEnabled ? backendUrlHttps : backendUrl;
 
             // Database credentials based on instance type
-            let dbHost, dbName, dbUser, dbPassword, dbExternalHost, dbExternalPort;
+            let dbHost, dbName, dbUser, dbPassword, dbRootPassword, dbExternalHost, dbExternalPort;
             if (isCustomInstance) {
                 // Custom instances use instanceName for all DB credentials
                 dbHost = `${instanceName}_db`;
                 dbName = instanceName;
                 dbUser = instanceName;
                 dbPassword = instanceName;
+                dbRootPassword = 'root'; // Custom instances use 'root' as root password
                 // Extract custom instance MySQL port from docker-compose.yml
                 const customPortMatch = composeContent.match(/"(\d+):3306"/);
                 dbExternalHost = 'localhost';
@@ -475,6 +480,7 @@ export class DockerService {
                 dbName = envVars.DB_NAME || 'redaxo';
                 dbUser = envVars.DB_USER || 'redaxo';
                 dbPassword = envVars.DB_PASSWORD || envVars.MYSQL_PASSWORD || 'N/A';
+                dbRootPassword = envVars.DB_ROOT_PASSWORD || envVars.MYSQL_ROOT_PASSWORD || 'N/A';
                 // External connection
                 dbExternalHost = 'localhost';
                 dbExternalPort = envVars.MYSQL_PORT || '3306';
@@ -486,6 +492,8 @@ export class DockerService {
                 instanceType: isCustomInstance ? 'custom' : 'redaxo',
                 
                 // URLs
+                primaryFrontendUrl,
+                primaryBackendUrl,
                 frontendUrl,
                 backendUrl,
                 frontendUrlHttps,
@@ -500,6 +508,7 @@ export class DockerService {
                 dbName,
                 dbUser,
                 dbPassword,
+                dbRootPassword,
                 
                 // Database info (external connection)
                 dbExternalHost,
@@ -585,12 +594,54 @@ export class DockerService {
             
             this.log(`🔧 Repairing instance: ${instanceName}`);
             
-            // Rebuild containers
+            // Stop the instance first if running
+            try {
+                await this.runDockerCommand(['compose', 'down'], { cwd: instancePath });
+                this.log(`🛑 Instance stopped for repair`);
+            } catch (error) {
+                this.log(`⚠️ Instance was not running`);
+            }
+            
+            // Start MySQL temporarily to clean the database
+            this.log(`🧹 Cleaning database for fresh installation...`);
+            try {
+                await this.runDockerCommand(['compose', 'up', '-d', 'mysql'], { cwd: instancePath });
+                
+                // Wait for MySQL to be ready
+                let retries = 0;
+                while (retries < 30) {
+                    try {
+                        await this.runDockerCommand(['compose', 'exec', 'mysql', 'mysqladmin', 'ping', '-h', 'localhost', '--silent'], { cwd: instancePath });
+                        break;
+                    } catch {
+                        retries++;
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                }
+                
+                // Clean entire database for fresh installation
+                await this.runDockerCommand(['compose', 'exec', 'mysql', 'mysql', '-u', 'redaxo', '-predaxo', 'redaxo', '-e', 
+                    'SET FOREIGN_KEY_CHECKS = 0; ' +
+                    'DROP DATABASE IF EXISTS redaxo; ' +
+                    'CREATE DATABASE redaxo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; ' +
+                    'SET FOREIGN_KEY_CHECKS = 1;'
+                ], { cwd: instancePath });
+                
+                this.log(`🗑️ Database completely cleaned for fresh installation`);
+                
+                // Stop MySQL again
+                await this.runDockerCommand(['compose', 'down'], { cwd: instancePath });
+            } catch (error: any) {
+                this.log(`⚠️ Database cleanup failed, continuing with rebuild: ${error.message}`);
+            }
+            
+            // Rebuild containers with no cache to ensure fresh setup
+            this.log(`🔧 Rebuilding containers...`);
             await this.runDockerCommand(['compose', 'build', '--no-cache'], { cwd: instancePath });
             await this.runDockerCommand(['compose', 'up', '-d', '--force-recreate'], { cwd: instancePath });
             
-            this.log(`✅ Instance ${instanceName} repaired successfully`);
-            vscode.window.showInformationMessage(`Instance ${instanceName} repaired successfully!`);
+            this.log(`✅ Instance ${instanceName} repaired with clean database`);
+            vscode.window.showInformationMessage(`Instance ${instanceName} repaired successfully! Database cleaned for fresh REDAXO installation.`);
         } catch (error: any) {
             this.log(`❌ Failed to repair instance: ${error.message}`);
             vscode.window.showErrorMessage(`Failed to repair instance: ${error.message}`);

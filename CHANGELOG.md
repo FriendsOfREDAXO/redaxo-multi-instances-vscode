@@ -1,5 +1,70 @@
 # Changelog
 
+## [1.6.2] - 2025-08-28
+
+### 🔧 Critical Fixes
+- **Hosts File Management**: Behebung von Duplikaten in /etc/hosts durch exakte Pattern-Matching
+- **SSL_ERROR_RX_RECORD_TOO_LONG Fix**: Vollständige HTTP-zu-HTTPS Redirect-Implementierung verhindert Mixed-Protocol Fehler
+- **Improved Host Detection**: Präzise `grep` Pattern vermeiden False-Positives bei ähnlichen Hostnamen (z.B. 'hhhh.local' vs 'hhhhhhh.local')
+
+### ✨ New Features  
+- **Hosts File Manager**: Neue `Manage Hosts File` Funktion mit drei Optionen:
+  - **Show Hosts File**: Zeigt alle .local Einträge in der hosts-Datei
+  - **Clean Duplicates**: Entfernt automatisch doppelte Einträge
+  - **Reset Local Entries**: Komplettes Reset aller .local Einträge
+- **Enhanced SSL Configuration**: Verbesserte Apache SSL-Konfiguration mit automatischen HTTP-Redirects
+- **Duplicate Cleanup**: Automatische Bereinigung bei Host-Einträgen vor dem Hinzufügen neuer
+
+### 🛡️ Security & Reliability
+- **Exact Host Matching**: `^127\.0\.0\.1[[:space:]]+instancename\.local[[:space:]]*$` Pattern verhindert False-Positives
+- **SSL Protocol Optimization**: Separate HTTP (Port 80) und HTTPS (Port 443) VirtualHosts mit korrekten Redirects  
+- **Apache Module Management**: Korrekte SSL-Modul Aktivierung/Deaktivierung basierend auf SSL-Einstellungen
+- **Backup Integration**: Automatische hosts-Datei Backups vor Änderungen
+
+### 🔧 Technical Improvements
+- **cleanupHostsFile()**: Neue Funktion entfernt duplicate Einträge vor dem Hinzufügen
+- **Enhanced SSL Setup**: HTTP VirtualHost mit Redirect zu HTTPS verhindert Mixed-Content Fehler
+- **Improved Error Handling**: Bessere Fehlerbehandlung bei hosts-Datei Operationen
+- **Bundle Size**: 234 KiB mit allen neuen Host-Management Features
+
+## [1.6.1] - 2025-08-28
+
+### 🔑 Enhanced Database Access
+- **MySQL Root User Support**: Vollständiger MySQL Root-User Zugang für beide Instanztypen (REDAXO und Custom)
+- **Expanded Credentials Display**: Separate Bereiche für Standard User und Root User in beiden Verbindungstypen
+- **Enhanced Copy Functionality**: 16+ Copy-Buttons für alle Database-Credentials inklusive Root-User
+- **Unified Database Management**: Einheitliche Root-User Funktionalität für Standard REDAXO und Custom Instances
+### ✨ UI Improvements
+- **Clear User Separation**: Deutliche Trennung zwischen Standard User (redaxo/instanceName) und Root User
+- **Complete Credential Coverage**: Sowohl interne (Container-zu-Container) als auch externe (localhost:port) Root-User Credentials
+- **Enhanced Security**: Vollständiger Zugang zu MySQL Root-Funktionalität für erweiterte Database-Administration
+- **Copy-Button Enhancement**: Ein-Klick-Kopieren für alle User-Typen und Verbindungsarten
+
+### 🔧 Technical
+- **DockerService Enhancement**: Erweiterte `getLoginInfo()` mit `dbRootPassword` für beide Instanztypen
+- **Root Password Detection**: Automatische Erkennung von `DB_ROOT_PASSWORD`/`MYSQL_ROOT_PASSWORD` (REDAXO) und `'root'` (Custom)
+- **JavaScript Functions**: Neue Copy-Funktionen für Root-User Credentials (intern/extern)
+- **Bundle Optimization**: Effiziente Integration ohne signifikante Größenzunahme (218 KiB)
+
+## [1.6.0] - 2025-08-28
+
+### 🚀 Major Improvements
+- **Simplified REDAXO Setup**: Komplett vereinfachte Installation durch Nutzung der nativen Docker Image Auto-Setup Funktionalität
+- **Eliminated Installation Conflicts**: Behebt "User admin already exists" Fehler durch Wegfall komplexer Database-Cleanup Routinen
+- **Native Docker Integration**: Voll auf FriendsOfREDAXO/docker-redaxo Image Auto-Installation optimiert
+- **Reduced Bundle Size**: Code-Optimierung reduziert Bundle-Größe von 215 KiB auf 212 KiB
+
+### ✨ Enhanced
+- **Streamlined Setup Process**: Setup-Script fokussiert sich auf Login-Informationen statt komplexe Database-Management
+- **Preserved SSL/HTTPS**: Alle SSL-Zertifikat und HTTPS-Funktionen bleiben vollständig erhalten
+- **Environment Variable Setup**: Optimierte REDAXO_* Environment Variables für nahtlose Auto-Installation
+- **Maintainable Codebase**: Deutlich einfachere und wartbarere Code-Struktur
+
+### 🔧 Technical
+- **Docker Image Compatibility**: 100% kompatibel mit friendsofredaxo/docker-redaxo Auto-Setup Features
+- **SSL Configuration**: Beibehaltung aller mkcert-basierten SSL-Konfigurationen und Apache-Einstellungen
+- **Database Persistence**: MySQL Volume-Persistenz funktioniert jetzt konfliktfrei mit Auto-Installation
+
 ## [1.5.2] - 2025-08-27
 
 ### 🔧 Fixed
