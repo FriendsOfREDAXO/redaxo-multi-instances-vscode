@@ -1,5 +1,47 @@
 # 🚀 REDAXO Multi-Instances Manager - Release Notes
 
+# Release Notes
+
+## Version 1.7.0 (2025-08-29)
+
+### 🔧 Improvements
+- **Login Info UI**: Removed Modern Login Info preview from context menu
+- **URL Functionality**: Maintained clickable URLs in login info while removing demo preview
+- **User Experience**: Streamlined context menu by removing preview/demo entries
+
+### 🛠️ Technical Changes
+- Cleaned up package.json context menu entries
+- Maintained full login info functionality without preview mode
+- Improved user interface consistency
+
+---
+
+## Version 1.6.5 (2025-08-29)
+*Veröffentlicht: 29. August 2025*
+
+### 🎯 Intelligente Benutzeroberfläche
+- **🔍 Context-Aware Login-Info**: REDAXO Backend Login nur bei Standard REDAXO Instances angezeigt
+- **💡 Custom Instance Klarstellung**: Informative Password-Hinweise für Custom Instances
+- **🌐 DNS-konforme Container**: Alle Container-Namen ohne Unterstriche für bessere Kompatibilität
+
+### 🗄️ MariaDB Version Updates
+- **📦 MariaDB 11.6** (Neueste LTS) - Empfohlen
+- **⚡ MariaDB 11.5** (Stabil)
+- **🔧 MariaDB 11.4** (Bewährt)
+- **📊 Mehrere Optionen**: 11.3, 11.2, 10.11 Legacy zur Auswahl
+
+### ✨ Enhanced Custom Instances
+- **🏷️ Smart Detection**: Verbesserte Erkennung von Custom vs REDAXO Instances
+- **🔑 Password Clarity**: "Custom Instance: Passwort = Instance Name" Hinweise
+- **📋 Selective Display**: Nur relevante UI-Elemente basierend auf Instance-Typ
+
+### 🔧 Technical Excellence
+- **🌍 DNS Compliance**: Container-Namen ohne Unterstriche (instancenamedb vs instance_db)
+- **🔄 Backward Compatibility**: Unterstützt sowohl alte als auch neue Container-Namen
+- **⚡ Optimized Detection**: Verbesserte Custom Instance Erkennung in docker-compose.yml
+
+---
+
 ## 📦 Version 1.6.4 - Database Port Mapping Final Fix
 *Veröffentlicht: 29. August 2025*
 

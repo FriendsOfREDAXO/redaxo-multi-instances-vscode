@@ -75,8 +75,8 @@
             </div>
         </div>
 
-        <!-- REDAXO Login Credentials -->
-        <div class="glass-card redaxo-login animate-in" style="animation-delay: 0.2s">
+        <!-- REDAXO Login Credentials (only for standard REDAXO instances) -->
+        <div class="glass-card redaxo-login animate-in custom-instance-{{CUSTOM_INSTANCE}}" style="animation-delay: 0.2s">
             <div class="card-header">
                 <div class="card-icon">🔑</div>
                 <h2>REDAXO Backend Login</h2>
@@ -100,7 +100,7 @@
                             <span class="copy-icon">📋</span>
                         </button>
                         <button class="toggle-visibility micro-btn" data-target="password-field">
-                            <span class="visibility-icon">�</span>
+                            <span class="visibility-icon">🙈</span>
                         </button>
                     </div>
                 </div>
@@ -174,8 +174,12 @@
                                     <span class="copy-icon">📋</span>
                                 </button>
                                 <button class="toggle-visibility micro-btn" data-target="db-password">
-                                    <span class="visibility-icon">�</span>
+                                    <span class="visibility-icon">🙈</span>
                                 </button>
+                            </div>
+                            <div class="password-note custom-instance-{{CUSTOM_INSTANCE}}">
+                                <span class="note-icon">💡</span>
+                                <small><strong>Custom Instance:</strong> Passwort = Instance Name</small>
                             </div>
                         </div>
                     </div>
@@ -259,6 +263,10 @@
                                 <button class="toggle-visibility micro-btn" data-target="db-password-ext">
                                     <span class="visibility-icon">🙈</span>
                                 </button>
+                            </div>
+                            <div class="password-note custom-instance-{{CUSTOM_INSTANCE}}">
+                                <span class="note-icon">💡</span>
+                                <small><strong>Custom Instance:</strong> Passwort = Instance Name</small>
                             </div>
                         </div>
                     </div>

@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.7.0] - 2025-08-29
+
+### Changed
+- Removed Modern Login Info preview from context menu
+- Maintained clickable URLs functionality in login info
+- Streamlined context menu by removing demo/preview entries
+
+### Fixed
+- Improved user interface consistency
+- Cleaned up unnecessary context menu entries
+
+---
+
+## [1.6.5] - 2025-08-29
+
+### 🎯 Smart User Interface
+- **Context-Aware Display**: REDAXO Backend Login only shown for standard REDAXO instances
+- **Custom Instance Clarity**: Password hints clearly indicate "Password = Instance Name" for custom instances
+- **Intelligent UI**: Interface adapts based on instance type (custom vs standard REDAXO)
+
+### 🗄️ MariaDB Version Updates
+- **Updated Options**: MariaDB 11.6 (LTS), 11.5, 11.4, 11.3, 11.2, 10.11 available
+- **Modern Database**: Latest MariaDB versions for improved performance and security
+- **Multiple Choices**: Users can select appropriate MariaDB version for their needs
+
+### 🔧 DNS-Compliant Containers
+- **Container Names**: All new custom instances use DNS-compliant names without underscores
+- **Improved Compatibility**: Better network connectivity and hostname resolution
+- **Automatic Generation**: Helper functions ensure consistent naming for all new instances
+
+### 🏆 Enhanced Custom Instance Management
+- **Smart Detection**: Improved recognition of custom vs standard REDAXO instances
+- **Backward Compatibility**: Supports both old (instance_web) and new (instanceweb) naming conventions
+- **Clear Communication**: Users understand password conventions for custom instances
+
 ## [1.6.4] - 2025-08-29
 
 ### 🔧 Bug Fixes

@@ -452,7 +452,12 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
                         <div class="form-group">
                             <label for="mariadbVersion">MariaDB Version:</label>
                             <select id="mariadbVersion" required>
-                                    <option value="11.3">MariaDB 11.3 (Neueste)</option>
+                                <option value="11.6">MariaDB 11.6 (Neueste LTS)</option>
+                                <option value="11.5">MariaDB 11.5 (Stabil)</option>
+                                <option value="11.4">MariaDB 11.4 (Empfohlen)</option>
+                                <option value="11.3">MariaDB 11.3</option>
+                                <option value="11.2">MariaDB 11.2</option>
+                                <option value="10.11">MariaDB 10.11 (Legacy LTS)</option>
                             </select>
                         </div>
                     </div>

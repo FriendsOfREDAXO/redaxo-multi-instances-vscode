@@ -19,7 +19,23 @@ export class EmptyInstanceService {
     private readonly outputChannel: vscode.OutputChannel;
 
     constructor() {
-    this.outputChannel = vscode.window.createOutputChannel('REDAXO Custom Instances');
+        this.outputChannel = vscode.window.createOutputChannel('REDAXO Custom Instances');
+    }
+
+    /**
+     * Generate container-safe name without underscores
+     */
+    private getContainerName(instanceName: string, suffix: string): string {
+        // Replace underscores with hyphens for DNS compliance
+        const safeName = instanceName.replace(/_/g, '');
+        return `${safeName}${suffix}`;
+    }
+
+    /**
+     * Generate database host name without underscores
+     */
+    private getDbHostName(instanceName: string): string {
+        return this.getContainerName(instanceName, 'db');
     }
 
     async createEmptyInstance(config: EmptyInstanceConfig): Promise<void> {
@@ -128,7 +144,7 @@ $info = [
     'PHP Version' => PHP_VERSION,
     'HTTP Port' => '${config.httpPort}',
     'HTTPS Port' => '${config.httpsPort}',
-    'Database' => '${config.instanceName}_db',
+    'Database' => '${this.getDbHostName(config.instanceName)}',
     'Xdebug' => extension_loaded('xdebug') ? 'Active' : 'Inactive',
 ];
 ?>
@@ -340,7 +356,7 @@ $info = [
       args:
         PHP_VERSION: ${config.phpVersion}
         ENABLE_XDEBUG: ${config.enableXdebug ? 'true' : 'false'}
-    container_name: ${config.instanceName}_web
+    container_name: ${this.getContainerName(config.instanceName, 'web')}
     ports:
       - "${config.httpPort}:80"
       - "${config.httpsPort}:443"
@@ -355,7 +371,7 @@ $info = [
 
   db:
     image: mariadb:${config.mariadbVersion}
-    container_name: ${config.instanceName}_db
+    container_name: ${this.getDbHostName(config.instanceName)}
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: ${config.instanceName}
@@ -366,7 +382,7 @@ $info = [
     ports:
       - "${dbPort}:3306"
     volumes:
-      - ${config.instanceName}_db_data:/var/lib/mysql
+      - ${this.getDbHostName(config.instanceName)}_data:/var/lib/mysql
       - ./database:/docker-entrypoint-initdb.d
     command: >
       --max_connections=500
@@ -380,7 +396,7 @@ $info = [
     restart: unless-stopped
 
 volumes:
-  ${config.instanceName}_db_data:
+  ${this.getDbHostName(config.instanceName)}_data:
     driver: local`;
 
         fs.writeFileSync(path.join(config.projectPath, 'docker-compose.yml'), dockerCompose);
@@ -540,7 +556,7 @@ PHP_VERSION=${config.phpVersion}
 MARIADB_VERSION=${config.mariadbVersion}
 HTTP_PORT=${config.httpPort}
 HTTPS_PORT=${config.httpsPort}
-DB_HOST=${config.instanceName}_db
+DB_HOST=${this.getDbHostName(config.instanceName)}
 DB_NAME=${config.instanceName}
 DB_USER=${config.instanceName}
 DB_PASSWORD=${config.instanceName}
@@ -650,7 +666,7 @@ Diese Custom Instance ist bereit für dein PHP-Projekt!
 
 ## 🗄️ Datenbank-Verbindung
 
-- **Host**: \`${config.instanceName}_db\`
+- **Host**: \`${this.getDbHostName(config.instanceName)}\`
 - **Datenbank**: \`${config.instanceName}\`
 - **Benutzer**: \`${config.instanceName}\`
 - **Passwort**: \`${config.instanceName}\`

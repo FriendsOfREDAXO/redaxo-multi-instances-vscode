@@ -731,6 +731,37 @@ body {
     }
 }
 
+/* Custom Instance Password Notes */
+.password-note {
+    margin-top: var(--spacing-xs);
+    display: none; /* Hidden by default */
+}
+
+.password-note.custom-instance-custom {
+    display: flex; /* Only show for custom instances */
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: rgba(75, 154, 217, 0.1);
+    border: 1px solid rgba(75, 154, 217, 0.2);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.note-icon {
+    font-size: 0.9rem;
+}
+
+/* REDAXO Login Section - only show for standard REDAXO instances */
+.redaxo-login.custom-instance-custom {
+    display: none; /* Hide for custom instances */
+}
+
+.redaxo-login.custom-instance-redaxo {
+    display: block; /* Show for REDAXO instances */
+}
+
 /* Accessibility */
 @media (prefers-reduced-motion: reduce) {
     * {

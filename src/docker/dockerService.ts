@@ -438,7 +438,9 @@ export class DockerService {
             const composeContent = await fs.readFile(composePath, 'utf8');
             
             // Check if this is a custom instance by looking for docker-compose.yml structure
-            const isCustomInstance = composeContent.includes(`${instanceName}_web`) && composeContent.includes(`${instanceName}_db`);
+            // Support both old format (instance_web) and new format (instanceweb)
+            const isCustomInstance = composeContent.includes(`${instanceName}_web`) && composeContent.includes(`${instanceName}_db`) ||
+                                    composeContent.includes(`${instanceName.replace(/_/g, '')}web`) && composeContent.includes(`${instanceName.replace(/_/g, '')}db`);
             
             // Extract ports from docker-compose
             const httpPortMatch = composeContent.match(/"(\d+):80"/);
@@ -469,10 +471,10 @@ export class DockerService {
             let dbHost, dbName, dbUser, dbPassword, dbRootPassword, dbExternalHost, dbExternalPort;
             if (isCustomInstance) {
                 // Custom instances use instanceName for all DB credentials
-                dbHost = `${instanceName}_db`;
+                dbHost = `${instanceName.replace(/_/g, '')}db`; // Remove underscores for DNS compliance
                 dbName = instanceName;
                 dbUser = instanceName;
-                dbPassword = instanceName;
+                dbPassword = instanceName; // Custom instances: password = instance name
                 dbRootPassword = 'root'; // Custom instances use 'root' as root password
                 // Extract custom instance MySQL port from docker-compose.yml
                 const customPortMatch = composeContent.match(/"(\d+):3306"/);
