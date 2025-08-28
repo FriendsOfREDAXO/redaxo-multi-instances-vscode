@@ -46,7 +46,7 @@
                     </div>
                 </div>
                 <div class="url-item">
-                    <div class="url-label">Frontend (HTTPS) <span class="url-note">⚠️ Requires hosts entry</span></div>
+                    <div class="url-label">Frontend (HTTPS) <span class="url-note">⚠️ Port required</span></div>
                     <div class="url-value">
                         <a href="{{FRONTEND_HTTPS_URL}}" class="url-link">{{FRONTEND_HTTPS_URL}}</a>
                         <button class="copy-btn micro-btn" data-copy="{{FRONTEND_HTTPS_URL}}">
@@ -55,7 +55,7 @@
                     </div>
                 </div>
                 <div class="url-item">
-                    <div class="url-label">Backend (HTTPS) <span class="url-note">⚠️ Requires hosts entry</span></div>
+                    <div class="url-label">Backend (HTTPS) <span class="url-note">⚠️ Port required</span></div>
                     <div class="url-value">
                         <a href="{{BACKEND_HTTPS_URL}}" class="url-link">{{BACKEND_HTTPS_URL}}</a>
                         <button class="copy-btn micro-btn" data-copy="{{BACKEND_HTTPS_URL}}">
@@ -67,8 +67,10 @@
             <div class="hosts-info">
                 <div class="info-icon">💡</div>
                 <div class="info-text">
-                    <strong>HTTPS URLs require hosts file entry:</strong><br>
-                    <code>127.0.0.1 {{INSTANCE_NAME}}.local</code>
+                    <strong>HTTPS .local domains require:</strong><br>
+                    1. <strong>Hosts file entry:</strong> <code>127.0.0.1 {{INSTANCE_NAME}}.local</code><br>
+                    2. <strong>SSL Proxy:</strong> Configure reverse proxy to redirect HTTPS traffic from .local domain to localhost:port<br>
+                    <small>⚠️ Currently showing localhost:port - .local domains need additional SSL setup</small>
                 </div>
             </div>
         </div>
@@ -139,8 +141,8 @@
                         <div class="db-item">
                             <label>Port</label>
                             <div class="credential-field">
-                                <span class="credential-value">3306</span>
-                                <button class="copy-btn micro-btn" data-copy="3306">
+                                <span class="credential-value">{{DB_PORT}}</span>
+                                <button class="copy-btn micro-btn" data-copy="{{DB_PORT}}">
                                     <span class="copy-icon">📋</span>
                                 </button>
                             </div>
@@ -257,6 +259,35 @@
                                 <button class="toggle-visibility micro-btn" data-target="db-password-ext">
                                     <span class="visibility-icon">🙈</span>
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Root User Section -->
+                    <div class="root-section">
+                        <h4 class="root-title">🔑 Root User</h4>
+                        <div class="db-grid">
+                            <div class="db-item">
+                                <label>Username</label>
+                                <div class="credential-field">
+                                    <span class="credential-value">root</span>
+                                    <button class="copy-btn micro-btn" data-copy="root">
+                                        <span class="copy-icon">📋</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="db-item">
+                                <label>Password</label>
+                                <div class="credential-field">
+                                    <span class="credential-value root-password-ext hidden">{{DB_ROOT_PASSWORD}}</span>
+                                    <span class="credential-value password-placeholder">••••••••</span>
+                                    <button class="copy-btn micro-btn" data-copy="{{DB_ROOT_PASSWORD}}">
+                                        <span class="copy-icon">📋</span>
+                                    </button>
+                                    <button class="toggle-visibility micro-btn" data-target="root-password-ext">
+                                        <span class="visibility-icon">🙈</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -1641,8 +1641,8 @@ async function getModernLoginInfoHtml(webview: vscode.Webview, context: vscode.E
         .replace(/{{STATUS_TEXT}}/g, statusText)
         .replace(/{{FRONTEND_URL}}/g, loginInfo.frontendUrl || 'http://localhost:' + (loginInfo.httpPort || '80'))
         .replace(/{{BACKEND_URL}}/g, loginInfo.backendUrl || 'http://localhost:' + (loginInfo.httpPort || '80') + '/redaxo/index.php')
-        .replace(/{{FRONTEND_HTTPS_URL}}/g, `https://${instanceName}.local`)
-        .replace(/{{BACKEND_HTTPS_URL}}/g, `https://${instanceName}.local/redaxo`)
+        .replace(/{{FRONTEND_HTTPS_URL}}/g, loginInfo.httpsPort ? `https://${instanceName}.local:${loginInfo.httpsPort}` : `https://localhost:${loginInfo.httpsPort || '8443'}`)
+        .replace(/{{BACKEND_HTTPS_URL}}/g, loginInfo.httpsPort ? `https://${instanceName}.local:${loginInfo.httpsPort}/redaxo` : `https://localhost:${loginInfo.httpsPort || '8443'}/redaxo`)
         .replace(/{{HTTPS_URLS}}/g, httpsUrls)
         .replace(/{{CONTAINER_NAME}}/g, loginInfo.containerName || instanceName)
         .replace(/{{HTTP_PORT}}/g, loginInfo.httpPort || 'Not set')
@@ -1654,14 +1654,13 @@ async function getModernLoginInfoHtml(webview: vscode.Webview, context: vscode.E
         .replace(/{{ADMIN_PASSWORD}}/g, 'admin')
         // Database Credentials
         .replace(/{{DB_HOST_INTERNAL}}/g, loginInfo.dbHost || 'mysql')
-        .replace(/{{DB_HOST_EXTERNAL}}/g, loginInfo.dbHostExternal || 'localhost')
+        .replace(/{{DB_HOST_EXTERNAL}}/g, loginInfo.dbExternalHost || 'localhost')
         .replace(/{{DB_NAME}}/g, loginInfo.dbName || instanceName || 'redaxo')
         .replace(/{{DB_USER}}/g, loginInfo.dbUser || 'redaxo')
         .replace(/{{DB_PASSWORD}}/g, loginInfo.dbPassword || 'redaxo')
         .replace(/{{DB_ROOT_PASSWORD}}/g, loginInfo.dbRootPassword || 'root')
-        .replace(/{{DB_PORT}}/g, loginInfo.dbPort || '3306')
-        .replace(/{{DB_PORT_EXTERNAL}}/g, loginInfo.dbPort || '3306')
-        .replace(/{{DB_PORT_EXTERNAL}}/g, loginInfo.dbPortExternal || '3306');
+        .replace(/{{DB_PORT}}/g, '3306') // Internal port is always 3306
+        .replace(/{{DB_PORT_EXTERNAL}}/g, loginInfo.dbExternalPort || loginInfo.dbPort || '3306');
     
     return htmlTemplate;
 }

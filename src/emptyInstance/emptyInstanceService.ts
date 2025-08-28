@@ -9,6 +9,7 @@ export interface EmptyInstanceConfig {
     phpVersion: string;
     mariadbVersion: string;
     enableXdebug: boolean;
+    enableSSL?: boolean;
     httpPort?: number;
     httpsPort?: number;
     createWelcome?: boolean;
@@ -51,6 +52,27 @@ export class EmptyInstanceService {
 
             // 7. README erstellen
             await this.createReadme(config);
+
+            // 8. SSL automatisch einrichten falls aktiviert
+            if (config.enableSSL) {
+                this.outputChannel.appendLine('🔒 Richte SSL automatisch ein...');
+                try {
+                    const { SSLManager } = require('../docker/sslManager');
+                    const success = await SSLManager.setupSSLCertificates(
+                        config.instanceName, 
+                        config.projectPath, 
+                        'custom'
+                    );
+                    if (success) {
+                        this.outputChannel.appendLine('✅ SSL erfolgreich eingerichtet!');
+                        this.outputChannel.appendLine(`🌐 HTTPS Domain: https://${config.instanceName}.local:${httpsPort}`);
+                    } else {
+                        this.outputChannel.appendLine('⚠️ SSL-Setup fehlgeschlagen. Nutze "Setup HTTPS/SSL" Command.');
+                    }
+                } catch (error: any) {
+                    this.outputChannel.appendLine(`⚠️ SSL-Setup Fehler: ${error.message}`);
+                }
+            }
 
             this.outputChannel.appendLine('✅ Custom Instance erfolgreich erstellt!');
             this.outputChannel.appendLine(`🌐 HTTP: http://localhost:${httpPort}`);

@@ -487,7 +487,7 @@ export class DockerService {
                 dbRootPassword = envVars.DB_ROOT_PASSWORD || envVars.MYSQL_ROOT_PASSWORD || 'N/A';
                 // External connection
                 dbExternalHost = 'localhost';
-                dbExternalPort = envVars.MYSQL_PORT || '3306';
+                dbExternalPort = mysqlPort || '3306'; // Use extracted port from docker-compose.yml
             }
             
             return {

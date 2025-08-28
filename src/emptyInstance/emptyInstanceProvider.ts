@@ -466,6 +466,13 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
                         <input type="checkbox" id="enableXdebug" name="enableXdebug">
                         <label for="enableXdebug">Xdebug aktivieren (für Debugging)</label>
                     </div>
+                    
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="enableSSL" name="enableSSL" checked>
+                        <label for="enableSSL">🔒 SSL automatisch einrichten (HTTPS)</label>
+                        <small>Erstellt Zertifikate und konfiguriert Apache für HTTPS</small>
+                    </div>
+                    
                     <div class="form-group checkbox-group">
                         <input type="checkbox" id="openInNewWindow" name="openInNewWindow" checked>
                         <label for="openInNewWindow">In neuem Fenster öffnen</label>
@@ -528,6 +535,7 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
                     const mariadbVersionSelect = document.getElementById('mariadbVersion');
                     const createWelcomeCheckbox = document.getElementById('createWelcome');
                     const xdebugCheckbox = document.getElementById('enableXdebug');
+                    const enableSSLCheckbox = document.getElementById('enableSSL');
                     const openInNewWindowCheckbox = document.getElementById('openInNewWindow');
                     const createBtn = document.getElementById('createBtn');
                     
@@ -545,6 +553,7 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
                             mariadbVersion: mariadbVersionSelect.value,
                             createWelcome: createWelcomeCheckbox.checked,
                             enableXdebug: xdebugCheckbox.checked,
+                            enableSSL: enableSSLCheckbox.checked,
                             openInNewWindow: openInNewWindowCheckbox.checked
                         };
                         console.log('[EmptyInstance Webview] Sende Config', config);
