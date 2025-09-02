@@ -1650,8 +1650,8 @@ async function getModernLoginInfoHtml(webview: vscode.Webview, context: vscode.E
         .replace(/{{INSTANCE_TYPE}}/g, loginInfo.instanceType || 'Standard')
         .replace(/{{CUSTOM_INSTANCE}}/g, loginInfo.instanceType === 'custom' ? 'custom' : 'redaxo')
         // REDAXO Admin Credentials
-        .replace(/{{ADMIN_USER}}/g, 'admin')
-        .replace(/{{ADMIN_PASSWORD}}/g, 'admin')
+        .replace(/{{ADMIN_USER}}/g, loginInfo.adminUser || 'admin')
+        .replace(/{{ADMIN_PASSWORD}}/g, loginInfo.adminPassword || 'redaxo123')
         // Database Credentials
         .replace(/{{DB_HOST_INTERNAL}}/g, loginInfo.dbHost || 'mysql')
         .replace(/{{DB_HOST_EXTERNAL}}/g, loginInfo.dbExternalHost || 'localhost')

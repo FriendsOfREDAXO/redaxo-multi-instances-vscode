@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.7.1] - 2025-08-30
+
+### Fixed
+- **Admin Password Authentication**: REDAXO admin password now shows actual password from .env file instead of hardcoded 'admin'
+- **Login Info UI**: Fixed copy and visibility toggle buttons for admin password functionality
+- **Password Display**: Corrected password extraction from MYSQL_PASSWORD environment variable
+- **JavaScript Interactions**: Fixed selectors for password field visibility toggles and clipboard operations
+
+### Improved
+- Enhanced password field handling in login info webview
+- Better error handling for password extraction from Docker environments
+
+---
+
 ## [1.7.0] - 2025-08-29
 
 ### Changed

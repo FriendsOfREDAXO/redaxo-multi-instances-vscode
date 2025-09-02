@@ -2,6 +2,20 @@
 
 # Release Notes
 
+## Version 1.7.1 (2025-08-30)
+
+### 🔧 Bug Fixes
+- **Admin Password Fix**: Corrected REDAXO admin password display to show actual password from .env file instead of hardcoded 'admin'
+- **Login Info Functionality**: Fixed copy and visibility toggle buttons for admin password
+- **Password Authentication**: Admin password now correctly reads from MYSQL_PASSWORD environment variable
+
+### 🛠️ Technical Improvements
+- Fixed JavaScript selectors for login info password field interactions
+- Improved password field visibility toggle with proper placeholder handling
+- Enhanced password extraction from Docker environment variables
+
+---
+
 ## Version 1.7.0 (2025-08-29)
 
 ### 🔧 Improvements

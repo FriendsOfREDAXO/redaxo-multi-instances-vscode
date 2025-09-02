@@ -78,15 +78,23 @@ class LoginInfoWebview {
                 e.stopPropagation();
                 
                 const targetClass = button.dataset.target;
-                const passwordField = button.closest('.credential-field').querySelector(`.${targetClass}`);
+                const container = button.closest('.login-value') || button.closest('.credential-field');
+                const passwordField = container.querySelector(`.${targetClass}`);
+                const passwordPlaceholder = container.querySelector('.password-placeholder');
                 const icon = button.querySelector('.visibility-icon');
                 
-                if (passwordField.classList.contains('hidden')) {
-                    passwordField.classList.remove('hidden');
-                    icon.textContent = '👁️';
-                } else {
-                    passwordField.classList.add('hidden');
-                    icon.textContent = '🙈';
+                if (passwordField && passwordPlaceholder) {
+                    if (passwordField.classList.contains('hidden')) {
+                        // Show password, hide placeholder
+                        passwordField.classList.remove('hidden');
+                        passwordPlaceholder.classList.add('hidden');
+                        icon.textContent = '👁️';
+                    } else {
+                        // Hide password, show placeholder
+                        passwordField.classList.add('hidden');
+                        passwordPlaceholder.classList.remove('hidden');
+                        icon.textContent = '🙈';
+                    }
                 }
                 
                 this.addButtonFeedback(button);
