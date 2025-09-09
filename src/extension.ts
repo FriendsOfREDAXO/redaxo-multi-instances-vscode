@@ -4,6 +4,7 @@ import * as fs from 'fs/promises';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { DockerService } from './docker/dockerService';
+import { DDEVService } from './ddev/ddevService';
 import { ResourceMonitor } from './docker/resourceMonitor';
 import { InstancesProvider } from './providers/instancesProvider';
 import { EmptyInstanceProvider } from './emptyInstance/emptyInstanceProvider';
@@ -20,6 +21,7 @@ async function dirExists(p: string): Promise<boolean> {
 }
 
 let dockerService: DockerService;
+let ddevService: DDEVService;
 let instancesProvider: InstancesProvider;
 let emptyInstanceProvider: EmptyInstanceProvider;
 let outputChannel: vscode.OutputChannel;
@@ -33,8 +35,9 @@ export function activate(context: vscode.ExtensionContext) {
     
     // Initialize services
     dockerService = new DockerService(outputChannel);
+    ddevService = new DDEVService(outputChannel);
     instancesProvider = new InstancesProvider(dockerService);
-    emptyInstanceProvider = new EmptyInstanceProvider(context.extensionUri, dockerService);
+    emptyInstanceProvider = new EmptyInstanceProvider(context.extensionUri, dockerService, ddevService);
 
     // Register Tree Views
     const treeView = vscode.window.createTreeView('redaxo-instances.instancesView', {

@@ -28,6 +28,10 @@ export interface RedaxoInstance {
     hasSnapshot?: boolean;
     path?: string;
     instanceType?: 'standard' | 'custom';
+    // DDEV specific properties
+    containerType?: 'docker' | 'ddev';
+    localDomain?: string; // for DDEV projects (e.g., instancename.ddev.site)
+    redaxoStructure?: 'classic' | 'modern';
 }
 
 export interface DatabaseDump {
@@ -51,6 +55,10 @@ export interface CreateInstanceOptions {
     downloadUrl?: string;
     sslEnabled?: boolean;
     imageVariant?: 'stable' | 'edge'; // stable = older PHP, edge = latest PHP/REDAXO
+    // DDEV specific options
+    containerType?: 'docker' | 'ddev';
+    redaxoStructure?: 'classic' | 'modern'; // classic = traditional, modern = with public folder
+    localDomain?: string; // for DDEV local domain
 }
 
 export interface DockerContainer {
@@ -85,4 +93,32 @@ export interface InstanceCommand {
     args: string[];
     cwd?: string;
     env?: { [key: string]: string };
+}
+
+export interface DDEVConfig {
+    name: string;
+    type: string;
+    docroot: string;
+    php_version: string;
+    database: {
+        type: string;
+        version: string;
+    };
+    router_http_port?: string;
+    router_https_port?: string;
+    use_dns_when_possible?: boolean;
+    additional_hostnames?: string[];
+}
+
+export interface DDEVProjectInfo {
+    name: string;
+    status: 'running' | 'stopped' | 'paused' | 'unhealthy';
+    location: string;
+    urls: string[];
+    type: string;
+    phpVersion: string;
+    dbType: string;
+    dbVersion: string;
+    primaryUrl?: string;
+    httpsUrl?: string;
 }

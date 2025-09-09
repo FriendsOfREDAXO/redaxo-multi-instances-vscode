@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { EmptyInstanceService, EmptyInstanceConfig } from './emptyInstanceService';
 import { DockerService } from '../docker/dockerService';
+import { DDEVService } from '../ddev/ddevService';
+import { CreateInstanceOptions } from '../types/redaxo';
 import * as path from 'path';
 
 export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
@@ -8,10 +10,12 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
     private emptyInstanceService: EmptyInstanceService;
     private dockerService: DockerService;
+    private ddevService: DDEVService;
 
-    constructor(private readonly _extensionUri: vscode.Uri, dockerService: DockerService) {
+    constructor(private readonly _extensionUri: vscode.Uri, dockerService: DockerService, ddevService: DDEVService) {
         this.emptyInstanceService = new EmptyInstanceService();
         this.dockerService = dockerService;
+        this.ddevService = ddevService;
     }
 
     public resolveWebviewView(
@@ -41,38 +45,16 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
 
     private async handleCreateEmptyInstance(config: any) {
         try {
-            // Instances-Ordner vom DockerService verwenden
-            const instancesPath = await this.dockerService.getInstancesDirectory();
-            const projectPath = path.join(instancesPath, config.instanceName);
-
-            const emptyConfig: EmptyInstanceConfig = {
-                instanceName: config.instanceName,
-                projectPath: projectPath,
-                phpVersion: config.phpVersion,
-                mariadbVersion: config.mariadbVersion,
-                enableXdebug: config.enableXdebug,
-                createWelcome: config.createWelcome
-            };
-            this.emptyInstanceService['outputChannel']?.appendLine?.(`[DEBUG] Provider: createWelcome=${config.createWelcome}`);
-
-            await this.emptyInstanceService.createEmptyInstance(emptyConfig);
-            
-            // Ordner in VS Code öffnen
-            if (config.openInNewWindow) {
-                const uri = vscode.Uri.file(projectPath);
-                await vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
-            }
-            
-            // Success-Nachricht an Webview senden
-            if (this._view) {
-                this._view.webview.postMessage({ 
-                    type: 'creationSuccess',
-                    path: projectPath 
-                });
+            if (config.containerType === 'ddev') {
+                // Handle DDEV instance creation
+                await this.handleCreateDDEVInstance(config);
+            } else {
+                // Handle traditional Docker instance creation
+                await this.handleCreateDockerInstance(config);
             }
             
         } catch (error) {
-            vscode.window.showErrorMessage(`Fehler beim Erstellen der Custom Instance: ${error}`);
+            vscode.window.showErrorMessage(`Fehler beim Erstellen der Instance: ${error}`);
             
             // Error-Nachricht an Webview senden
             if (this._view) {
@@ -81,6 +63,79 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
                     error: error?.toString() 
                 });
             }
+        }
+    }
+
+    private async handleCreateDockerInstance(config: any) {
+        // Instances-Ordner vom DockerService verwenden
+        const instancesPath = await this.dockerService.getInstancesDirectory();
+        const projectPath = path.join(instancesPath, config.instanceName);
+
+        const emptyConfig: EmptyInstanceConfig = {
+            instanceName: config.instanceName,
+            projectPath: projectPath,
+            phpVersion: config.phpVersion,
+            mariadbVersion: config.mariadbVersion,
+            enableXdebug: config.enableXdebug,
+            createWelcome: config.createWelcome
+        };
+        this.emptyInstanceService['outputChannel']?.appendLine?.(`[DEBUG] Provider: createWelcome=${config.createWelcome}`);
+
+        await this.emptyInstanceService.createEmptyInstance(emptyConfig);
+        
+        // Ordner in VS Code öffnen
+        if (config.openInNewWindow) {
+            const uri = vscode.Uri.file(projectPath);
+            await vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
+        }
+        
+        // Success-Nachricht an Webview senden
+        if (this._view) {
+            this._view.webview.postMessage({ 
+                type: 'creationSuccess',
+                path: projectPath 
+            });
+        }
+    }
+
+    private async handleCreateDDEVInstance(config: any) {
+        // Check if DDEV is available
+        const ddevAvailable = await this.ddevService.checkDDEVAvailability();
+        if (!ddevAvailable) {
+            throw new Error('DDEV is not available. Please install DDEV first: https://ddev.readthedocs.io/en/stable/#installation');
+        }
+
+        const instancesPath = await this.ddevService.getInstancesDirectory();
+        const projectPath = path.join(instancesPath, config.instanceName);
+
+        const ddevConfig: CreateInstanceOptions = {
+            name: config.instanceName,
+            phpVersion: config.phpVersion,
+            mariadbVersion: config.mariadbVersion,
+            autoInstall: config.autoInstall,
+            importDump: false,
+            webserverOnly: false,
+            containerType: 'ddev',
+            redaxoStructure: config.redaxoStructure,
+            localDomain: `${config.instanceName}.ddev.site`
+        };
+
+        await this.ddevService.createInstance(ddevConfig);
+        
+        // Ordner in VS Code öffnen
+        if (config.openInNewWindow) {
+            const uri = vscode.Uri.file(projectPath);
+            await vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
+        }
+        
+        // Success-Nachricht an Webview senden
+        if (this._view) {
+            this._view.webview.postMessage({ 
+                type: 'creationSuccess',
+                path: projectPath,
+                containerType: 'ddev',
+                localDomain: `${config.instanceName}.ddev.site`
+            });
         }
     }
 
@@ -436,6 +491,26 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
                         <small>Wird im REDAXO Instances-Ordner erstellt</small>
                     </div>
 
+                    <div class="form-row">    
+                        <div class="form-group">
+                            <label for="containerType">Container Type:</label>
+                            <select id="containerType" required>
+                                <option value="docker">🐳 Docker (Traditional)</option>
+                                <option value="ddev">🚀 DDEV (Local Development)</option>
+                            </select>
+                            <small>DDEV provides local domains and easier PHP/DB switching</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="redaxoStructure">REDAXO Structure:</label>
+                            <select id="redaxoStructure" required>
+                                <option value="classic">📁 Classic Structure</option>
+                                <option value="modern">🆕 Modern Structure (with public/)</option>
+                            </select>
+                            <small>Modern structure uses public/ folder as webroot</small>
+                        </div>
+                    </div>
+
                     <div class="form-row">
                         <div class="form-group">
                             <label for="phpVersion">PHP Version:</label>
@@ -472,10 +547,16 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
                         <label for="enableXdebug">Xdebug aktivieren (für Debugging)</label>
                     </div>
                     
-                    <div class="form-group checkbox-group">
+                    <div class="form-group checkbox-group" id="sslGroup">
                         <input type="checkbox" id="enableSSL" name="enableSSL" checked>
                         <label for="enableSSL">🔒 SSL automatisch einrichten (HTTPS)</label>
                         <small>Erstellt Zertifikate und konfiguriert Apache für HTTPS</small>
+                    </div>
+
+                    <div class="form-group checkbox-group" id="autoInstallGroup">
+                        <input type="checkbox" id="autoInstall" name="autoInstall" checked>
+                        <label for="autoInstall">📦 REDAXO automatisch installieren</label>
+                        <small>Downloads and installs latest REDAXO release</small>
                     </div>
                     
                     <div class="form-group checkbox-group">
@@ -490,13 +571,13 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
                 <div class="info-section">
                     <h3>📋 Was wird erstellt?</h3>
                     <div class="features-list">
-                        <div class="feature">
+                        <div class="feature" id="containerFeature">
                             <strong>🐳 Docker Setup</strong>
                             <p>Optimierte Container mit Apache, PHP, MariaDB</p>
                         </div>
                         <div class="feature">
-                            <strong>📁 Public Ordner</strong>
-                            <p>Webroot mit Welcome-Seite und phpinfo()</p>
+                            <strong>📁 REDAXO Structure</strong>
+                            <p id="structureDescription">Classic: root webroot / Modern: public/ webroot</p>
                         </div>
                         <div class="feature">
                             <strong>🔧 Extensions</strong>
@@ -506,11 +587,11 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
                             <strong>⚡ Performance</strong>
                             <p>2GB RAM, 512MB Upload, 300s Execution Time</p>
                         </div>
-                        <div class="feature">
+                        <div class="feature" id="httpsFeature">
                             <strong>🔒 HTTPS Ready</strong>
-                            <p>Selbstsignierte SSL-Zertifikate inklusive</p>
+                            <p>SSL-Zertifikate für sichere Verbindungen</p>
                         </div>
-                        <div class="feature">
+                        <div class="feature" id="domainFeature">
                             <strong>🎯 Automatische Ports</strong>
                             <p>Freie HTTP/HTTPS/DB Ports werden automatisch gefunden</p>
                         </div>
@@ -536,11 +617,14 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
                     // DOM Elements
                     const form = document.getElementById('emptyInstanceForm');
                     const instanceNameInput = document.getElementById('instanceName');
+                    const containerTypeSelect = document.getElementById('containerType');
+                    const redaxoStructureSelect = document.getElementById('redaxoStructure');
                     const phpVersionSelect = document.getElementById('phpVersion');
                     const mariadbVersionSelect = document.getElementById('mariadbVersion');
                     const createWelcomeCheckbox = document.getElementById('createWelcome');
                     const xdebugCheckbox = document.getElementById('enableXdebug');
                     const enableSSLCheckbox = document.getElementById('enableSSL');
+                    const autoInstallCheckbox = document.getElementById('autoInstall');
                     const openInNewWindowCheckbox = document.getElementById('openInNewWindow');
                     const createBtn = document.getElementById('createBtn');
                     
@@ -554,11 +638,14 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
                         
                         const config = {
                             instanceName: instanceNameInput.value.trim(),
+                            containerType: containerTypeSelect.value,
+                            redaxoStructure: redaxoStructureSelect.value,
                             phpVersion: phpVersionSelect.value,
                             mariadbVersion: mariadbVersionSelect.value,
                             createWelcome: createWelcomeCheckbox.checked,
                             enableXdebug: xdebugCheckbox.checked,
                             enableSSL: enableSSLCheckbox.checked,
+                            autoInstall: autoInstallCheckbox.checked,
                             openInNewWindow: openInNewWindowCheckbox.checked
                         };
                         console.log('[EmptyInstance Webview] Sende Config', config);
@@ -569,6 +656,16 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
                             type: 'createEmptyInstance',
                             config: config
                         });
+                    });
+                    
+                    // Container type change handler
+                    containerTypeSelect.addEventListener('change', (e) => {
+                        updateUIForContainerType(e.target.value);
+                    });
+                    
+                    // REDAXO structure change handler
+                    redaxoStructureSelect.addEventListener('change', (e) => {
+                        updateUIForRedaxoStructure(e.target.value);
                     });
                     
                     // Instance name validation
@@ -697,16 +794,52 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
                             clearFieldError(field);
                         });
                         
+                        containerTypeSelect.value = 'docker';
+                        redaxoStructureSelect.value = 'classic';
                         phpVersionSelect.value = '8.3';
                         mariadbVersionSelect.value = '11.2';
                         xdebugCheckbox.checked = false;
                         openInNewWindowCheckbox.checked = true;
                     }
                     
+                    function updateUIForContainerType(containerType) {
+                        const containerFeature = document.getElementById('containerFeature');
+                        const domainFeature = document.getElementById('domainFeature');
+                        const sslGroup = document.getElementById('sslGroup');
+                        
+                        if (containerType === 'ddev') {
+                            containerFeature.innerHTML = '<strong>🚀 DDEV Setup</strong><p>Local development with easy PHP/DB switching and local domains</p>';
+                            domainFeature.innerHTML = '<strong>🌐 Local Domains</strong><p>Automatic .ddev.site domains with HTTPS</p>';
+                            // For DDEV, SSL is handled automatically
+                            sslGroup.style.display = 'none';
+                        } else {
+                            containerFeature.innerHTML = '<strong>🐳 Docker Setup</strong><p>Optimierte Container mit Apache, PHP, MariaDB</p>';
+                            domainFeature.innerHTML = '<strong>🎯 Automatische Ports</strong><p>Freie HTTP/HTTPS/DB Ports werden automatisch gefunden</p>';
+                            sslGroup.style.display = 'block';
+                        }
+                    }
+                    
+                    function updateUIForRedaxoStructure(structure) {
+                        const structureDescription = document.getElementById('structureDescription');
+                        
+                        if (structure === 'modern') {
+                            structureDescription.textContent = 'Modern structure with public/ folder as webroot';
+                        } else {
+                            structureDescription.textContent = 'Classic structure with root as webroot';
+                        }
+                    }
+                    
                     // Initialize
+                    containerTypeSelect.value = 'docker';
+                    redaxoStructureSelect.value = 'classic';
                     phpVersionSelect.value = '8.3';
                     mariadbVersionSelect.value = '11.2';
                     openInNewWindowCheckbox.checked = true;
+                    autoInstallCheckbox.checked = true;
+                    
+                    // Update UI based on initial values
+                    updateUIForContainerType('docker');
+                    updateUIForRedaxoStructure('classic');
                 })();
             </script>
         </body>

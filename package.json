@@ -285,6 +285,23 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically refresh instance status"
+        },
+        "redaxo-instances.ddevPath": {
+          "type": "string",
+          "default": "ddev",
+          "description": "Path to DDEV executable"
+        },
+        "redaxo-instances.defaultContainerType": {
+          "type": "string",
+          "default": "docker",
+          "enum": ["docker", "ddev"],
+          "description": "Default container type for new instances"
+        },
+        "redaxo-instances.defaultRedaxoStructure": {
+          "type": "string",
+          "default": "classic",
+          "enum": ["classic", "modern"],
+          "description": "Default REDAXO structure (classic = traditional, modern = with public folder)"
         }
       }
     }
