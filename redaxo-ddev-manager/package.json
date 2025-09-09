@@ -1,0 +1,228 @@
+{
+  "name": "redaxo-ddev-manager",
+  "displayName": "REDAXO DDEV Manager",
+  "description": "VS Code extension for managing REDAXO CMS projects with DDEV",
+  "version": "1.0.0",
+  "publisher": "FriendsOfREDAXO",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other",
+    "Extension Packs"
+  ],
+  "keywords": [
+    "redaxo",
+    "ddev",
+    "cms",
+    "php",
+    "development",
+    "docker"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "redaxo-ddev.openDashboard",
+        "title": "Open Dashboard",
+        "category": "REDAXO DDEV",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "redaxo-ddev.createProject",
+        "title": "Create New Project",
+        "category": "REDAXO DDEV",
+        "icon": "$(add)"
+      },
+      {
+        "command": "redaxo-ddev.startProject",
+        "title": "Start Project",
+        "category": "REDAXO DDEV",
+        "icon": "$(play)"
+      },
+      {
+        "command": "redaxo-ddev.stopProject",
+        "title": "Stop Project",
+        "category": "REDAXO DDEV",
+        "icon": "$(stop)"
+      },
+      {
+        "command": "redaxo-ddev.restartProject",
+        "title": "Restart Project",
+        "category": "REDAXO DDEV",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "redaxo-ddev.deleteProject",
+        "title": "Delete Project",
+        "category": "REDAXO DDEV",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "redaxo-ddev.importDatabase",
+        "title": "Import Database",
+        "category": "REDAXO DDEV",
+        "icon": "$(database)"
+      },
+      {
+        "command": "redaxo-ddev.exportDatabase",
+        "title": "Export Database",
+        "category": "REDAXO DDEV",
+        "icon": "$(export)"
+      },
+      {
+        "command": "redaxo-ddev.openUrl",
+        "title": "Open in Browser",
+        "category": "REDAXO DDEV",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "redaxo-ddev.openTerminal",
+        "title": "Open Terminal",
+        "category": "REDAXO DDEV",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "redaxo-ddev.refreshProjects",
+        "title": "Refresh Projects",
+        "category": "REDAXO DDEV",
+        "icon": "$(refresh)"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "redaxo-ddev-projects",
+          "name": "REDAXO DDEV Projects",
+          "when": "true"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "redaxo-ddev.openDashboard",
+          "when": "view == redaxo-ddev-projects",
+          "group": "navigation@1"
+        },
+        {
+          "command": "redaxo-ddev.createProject",
+          "when": "view == redaxo-ddev-projects",
+          "group": "navigation@2"
+        },
+        {
+          "command": "redaxo-ddev.refreshProjects",
+          "when": "view == redaxo-ddev-projects",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "redaxo-ddev.startProject",
+          "when": "view == redaxo-ddev-projects && viewItem == redaxo-project-stopped",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "redaxo-ddev.stopProject",
+          "when": "view == redaxo-ddev-projects && viewItem == redaxo-project-running",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "redaxo-ddev.restartProject",
+          "when": "view == redaxo-ddev-projects && viewItem == redaxo-project-running",
+          "group": "1_actions@2"
+        },
+        {
+          "command": "redaxo-ddev.openUrl",
+          "when": "view == redaxo-ddev-projects && viewItem == redaxo-project-running",
+          "group": "2_navigation@1"
+        },
+        {
+          "command": "redaxo-ddev.openTerminal",
+          "when": "view == redaxo-ddev-projects",
+          "group": "2_navigation@2"
+        },
+        {
+          "command": "redaxo-ddev.importDatabase",
+          "when": "view == redaxo-ddev-projects",
+          "group": "3_database@1"
+        },
+        {
+          "command": "redaxo-ddev.exportDatabase",
+          "when": "view == redaxo-ddev-projects",
+          "group": "3_database@2"
+        },
+        {
+          "command": "redaxo-ddev.deleteProject",
+          "when": "view == redaxo-ddev-projects",
+          "group": "4_danger@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "REDAXO DDEV Manager",
+      "properties": {
+        "redaxo-ddev.defaultREDAXOVersion": {
+          "type": "string",
+          "default": "5.17.0",
+          "description": "Default REDAXO version for new projects"
+        },
+        "redaxo-ddev.defaultPHPVersion": {
+          "type": "string",
+          "default": "8.1",
+          "enum": ["7.4", "8.0", "8.1", "8.2", "8.3", "8.4"],
+          "description": "Default PHP version for new projects"
+        },
+        "redaxo-ddev.defaultDatabase": {
+          "type": "string",
+          "default": "mysql:8.0",
+          "enum": ["mysql:5.7", "mysql:8.0", "mariadb:10.3", "mariadb:10.4", "mariadb:10.5", "mariadb:10.6"],
+          "description": "Default database version for new projects"
+        },
+        "redaxo-ddev.projectsDirectory": {
+          "type": "string",
+          "default": "",
+          "description": "Default directory for REDAXO projects (leave empty to use workspace folder)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/mocha": "^10.0.7",
+    "@types/node": "20.x",
+    "@typescript-eslint/eslint-plugin": "^7.14.1",
+    "@typescript-eslint/parser": "^7.11.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.5",
+    "webpack": "^5.92.1",
+    "webpack-cli": "^5.1.4",
+    "ts-loader": "^9.5.1",
+    "@vscode/test-cli": "^0.0.9",
+    "@vscode/test-electron": "^2.4.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FriendsOfREDAXO/redaxo-ddev-manager.git"
+  },
+  "bugs": {
+    "url": "https://github.com/FriendsOfREDAXO/redaxo-ddev-manager/issues"
+  },
+  "homepage": "https://github.com/FriendsOfREDAXO/redaxo-ddev-manager#readme",
+  "license": "MIT",
+  "icon": "resources/icon.png"
+}
