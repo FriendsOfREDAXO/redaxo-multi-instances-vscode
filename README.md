@@ -1,25 +1,21 @@
 # 🚀 REDAXO Multi-Instances Manager 
 
-👉 Für macOS und Linux | 🆕 **Now with DDEV Support!**
+👉 Für macOs und Linux
 
 Based on: [Docker image for REDAXO](https://github.com/FriendsOfREDAXO/docker-redaxo) Danke Dirk! 🙏
 
 ![Screenshot](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/blob/main/screenshot.png?raw=true)
 
-Eine TreeView (Seitenleiste)
+Eine  TreeView (Seitenleiste)
 - **Server-Symbol** = REDAXO-Instanz (Grün=läuft, Gelb=gestoppt, Rot=Fehler)
 - **Paket-Symbol** = Custom-Instanz (Grün=läuft, Gelb=gestoppt, Rot=Fehler)
-- **🚀/🌐-Symbol** = DDEV-Instanz (Grün=läuft, Gelb=gestoppt, Rot=Fehler)
 - **● / ○** in Beschreibung = Status (gefüllt=läuft, leer=gestoppt)
 - **Klick auf Instanz** öffnet Aktionsmenü (intuitiver Zugriff)
 - Rechtsklick für Kontext-Menü (wie gehabt)
-- **❓ Help-Button** in der Toolbar für schnelle Hilfe
-
-VS Code Extension zur Verwaltung mehrerer REDAXO-Instanzen ("Custom Instances") mit Docker/DDEV, SSL-Support und modernem Dashboard.
+- **❓ Help-Button** in der Toolbar für schnelle HilfeS Code Extension zur Verwaltung mehrerer REDAXO-Instanzen ("Custom Instances") mit Docker, SSL-Support und modernem Dashboard.
 
 ![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue?style=flat-square&logo=visual-studio-code)
-![Docker](https://img.shields.io/badge/Docker-Supported-blue?style=flat-square&logo=docker)
-![DDEV](https://img.shields.io/badge/DDEV-Supported-green?style=flat-square)
+![Docker](https://img.shields.io/badge/Docker-Required-blue?style=flat-square&logo=docker)
 ![REDAXO](https://img.shields.io/badge/REDAXO-5.x-green?style=flat-square)
 ![PHP](https://img.shields.io/badge/PHP-7.4%20|%208.1--8.5-purple?style=flat-square&logo=php)
 ![MariaDB](https://img.shields.io/badge/MariaDB-11.3-blue?style=flat-square)
@@ -29,16 +25,13 @@ VS Code Extension zur Verwaltung mehrerer REDAXO-Instanzen ("Custom Instances") 
 
 ### 🎯 Kern-Funktionen
 - **🏗️ Instanz-Management** - Erstellen, starten, stoppen und löschen von REDAXO-Instanzen
-- **🚀 DDEV Support** - Alternative zu Docker mit lokalen Domains und einfacher Konfiguration
 - **🔒 SSL/HTTPS Support** - Automatische SSL-Zertifikate mit mkcert
 - **🐳 Docker Integration** - Vollständig containerisierte Umgebung
-- **📊 Info Pages** - Modernes Webview-Dashboard je Instanz
+- **📊 Info Pages* - Modernes Webview-Dashboard je Instanz
 - **🔑 Login-Informationen** - Automatische Anzeige von Zugangsdaten und URLs
 - **📱 TreeView** - Seitenleiste mit allen Instanzen und deren Status
 
 ### 🔧 Technische Features
-- **Container Engines** - Docker oder DDEV (lokale Domains, automatisches HTTPS)
-- **REDAXO Strukturen** - Classic (root webroot) oder Modern (public/ webroot)
 - **PHP Support** - PHP 7.4, 8.1, 8.2, 8.3, 8.4, 8.5
 - **MariaDB Support** - Aktuell 11.3
 - **Port Management** - Automatische Port-Zuweisung und -Verwaltung
@@ -50,17 +43,9 @@ VS Code Extension zur Verwaltung mehrerer REDAXO-Instanzen ("Custom Instances") 
 
 ### Voraussetzungen
 
-#### Für Docker-basierte Instanzen
 1. **VS Code** (Version 1.74.0 oder höher)
 2. **Docker Desktop** - [Download](https://www.docker.com/products/docker-desktop)
 3. **mkcert** (optional, für SSL)
-
-#### Für DDEV-basierte Instanzen (empfohlen für lokale Entwicklung)
-1. **VS Code** (Version 1.74.0 oder höher)
-2. **DDEV** - [Installation Guide](https://ddev.readthedocs.io/en/stable/#installation)
-3. **Docker Desktop oder Podman** (wird von DDEV benötigt)
-
-> 💡 **Tipp**: DDEV bietet automatische lokale Domains (`.ddev.site`), built-in HTTPS und einfacheres PHP/DB-Switching. Siehe [DDEV-INTEGRATION.md](DDEV-INTEGRATION.md) für Details.
 
 ### Extension Installation
 

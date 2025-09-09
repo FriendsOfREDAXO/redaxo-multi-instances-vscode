@@ -3,7 +3,6 @@ import * as path from 'path';
 import { RedaxoInstance } from '../types/redaxo';
 import { ResourceMonitor, InstanceResources } from '../docker/resourceMonitor';
 import { DockerService } from '../docker/dockerService';
-import { DDEVService } from '../ddev/ddevService';
 
 // Union type for all tree view items
 export type TreeViewItem = RedaxoInstanceItem | CategoryItem | InfoItem;
@@ -16,7 +15,7 @@ export class InstancesProvider implements vscode.TreeDataProvider<TreeViewItem> 
     private statusBarItem: vscode.StatusBarItem;
     private refreshTimer: NodeJS.Timeout | undefined;
 
-    constructor(private dockerService: DockerService, private ddevService?: DDEVService) {
+    constructor(private dockerService: DockerService) {
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
         this.statusBarItem.command = 'redaxo-instances.refresh';
         this.statusBarItem.show();
@@ -28,7 +27,7 @@ export class InstancesProvider implements vscode.TreeDataProvider<TreeViewItem> 
     }
 
     async refresh(): Promise<void> {
-        this.instances = await this.loadAllInstances();
+        this.instances = await this.dockerService.listInstances();
         this.updateStatusBar();
         this._onDidChangeTreeData.fire();
     }
@@ -37,34 +36,13 @@ export class InstancesProvider implements vscode.TreeDataProvider<TreeViewItem> 
         this._onDidChangeTreeData.fire(item);
     }
 
-    private async loadAllInstances(): Promise<RedaxoInstance[]> {
+    private async loadInstances(): Promise<void> {
         try {
-            const allInstances: RedaxoInstance[] = [];
-            
-            // Load Docker instances
-            const dockerInstances = await this.dockerService.listInstances();
-            allInstances.push(...dockerInstances);
-            
-            // Load DDEV instances if service is available
-            if (this.ddevService) {
-                try {
-                    const ddevInstances = await this.ddevService.listInstances();
-                    allInstances.push(...ddevInstances);
-                } catch (error) {
-                    // DDEV might not be available, continue without error
-                    console.log('DDEV not available or no DDEV instances found');
-                }
-            }
-            
-            return allInstances;
+            this.instances = await this.dockerService.listInstances();
         } catch (error) {
             vscode.window.showErrorMessage(`Error loading instances: ${error}`);
-            return [];
+            this.instances = [];
         }
-    }
-
-    private async loadInstances(): Promise<void> {
-        this.instances = await this.loadAllInstances();
     }
 
     private updateStatusBar(): void {
@@ -145,16 +123,7 @@ export class RedaxoInstanceItem extends vscode.TreeItem {
         this.provider = provider;
         this.tooltip = this.generateTooltip(instance);
         this.description = this.generateDescription(instance);
-        
-        // Set context value to include container type
-        if (contextPrefix) {
-            this.contextValue = contextPrefix;
-        } else {
-            const containerType = instance.containerType || 'docker';
-            const status = instance.running ? 'running' : 'stopped';
-            this.contextValue = `instance-${status}-${containerType}`;
-        }
-        
+        this.contextValue = contextPrefix || (instance.running ? 'instance-running' : 'instance-stopped');
         this.iconPath = this.getIconPath(instance);
         
         // Add command to show context menu on single click
@@ -233,20 +202,14 @@ export class RedaxoInstanceItem extends vscode.TreeItem {
     private generateDescription(instance: RedaxoInstance): string {
         const status = instance.running ? '●' : '○';
         const typeLabel = instance.instanceType === 'custom' ? 'Custom' : 'REDAXO';
-        const containerType = instance.containerType === 'ddev' ? 'DDEV' : 'Docker';
+        let description = `${status} ${typeLabel} | PHP ${instance.phpVersion} | MariaDB ${instance.mariadbVersion}`;
         
-        let description = `${status} ${typeLabel} | ${containerType} | PHP ${instance.phpVersion} | MariaDB ${instance.mariadbVersion}`;
-        
-        // For DDEV instances, show the local domain
-        if (instance.containerType === 'ddev' && instance.localDomain) {
-            description += ` | ${instance.localDomain}`;
-        } else if (instance.port) {
-            // For Docker instances, show the port
+        if (instance.port) {
             description += ` | HTTP:${instance.port}`;
         }
         
-        // Add HTTPS port if SSL is configured (mainly for Docker)
-        if (instance.frontendUrlHttps && instance.containerType !== 'ddev') {
+        // Add HTTPS port if SSL is configured
+        if (instance.frontendUrlHttps) {
             const httpsUrl = new URL(instance.frontendUrlHttps);
             const httpsPort = httpsUrl.port || '443';
             description += ` | HTTPS:${httpsPort}`;
@@ -265,13 +228,8 @@ export class RedaxoInstanceItem extends vscode.TreeItem {
             return new vscode.ThemeIcon('loading~spin');
         }
         
-        // Use different icons for different container types and instance types
-        let iconName: string;
-        if (instance.containerType === 'ddev') {
-            iconName = instance.instanceType === 'custom' ? 'rocket' : 'globe';
-        } else {
-            iconName = instance.instanceType === 'custom' ? 'package' : 'server-environment';
-        }
+        // Use different icons for different instance types
+        const iconName = instance.instanceType === 'custom' ? 'package' : 'server-environment';
         
         if (instance.running) {
             return new vscode.ThemeIcon(iconName, new vscode.ThemeColor('charts.green'));

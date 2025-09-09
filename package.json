@@ -182,27 +182,27 @@
       "view/item/context": [
         {
           "command": "redaxo-instances.startInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-stopped/",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-stopped|stopped-instance/",
           "group": "1_control@1"
         },
         {
           "command": "redaxo-instances.stopInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running/",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
           "group": "1_control@1"
         },
         {
           "command": "redaxo-instances.openInBrowser",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running/",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
           "group": "2_browser@1"
         },
         {
           "command": "redaxo-instances.openBackend",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running/",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
           "group": "2_browser@2"
         },
         {
           "command": "redaxo-instances.openTerminal",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-.*-docker/",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
           "group": "3_docker@1"
         },
         {
@@ -222,7 +222,7 @@
         },
         {
           "command": "redaxo-instances.setupSSL",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-.*-docker/",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
           "group": "4_info@4"
         },
         {
@@ -232,7 +232,7 @@
         },
         {
           "command": "redaxo-instances.updateHosts",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-.*-docker/",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
           "group": "4_info@5"
         },
         {
@@ -285,23 +285,6 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically refresh instance status"
-        },
-        "redaxo-instances.ddevPath": {
-          "type": "string",
-          "default": "ddev",
-          "description": "Path to DDEV executable"
-        },
-        "redaxo-instances.defaultContainerType": {
-          "type": "string",
-          "default": "docker",
-          "enum": ["docker", "ddev"],
-          "description": "Default container type for new instances"
-        },
-        "redaxo-instances.defaultRedaxoStructure": {
-          "type": "string",
-          "default": "classic",
-          "enum": ["classic", "modern"],
-          "description": "Default REDAXO structure (classic = traditional, modern = with public folder)"
         }
       }
     }
