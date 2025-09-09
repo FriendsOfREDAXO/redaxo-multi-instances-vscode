@@ -20,6 +20,21 @@ async function dirExists(p: string): Promise<boolean> {
     }
 }
 
+async function getServiceForInstance(instanceName: string): Promise<{ service: DockerService | DDEVService, containerType: 'docker' | 'ddev' }> {
+    // First check if it's a DDEV instance
+    try {
+        const ddevInstance = await ddevService.getInstance(instanceName);
+        if (ddevInstance && ddevInstance.containerType === 'ddev') {
+            return { service: ddevService, containerType: 'ddev' };
+        }
+    } catch {
+        // Ignore error, continue to check Docker
+    }
+    
+    // Default to Docker service
+    return { service: dockerService, containerType: 'docker' };
+}
+
 let dockerService: DockerService;
 let ddevService: DDEVService;
 let instancesProvider: InstancesProvider;
@@ -36,7 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Initialize services
     dockerService = new DockerService(outputChannel);
     ddevService = new DDEVService(outputChannel);
-    instancesProvider = new InstancesProvider(dockerService);
+    instancesProvider = new InstancesProvider(dockerService, ddevService);
     emptyInstanceProvider = new EmptyInstanceProvider(context.extensionUri, dockerService, ddevService);
 
     // Register Tree Views
@@ -324,7 +339,9 @@ function registerCommands(context: vscode.ExtensionContext) {
                         title: `Starting instance ${instanceName}...`,
                         cancellable: false
                     }, async () => {
-                        await dockerService.startInstance(instanceName!);
+                        const { service, containerType } = await getServiceForInstance(instanceName!);
+                        await service.startInstance(instanceName!);
+                        outputChannel.appendLine(`Started ${containerType.toUpperCase()} instance: ${instanceName}`);
                     });
                     instancesProvider.refresh();
                     vscode.window.showInformationMessage(`Instance "${instanceName}" started successfully!`);
@@ -353,7 +370,9 @@ function registerCommands(context: vscode.ExtensionContext) {
                         title: `Stopping instance ${instanceName}...`,
                         cancellable: false
                     }, async () => {
-                        await dockerService.stopInstance(instanceName!);
+                        const { service, containerType } = await getServiceForInstance(instanceName!);
+                        await service.stopInstance(instanceName!);
+                        outputChannel.appendLine(`Stopped ${containerType.toUpperCase()} instance: ${instanceName}`);
                     });
                     instancesProvider.refresh();
                     vscode.window.showInformationMessage(`Instance "${instanceName}" stopped successfully!`);
@@ -388,7 +407,9 @@ function registerCommands(context: vscode.ExtensionContext) {
                             title: `Deleting instance ${instanceName}...`,
                             cancellable: false
                         }, async () => {
-                            await dockerService.deleteInstance(instanceName!);
+                            const { service, containerType } = await getServiceForInstance(instanceName!);
+                            await service.deleteInstance(instanceName!);
+                            outputChannel.appendLine(`Deleted ${containerType.toUpperCase()} instance: ${instanceName}`);
                         });
                         instancesProvider.refresh();
                         vscode.window.showInformationMessage(`Instance "${instanceName}" deleted successfully!`);

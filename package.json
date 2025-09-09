@@ -182,27 +182,27 @@
       "view/item/context": [
         {
           "command": "redaxo-instances.startInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-stopped|stopped-instance/",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-stopped/",
           "group": "1_control@1"
         },
         {
           "command": "redaxo-instances.stopInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running/",
           "group": "1_control@1"
         },
         {
           "command": "redaxo-instances.openInBrowser",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running/",
           "group": "2_browser@1"
         },
         {
           "command": "redaxo-instances.openBackend",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running/",
           "group": "2_browser@2"
         },
         {
           "command": "redaxo-instances.openTerminal",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-.*-docker/",
           "group": "3_docker@1"
         },
         {
@@ -222,7 +222,7 @@
         },
         {
           "command": "redaxo-instances.setupSSL",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-.*-docker/",
           "group": "4_info@4"
         },
         {
@@ -232,7 +232,7 @@
         },
         {
           "command": "redaxo-instances.updateHosts",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-.*-docker/",
           "group": "4_info@5"
         },
         {
