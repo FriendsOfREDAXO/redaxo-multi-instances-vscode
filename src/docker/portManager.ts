@@ -121,19 +121,21 @@ export class PortManager {
     /**
      * Findet einen freien Port-Range für eine komplette REDAXO-Instanz
      * @param startPort Startport für die Suche
-     * @returns Object mit HTTP, HTTPS und optionalem MySQL-Port
+     * @returns Object mit HTTP, HTTPS, MySQL und PHPMyAdmin Port
      */
     static async findInstancePortRange(startPort: number = 8080): Promise<{
         http: number;
         https: number;
-        mysql?: number;
+        mysql: number;
+        phpmyadmin: number;
     }> {
-        const [httpPort, httpsPort] = await this.findAvailablePortRange(startPort, 2);
+        const [httpPort, httpsPort, mysqlPort, phpmyadminPort] = await this.findAvailablePortRange(startPort, 4);
         
         return {
             http: httpPort,
-            https: httpsPort
-            // MySQL läuft internal im Docker-Netzwerk, kein externer Port nötig
+            https: httpsPort,
+            mysql: mysqlPort,
+            phpmyadmin: phpmyadminPort
         };
     }
 

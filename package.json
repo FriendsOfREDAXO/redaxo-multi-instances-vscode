@@ -62,6 +62,11 @@
         "icon": "$(gear)"
       },
       {
+        "command": "redaxo-instances.openPhpMyAdmin",
+        "title": "Open PHPMyAdmin",
+        "icon": "$(database)"
+      },
+      {
         "command": "redaxo-instances.openTerminal",
         "title": "Open Container Terminal",
         "icon": "$(terminal)"
@@ -199,6 +204,11 @@
           "command": "redaxo-instances.openBackend",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
           "group": "2_browser@2"
+        },
+        {
+          "command": "redaxo-instances.openPhpMyAdmin",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
+          "group": "2_browser@3"
         },
         {
           "command": "redaxo-instances.openTerminal",

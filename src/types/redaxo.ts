@@ -7,6 +7,8 @@ export interface RedaxoInstance {
     port?: number; // HTTP Port for backward compatibility
     httpPort?: number;
     httpsPort?: number;
+    mysqlPort?: number;
+    phpmyadminPort?: number;
     frontendUrl: string;
     backendUrl: string;
     primaryFrontendUrl?: string;

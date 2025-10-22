@@ -2,7 +2,7 @@ import { CreateInstanceOptions } from '../types/redaxo';
 
 export class DockerComposeGenerator {
     
-    static generate(options: CreateInstanceOptions, dbPassword: string, dbRootPassword: string, httpPort: number, httpsPort: number, mysqlPort: number, sslEnabled: boolean): string {
+    static generate(options: CreateInstanceOptions, dbPassword: string, dbRootPassword: string, httpPort: number, httpsPort: number, mysqlPort: number, phpmyadminPort: number, sslEnabled: boolean): string {
         // Always use standard web root mount
         const webRootMount = './data/redaxo:/var/www/html';
         const baseVolumes = [
@@ -86,13 +86,30 @@ ${serviceDefinition}
     networks:
       - redaxo-network
 
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: redaxo-${options.name}-phpmyadmin
+    ports:
+      - "${phpmyadminPort}:80"
+    environment:
+      - PMA_HOST=mysql
+      - PMA_PORT=3306
+      - PMA_USER=root
+      - PMA_PASSWORD=${dbRootPassword}
+      - MYSQL_ROOT_PASSWORD=${dbRootPassword}
+      - UPLOAD_LIMIT=512M
+    depends_on:
+      - mysql
+    networks:
+      - redaxo-network
+
 networks:
   redaxo-network:
     driver: bridge
 `;
     }
 
-    static generateEnvFile(options: CreateInstanceOptions, dbPassword: string, dbRootPassword: string, httpPort: number, httpsPort: number, mysqlPort: number, sslEnabled: boolean): string {
+    static generateEnvFile(options: CreateInstanceOptions, dbPassword: string, dbRootPassword: string, httpPort: number, httpsPort: number, mysqlPort: number, phpmyadminPort: number, sslEnabled: boolean): string {
         return `# REDAXO Instance: ${options.name}
 INSTANCE_NAME=${options.name}
 PHP_VERSION=${options.phpVersion}
@@ -100,6 +117,7 @@ MARIADB_VERSION=${options.mariadbVersion}
 RELEASE_TYPE=standard
 HTTP_PORT=${httpPort}
 MYSQL_PORT=${mysqlPort}
+PHPMYADMIN_PORT=${phpmyadminPort}
 ${sslEnabled ? `HTTPS_PORT=${httpsPort}
 SSL_ENABLED=true` : `SSL_ENABLED=false`}
 
@@ -113,6 +131,7 @@ DB_ROOT_PASSWORD=${dbRootPassword}
 # URLs
 BASE_URL=${sslEnabled ? `https://${options.name}.local:${httpsPort}` : `http://localhost:${httpPort}`}
 BACKEND_URL=${sslEnabled ? `https://${options.name}.local:${httpsPort}/redaxo` : `http://localhost:${httpPort}/redaxo`}
+PHPMYADMIN_URL=http://localhost:${phpmyadminPort}
 `;
     }
 }

@@ -109,6 +109,11 @@ function registerCommands(context: vscode.ExtensionContext) {
                     description: 'Open REDAXO backend in browser',
                     command: 'redaxo-instances.openBackend'
                 });
+                items.push({
+                    label: '$(database) Open PHPMyAdmin',
+                    description: 'Open PHPMyAdmin in browser',
+                    command: 'redaxo-instances.openPhpMyAdmin'
+                });
             }
 
             // Always available actions
@@ -437,6 +442,34 @@ function registerCommands(context: vscode.ExtensionContext) {
                     vscode.env.openExternal(vscode.Uri.parse(instance.backendUrl));
                 } else {
                     vscode.window.showWarningMessage(`Instance "${instanceName}" is not running`);
+                }
+            }
+        }),
+
+        vscode.commands.registerCommand('redaxo-instances.openPhpMyAdmin', async (instanceItem?: any) => {
+            let instanceName: string | undefined;
+            
+            // Handle both string and RedaxoInstanceItem parameter
+            if (typeof instanceItem === 'string') {
+                instanceName = instanceItem;
+            } else if (instanceItem && typeof instanceItem === 'object' && instanceItem.label) {
+                instanceName = instanceItem.label;
+            } else {
+                instanceName = await selectInstance('Select instance to open PHPMyAdmin:');
+            }
+            
+            if (instanceName) {
+                try {
+                    const loginInfo = await dockerService.getLoginInfo(instanceName);
+                    if (loginInfo && loginInfo.running && loginInfo.phpmyadminUrl) {
+                        vscode.env.openExternal(vscode.Uri.parse(loginInfo.phpmyadminUrl));
+                    } else if (!loginInfo.running) {
+                        vscode.window.showWarningMessage(`Instance "${instanceName}" is not running`);
+                    } else {
+                        vscode.window.showWarningMessage(`PHPMyAdmin is not available for instance "${instanceName}"`);
+                    }
+                } catch (error: any) {
+                    vscode.window.showErrorMessage(`Failed to get PHPMyAdmin URL: ${error.message}`);
                 }
             }
         }),

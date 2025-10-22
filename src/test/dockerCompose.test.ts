@@ -23,6 +23,7 @@ suite('Docker Compose SSL Configuration Test Suite', () => {
             8080,
             8443,
             3306,
+            8081, // phpmyadminPort
             true // SSL enabled
         );
         
@@ -57,6 +58,7 @@ suite('Docker Compose SSL Configuration Test Suite', () => {
             8080,
             8443,
             3307,
+            8082, // phpmyadminPort
             false // SSL disabled
         );
         

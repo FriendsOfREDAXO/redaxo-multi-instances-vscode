@@ -144,10 +144,13 @@ export class DockerService {
             
             const dbRootPassword = PortManager.generateRandomPassword();
             const dbPassword = PortManager.generateRandomPassword(12);
-            const [httpPort, httpsPort] = await PortManager.findAvailablePortRange();
-            const mysqlPort = await PortManager.findAvailablePort(3306);
+            const ports = await PortManager.findInstancePortRange();
+            const httpPort = ports.http;
+            const httpsPort = ports.https;
+            const mysqlPort = ports.mysql;
+            const phpmyadminPort = ports.phpmyadmin;
             
-            this.log(`🌐 Zugewiesene Ports - HTTP: ${httpPort}, HTTPS: ${httpsPort}, MySQL: ${mysqlPort}`);
+            this.log(`🌐 Zugewiesene Ports - HTTP: ${httpPort}, HTTPS: ${httpsPort}, MySQL: ${mysqlPort}, PHPMyAdmin: ${phpmyadminPort}`);
             
             // Setup SSL certificates
             this.log(`🔒 Setting up SSL certificates with mkcert...`);
@@ -156,12 +159,12 @@ export class DockerService {
             
             // Create docker-compose.yml
             this.log(`⚙️  Creating Docker Compose configuration...`);
-            const dockerComposeContent = DockerComposeGenerator.generate(options, dbPassword, dbRootPassword, httpPort, httpsPort, mysqlPort, sslEnabled);
+            const dockerComposeContent = DockerComposeGenerator.generate(options, dbPassword, dbRootPassword, httpPort, httpsPort, mysqlPort, phpmyadminPort, sslEnabled);
             await fs.writeFile(path.join(instancePath, 'docker-compose.yml'), dockerComposeContent);
             
             // Create .env file
             this.log(`📝 Creating environment configuration...`);
-            const envContent = DockerComposeGenerator.generateEnvFile(options, dbPassword, dbRootPassword, httpPort, httpsPort, mysqlPort, sslEnabled);
+            const envContent = DockerComposeGenerator.generateEnvFile(options, dbPassword, dbRootPassword, httpPort, httpsPort, mysqlPort, phpmyadminPort, sslEnabled);
             await fs.writeFile(path.join(instancePath, '.env'), envContent);
             
             // Create data directories
@@ -446,15 +449,18 @@ export class DockerService {
             const httpPortMatch = composeContent.match(/"(\d+):80"/);
             const httpsPortMatch = composeContent.match(/"(\d+):443"/);
             const mysqlPortMatch = composeContent.match(/"(\d+):3306"/);
+            const phpmyadminPortMatch = envVars.PHPMYADMIN_PORT;
             
             const httpPort = httpPortMatch ? httpPortMatch[1] : '80';
             const httpsPort = httpsPortMatch ? httpsPortMatch[1] : '443';
             const mysqlPort = mysqlPortMatch ? mysqlPortMatch[1] : null;
+            const phpmyadminPort = phpmyadminPortMatch || null;
             
             // Build URLs with correct port selection based on SSL
             const sslEnabled = envVars.SSL_ENABLED === 'true';
             const frontendUrl = `http://localhost:${httpPort}`;
             const backendUrl = isCustomInstance ? `http://localhost:${httpPort}` : `http://localhost:${httpPort}/redaxo`;
+            const phpmyadminUrl = phpmyadminPort ? `http://localhost:${phpmyadminPort}` : null;
             let frontendUrlHttps = null;
             let backendUrlHttps = null;
             
@@ -504,6 +510,7 @@ export class DockerService {
                 backendUrl,
                 frontendUrlHttps,
                 backendUrlHttps,
+                phpmyadminUrl,
                 
                 // Login credentials (only for REDAXO instances)
                 adminUser: isCustomInstance ? 'N/A (Custom Instance)' : 'admin',
@@ -526,6 +533,7 @@ export class DockerService {
                 releaseType: envVars.RELEASE_TYPE || (isCustomInstance ? 'custom' : 'standard'),
                 httpPort,
                 httpsPort: sslEnabled ? httpsPort : null,
+                phpmyadminPort,
                 sslEnabled
             };
             
@@ -542,12 +550,21 @@ export class DockerService {
             
             this.log(`📥 Importing dump for instance: ${instanceName}`);
             
-            // Copy dump file to mysql-init directory
-            const mysqlInitPath = path.join(instancePath, 'mysql-init');
-            const dumpFileName = path.basename(dumpPath);
-            const targetDumpPath = path.join(mysqlInitPath, dumpFileName);
+            // Check if file is a Plesk dump (typically contains Plesk-specific statements)
+            const dumpContent = await fs.readFile(dumpPath, 'utf8');
+            const isPleskDump = this.isPleskDump(dumpContent);
             
-            await fs.copyFile(dumpPath, targetDumpPath);
+            if (isPleskDump) {
+                this.log(`🔍 Detected Plesk dump format - preprocessing...`);
+                await this.processPleskDump(dumpPath, instancePath, dumpContent);
+            } else {
+                // Standard dump import
+                const mysqlInitPath = path.join(instancePath, 'mysql-init');
+                const dumpFileName = path.basename(dumpPath);
+                const targetDumpPath = path.join(mysqlInitPath, dumpFileName);
+                
+                await fs.copyFile(dumpPath, targetDumpPath);
+            }
             
             this.log(`✅ Dump imported successfully for ${instanceName}`);
             vscode.window.showInformationMessage(`Dump imported successfully! Restart the instance to apply changes.`);
@@ -556,6 +573,37 @@ export class DockerService {
             vscode.window.showErrorMessage(`Failed to import dump: ${error.message}`);
             throw error;
         }
+    }
+
+    private isPleskDump(content: string): boolean {
+        // Check for Plesk-specific markers
+        return content.includes('-- Dump created by Plesk') ||
+               content.includes('-- Plesk') ||
+               content.includes('DEFINER=') && content.includes('admin@') ||
+               content.includes('psa_') || // Plesk database prefix
+               content.includes('SQL_MODE=') && content.includes('STRICT_TRANS_TABLES');
+    }
+
+    private async processPleskDump(dumpPath: string, instancePath: string, content: string): Promise<void> {
+        // Remove Plesk-specific SQL statements that might cause issues
+        let processedContent = content;
+        
+        // Remove DEFINER clauses that reference Plesk users
+        processedContent = processedContent.replace(/DEFINER\s*=\s*`[^`]+`@`[^`]+`\s*/gi, '');
+        
+        // Remove Plesk-specific SQL_MODE settings that might be too strict
+        processedContent = processedContent.replace(/SET\s+SQL_MODE\s*=\s*'[^']*STRICT_TRANS_TABLES[^']*'/gi, 
+            "SET SQL_MODE='NO_AUTO_VALUE_ON_ZERO'");
+        
+        // Remove Plesk database references if they exist
+        processedContent = processedContent.replace(/USE\s+`psa[^`]*`\s*;/gi, 'USE `redaxo`;');
+        
+        // Write processed dump to mysql-init directory
+        const mysqlInitPath = path.join(instancePath, 'mysql-init');
+        const processedDumpPath = path.join(mysqlInitPath, 'processed_plesk_dump.sql');
+        
+        await fs.writeFile(processedDumpPath, processedContent, 'utf8');
+        this.log(`✅ Plesk dump preprocessed and saved`);
     }
 
     async setupInstanceSSL(instanceName: string): Promise<void> {

@@ -9,6 +9,12 @@ export class SetupTemplates {
 
 echo "🚀 Setting up REDAXO instance: ${instanceName}"
 
+# Install MySQL client tools for database operations
+echo "🔧 Installing MySQL client tools..."
+apt-get update -qq > /dev/null 2>&1
+apt-get install -y default-mysql-client > /dev/null 2>&1
+echo "✅ MySQL client tools installed"
+
 # Configure PHP settings for better compatibility (matching custom instances)
 echo "⚙️ Configuring PHP ${phpVersion} settings..."
 cat > /usr/local/etc/php/conf.d/99-redaxo.ini << EOF
