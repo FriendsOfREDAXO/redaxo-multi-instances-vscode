@@ -27,13 +27,17 @@ Eine  TreeView (Seitenleiste)
 - **🏗️ Instanz-Management** - Erstellen, starten, stoppen und löschen von REDAXO-Instanzen
 - **🔒 SSL/HTTPS Support** - Automatische SSL-Zertifikate mit mkcert
 - **🐳 Docker Integration** - Vollständig containerisierte Umgebung
-- **📊 Info Pages* - Modernes Webview-Dashboard je Instanz
+- **📊 Info Pages** - Modernes Webview-Dashboard je Instanz
 - **🔑 Login-Informationen** - Automatische Anzeige von Zugangsdaten und URLs
 - **📱 TreeView** - Seitenleiste mit allen Instanzen und deren Status
+- **🗄️ PHPMyAdmin** - Datenbank-Verwaltung per PHPMyAdmin für jede Instanz
+- **📥 Dump Import** - Import von MySQL-Dumps inkl. Plesk-Dump-Unterstützung
 
 ### 🔧 Technische Features
 - **PHP Support** - PHP 7.4, 8.1, 8.2, 8.3, 8.4, 8.5
 - **MariaDB Support** - Aktuell 11.3
+- **PHPMyAdmin** - Integriert in jede Instanz mit dediziertem Port
+- **MySQL Tools** - MySQL-Client-Tools in jedem Container verfügbar
 - **Port Management** - Automatische Port-Zuweisung und -Verwaltung
 - **SSL Zertifikate** - Lokale Entwicklungszertifikate mit mkcert
 - **Docker Compose** - Automatische Container-Orchestrierung
@@ -76,8 +80,10 @@ npm run compile
 ### Alle VS Code Kommandos (Auswahl)
 - `REDAXO: Create New Instance` - Neue Instanz erstellen
 - `REDAXO: Show Dashboard` - Dashboard öffnen
-- `REDAXO: Show Login Info` - Login-Daten anzeigen (inkl. DB-Zugang)
+- `REDAXO: Show Login Info` - Login-Daten anzeigen (inkl. DB-Zugang und PHPMyAdmin URL)
 - `REDAXO: Start/Stop Instance` - Instanzen verwalten
+- `REDAXO: Open PHPMyAdmin` - PHPMyAdmin für Instanz öffnen
+- `REDAXO: Import Dump` - MySQL-Dump importieren (inkl. Plesk-Dumps)
 - `REDAXO: Setup HTTPS/SSL` - SSL für Instanz einrichten
 - **`REDAXO: Show Help & Documentation`** - 📖 Vollständige Anleitung & Hilfe
 
@@ -119,6 +125,35 @@ mkcert -install
 ### Zugriff auf HTTPS-Instanzen
 - **Frontend**: `https://instancename.local:8443`
 - **Backend**: `https://instancename.local:8443/redaxo/`
+
+## 🗄️ PHPMyAdmin
+
+Jede Instanz verfügt über eine eigene PHPMyAdmin-Installation für die Datenbankverwaltung.
+
+### Zugriff
+- Über Kontextmenü: Rechtsklick auf laufende Instanz → **"Open PHPMyAdmin"**
+- Über Login Info: PHPMyAdmin URL wird angezeigt
+- Direkter Zugriff: `http://localhost:[PHPMYADMIN_PORT]`
+
+### Login-Daten
+- **Server**: Automatisch konfiguriert (mysql)
+- **Benutzername**: root
+- **Passwort**: Wird in Login-Informationen angezeigt
+
+## 📥 Dump Import
+
+### Standard MySQL-Dumps
+1. Rechtsklick auf Instanz → **"Import Dump"**
+2. SQL-Datei auswählen
+3. Instanz neu starten, um Import anzuwenden
+
+### Plesk MySQL-Dumps
+Die Extension erkennt automatisch Plesk-Dumps und bereinigt sie:
+- Entfernt Plesk-spezifische DEFINER-Klauseln
+- Passt SQL_MODE-Einstellungen an
+- Entfernt Plesk-Datenbank-Referenzen
+
+**Unterstützte Formate**: `.sql`, `.zip`, `.tar.gz`
 
 ## 🔧 Troubleshooting
 
