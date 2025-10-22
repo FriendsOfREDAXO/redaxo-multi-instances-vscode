@@ -12,6 +12,7 @@ export interface EmptyInstanceConfig {
     enableSSL?: boolean;
     httpPort?: number;
     httpsPort?: number;
+    phpmyadminPort?: number;
     createWelcome?: boolean;
 }
 
@@ -49,10 +50,12 @@ export class EmptyInstanceService {
             // 2. Ports ermitteln
             const httpPort = await PortManager.findAvailablePort(8080);
             const httpsPort = await PortManager.findAvailablePort(8443);
+            const phpmyadminPort = await PortManager.findAvailablePort(8082);
             config.httpPort = httpPort;
             config.httpsPort = httpsPort;
+            config.phpmyadminPort = phpmyadminPort;
 
-            this.outputChannel.appendLine(`📡 HTTP Port: ${httpPort}, HTTPS Port: ${httpsPort}`);
+            this.outputChannel.appendLine(`📡 HTTP Port: ${httpPort}, HTTPS Port: ${httpsPort}, PHPMyAdmin Port: ${phpmyadminPort}`);
 
             // 3. Public-Ordner erstellen
             await this.createProjectFolder(config);
@@ -395,6 +398,22 @@ $info = [
       --long_query_time=2
     restart: unless-stopped
 
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: ${this.getContainerName(config.instanceName, 'phpmyadmin')}
+    ports:
+      - "${config.phpmyadminPort}:80"
+    environment:
+      - PMA_HOST=${this.getDbHostName(config.instanceName)}
+      - PMA_PORT=3306
+      - PMA_USER=root
+      - PMA_PASSWORD=root
+      - MYSQL_ROOT_PASSWORD=root
+      - UPLOAD_LIMIT=512M
+    depends_on:
+      - db
+    restart: unless-stopped
+
 volumes:
   ${this.getDbHostName(config.instanceName)}_data:
     driver: local`;
@@ -556,6 +575,7 @@ PHP_VERSION=${config.phpVersion}
 MARIADB_VERSION=${config.mariadbVersion}
 HTTP_PORT=${config.httpPort}
 HTTPS_PORT=${config.httpsPort}
+PHPMYADMIN_PORT=${config.phpmyadminPort}
 DB_HOST=${this.getDbHostName(config.instanceName)}
 DB_NAME=${config.instanceName}
 DB_USER=${config.instanceName}
@@ -563,6 +583,7 @@ DB_PASSWORD=${config.instanceName}
 DB_ROOT_PASSWORD=root
 BASE_URL=http://localhost:${config.httpPort}
 BACKEND_URL=http://localhost:${config.httpPort}
+PHPMYADMIN_URL=http://localhost:${config.phpmyadminPort}
 SSL_ENABLED=true
 INSTANCE_NAME=${config.instanceName}
 XDEBUG_ENABLED=${config.enableXdebug}`;
