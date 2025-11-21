@@ -2,195 +2,63 @@
 
 # Release Notes
 
-## Version 1.7.1 (2025-08-30)
+## Version 1.8.1 (2025-11-21)
 
-### 🔧 Bug Fixes
-- **Admin Password Fix**: Corrected REDAXO admin password display to show actual password from .env file instead of hardcoded 'admin'
-- **Login Info Functionality**: Fixed copy and visibility toggle buttons for admin password
-- **Password Authentication**: Admin password now correctly reads from MYSQL_PASSWORD environment variable
+### 🔍 Improved Database Tool Detection
+- **MariaDB/MySQL Auto-Detection**: `/install-tools` command now automatically detects whether containers use MariaDB or MySQL
+- **Native Tool Support**: Uses `mariadb`/`mariadb-dump` for MariaDB images and `mysql`/`mysqldump` for MySQL images
+- **Smart Installation**: Checks for existing tools before installation to avoid redundant operations
+- **Accurate Reporting**: Shows actual installed/found tool names instead of generic terms
 
 ### 🛠️ Technical Improvements
-- Fixed JavaScript selectors for login info password field interactions
-- Improved password field visibility toggle with proper placeholder handling
-- Enhanced password extraction from Docker environment variables
+- **DatabaseQueryService**: Enhanced `ensureMysqlClient()` to detect both MariaDB and MySQL native clients
+- **Chat Participant**: Improved `installDbContainerTools()` with intelligent database system detection
+- **Package Manager Support**: Better fallback logic for apt-get, apk, and yum package managers
+
+### 📦 CLI Tools Installation
+**Web Container Tools:**
+- vim, nano, curl, wget, unzip, git
+
+**Database Container Tools:**
+- MariaDB: `mariadb`, `mariadb-dump`, vim, nano
+- MySQL: `mysql`, `mysqldump`, vim, nano
 
 ---
 
-## Version 1.7.0 (2025-08-29)
+## Version 1.8.0 (2025-01-21)
 
-### 🔧 Improvements
-- **Login Info UI**: Removed Modern Login Info preview from context menu
-- **URL Functionality**: Maintained clickable URLs in login info while removing demo preview
-- **User Experience**: Streamlined context menu by removing preview/demo entries
+### 🤖 GitHub Copilot Chat Integration
+- **New Chat Participant**: `@redaxo` for direct instance management from Copilot Chat
+- **10 Slash Commands**: Full control over REDAXO instances via chat interface
+  - `/create` - Create new instance
+  - `/start [name]` - Start instance
+  - `/stop [name]` - Stop instance
+  - `/console <instance> <command>` - Execute REDAXO console commands
+  - `/query <instance> <SQL>` - Run SQL queries
+  - `/articles [instance]` - List articles
+  - `/addons [instance]` - Manage AddOns
+  - `/config <instance> <key>` - Read config values
+  - `/logs <instance>` - View container logs
+  - `/install-tools <instance>` - Install CLI tools
 
-### 🛠️ Technical Changes
-- Cleaned up package.json context menu entries
-- Maintained full login info functionality without preview mode
-- Improved user interface consistency
+### ⚡ Direct Instance Communication
+- **REDAXO Console Service**: Execute REDAXO console commands via Docker exec
+- **Database Query Service**: Run MySQL queries directly with automatic client installation
+- **FileSystem Service**: Read/write files in REDAXO containers
+- **Log Access**: Read REDAXO logs (redaxo.log, system.log) from multiple locations
 
----
+### 🔧 Enhanced Container Support
+- **Dynamic Container Detection**: Supports both Standard (`redaxo-name`) and Custom (`nameweb`) naming patterns
+- **Flexible Port Management**: Automatic detection of mapped database ports
+- **Multiple Log Paths**: Searches 8 different log file locations for comprehensive coverage
 
-## Version 1.6.5 (2025-08-29)
-*Veröffentlicht: 29. August 2025*
+### 📖 Documentation
+- **Extended README**: Comprehensive Copilot Chat command documentation
+- **Service APIs**: New `COMMUNICATION_SERVICES.md` for service documentation
+- **Examples**: Practical use cases for all chat commands
 
-### 🎯 Intelligente Benutzeroberfläche
-- **🔍 Context-Aware Login-Info**: REDAXO Backend Login nur bei Standard REDAXO Instances angezeigt
-- **💡 Custom Instance Klarstellung**: Informative Password-Hinweise für Custom Instances
-- **🌐 DNS-konforme Container**: Alle Container-Namen ohne Unterstriche für bessere Kompatibilität
-
-### 🗄️ MariaDB Version Updates
-- **📦 MariaDB 11.6** (Neueste LTS) - Empfohlen
-- **⚡ MariaDB 11.5** (Stabil)
-- **🔧 MariaDB 11.4** (Bewährt)
-- **📊 Mehrere Optionen**: 11.3, 11.2, 10.11 Legacy zur Auswahl
-
-### ✨ Enhanced Custom Instances
-- **🏷️ Smart Detection**: Verbesserte Erkennung von Custom vs REDAXO Instances
-- **🔑 Password Clarity**: "Custom Instance: Passwort = Instance Name" Hinweise
-- **📋 Selective Display**: Nur relevante UI-Elemente basierend auf Instance-Typ
-
-### 🔧 Technical Excellence
-- **🌍 DNS Compliance**: Container-Namen ohne Unterstriche (instancenamedb vs instance_db)
-- **🔄 Backward Compatibility**: Unterstützt sowohl alte als auch neue Container-Namen
-- **⚡ Optimized Detection**: Verbesserte Custom Instance Erkennung in docker-compose.yml
-
----
-
-## 📦 Version 1.6.4 - Database Port Mapping Final Fix
-*Veröffentlicht: 29. August 2025*
-
-### 🔧 Critical Bug Fixes
-- **🎯 Fixed External Port Display**: Database externe Ports werden jetzt korrekt angezeigt (3307 vs 3306)
-- **🔗 Variable Name Consistency**: Template-Variable-Mapping zwischen dockerService und extension korrigiert
-- **📊 Complete Root Credentials**: Root-Credentials jetzt vollständig in External Access Tab verfügbar
-
-### 🏆 Technical Fixes
-- **Correct Property Mapping**: `dbExternalPort` und `dbExternalHost` statt `dbPortExternal`/`dbHostExternal`
-- **Docker Port Extraction**: MySQL Ports aus docker-compose.yml werden korrekt extrahiert und angezeigt
-- **Consistent Database Info**: Einheitliche Darstellung interner (3306) vs externer (gemappter) Ports
-
----
-
-## 📦 Version 1.6.3 - Database Port Mapping & Root Credentials Fix
-*Veröffentlicht: 29. August 2025*
-
-### 🔧 Critical Bug Fixes
-- **🎯 Database Port Mapping**: Externe DB-Ports werden jetzt korrekt aus docker-compose.yml extrahiert (z.B. 3307 statt 3306)
-- **📊 Root Credentials in External Tab**: Root-User Credentials sind jetzt auch im "External Access" Tab verfügbar
-- **🔗 Variable Name Consistency**: Behoben Variable-Mapping zwischen dockerService und extension (dbExternalPort/dbExternalHost)
-
-### ✨ Enhanced Database Access
-- **🌐 External Connection**: Externe DB-Verbindungen zeigen jetzt den korrekten gemappten Host-Port (localhost:3307)
-- **📦 Internal Connection**: Interne DB-Verbindungen verwenden weiterhin Container-Port (mysql:3306)
-- **👤 Complete Root Access**: Root-Credentials in beiden Tabs (Container-Internal & External Access)
-
-### 🔧 Technical Fixes
-- **Regex Port Extraction**: Korrekte Extraktion externer Ports aus docker-compose.yml Port-Mappings
-- **Template Variable Mapping**: `dbExternalPort` und `dbExternalHost` korrekt gemappt
-- **Consistent UI**: Einheitliche Root-Credentials Darstellung in beiden Database-Tabs
-
----
-
-## 📦 Version 1.6.2 - Modern Login-Info & Auto-SSL
-*Veröffentlicht: 28. August 2025*
-
-### 🎨 Modern Login-Info Webview
-- **💎 Morphing Glass Design**: Moderne glassmorphische UI mit CSS-Blur-Effekten
-- **� Tab-System**: Container-Internal vs External Database Verbindungen
-- **👁️ Password Toggles**: Ein-Klick-Sichtbarkeit für alle Credentials
-- **🌐 HTTPS URLs**: Korrekte Ports für .local Domains mit SSL-Setup-Hinweisen
-- **📋 16+ Copy Buttons**: Alle Credentials, URLs und DB-Parameter kopierbar
-
-### � Automatisches SSL-Setup
-- **✅ SSL-Checkbox bei neuen Instanzen**: Automatische SSL-Konfiguration beim Erstellen
-- **� Container-SSL-Auto-Config**: Apache SSL-Module und VirtualHosts automatisch konfiguriert  
-- **�️ Erweiterte Fehlerbehandlung**: Detaillierte SSL-Logs und mkcert-Path-Detection
-- **📜 Zertifikat-Management**: Vollautomatische mkcert Integration mit hosts-Datei
-
-### 🏗️ Template-System
-- **📁 Separate HTML/CSS/JS Dateien**: Wartungsfreundliche Template-Architektur statt String-Concatenation
-- **� 16 Template-Variablen**: Vollständige Abdeckung aller Instance-Parameter
-- **🎯 Webview-safe URIs**: Korrekte Ressourcen-Verlinkung für VS Code Webviews
-
-### 🔧 Technical Excellence
-- **199 KiB Bundle**: Optimierte Größe trotz umfangreicher neuer Features
-- **🎨 Responsive Design**: Mobile-optimierte Webview für verschiedene Panel-Größen  
-- **⚡ Performance**: Stabile Animationen ohne "Weganimieren"-Probleme
-
----
-
-## 📦 Version 1.6.1 - Complete MySQL Root User Access
-*Veröffentlicht: 28. August 2025*
-
-### 🔑 Enhanced Database Administration
-- **🚀 Complete MySQL Root User Support**: Vollständiger MySQL Root-User Zugang für beide Instanztypen (REDAXO und Custom Instances)
-- **👤 Dual User Management**: Separate Bereiche für Standard User und Root User in sowohl internen als auch externen Verbindungen
-- **📋 Enhanced Copy Functionality**: 16+ Copy-Buttons für alle Database-Credentials inklusive Root-User Authentifizierung
-- **🔧 Unified Database Access**: Einheitliche Root-User Funktionalität für alle Instance-Typen
-
-### ✨ Advanced UI Features
-- **🎯 Clear User Separation**: 
-  - **Standard User**: REDAXO Instances (`redaxo`), Custom Instances (`instanceName`)
-  - **Root User**: Beide Typen (`root`) mit entsprechenden Passwörtern
-- **🌐 Complete Connection Coverage**: 
-  - **Container-Internal**: mysql:3306 mit Standard und Root Credentials
-  - **External Access**: localhost:port mit Standard und Root Credentials
-- **📊 Enhanced Security**: Vollständiger Zugang zu MySQL Root-Funktionalität für erweiterte Database-Administration
-- **⚡ Streamlined Workflow**: Ein-Klick-Kopieren für alle User-Typen und Verbindungsarten
-
-### 🔧 Technical Excellence
-- **🏗️ DockerService Enhancement**: 
-  - Erweiterte `getLoginInfo()` Funktion mit `dbRootPassword` Support
-  - Automatische Root Password Detection aus Environment Variables
-  - REDAXO Instances: `DB_ROOT_PASSWORD` oder `MYSQL_ROOT_PASSWORD`
-  - Custom Instances: Hardcoded `'root'` Password
-- **💻 JavaScript Functions**: 4 neue Copy-Funktionen für Root-User Credentials (intern/extern)
-- **📦 Optimized Integration**: Effiziente Bundle-Integration (218 KiB) ohne Performance-Impact
-- **🔒 Security Compliant**: Sichere Passwort-Handling für beide User-Typen
-
-### 🏆 Database Credentials Overview
-
-#### **🚀 Standard REDAXO Instances:**
-```
-Standard User: redaxo / [generiert]
-Root User: root / [DB_ROOT_PASSWORD]
-```
-
-#### **🔧 Custom Instances:**
-```
-Standard User: [instanceName] / [instanceName]  
-Root User: root / root
-```
-
-### 💡 What This Means for You
-- **✅ Complete Database Control**: Voller MySQL Root-Zugang für alle Instances
-- **✅ Enhanced Administration**: Erweiterte Database-Management Möglichkeiten
-- **✅ Streamlined Workflow**: Einheitliche Credential-Verwaltung für alle Instance-Typen
-- **✅ Copy-Ready**: Alle Credentials mit einem Klick kopierbar für externe Tools
-
-## 📦 Version 1.6.0 - Simplified REDAXO Setup Revolution
-*Veröffentlicht: 28. August 2025*
-
-### 🚀 Major Breakthrough: Simplified Installation
-- **⚡ Native Docker Image Integration**: Komplett vereinfachte REDAXO Installation durch Nutzung der eingebauten Auto-Setup Funktionalität des FriendsOfREDAXO Docker Images
-- **🔧 Eliminated Installation Conflicts**: Behebt dauerhaft "User admin already exists" Fehler durch Wegfall komplexer Database-Cleanup Routinen
-- **🏗️ Streamlined Architecture**: Drastische Code-Vereinfachung - von komplexem Database-Management zu eleganter Environment-Variable Konfiguration
-- **📦 Optimized Bundle**: Bundle-Größe reduziert von 215 KiB auf 212 KiB durch Code-Optimierung
-
-### ✨ Enhanced User Experience
-- **🎯 Simplified Setup Process**: Setup-Script fokussiert sich auf essenzielle Login-Informationen statt technisches Database-Management
-- **🔒 Preserved SSL/HTTPS**: Alle SSL-Zertifikat und HTTPS-Funktionen bleiben vollständig erhalten und funktional
-- **⚙️ Environment Variable Optimization**: Perfekt abgestimmte REDAXO_* Environment Variables für nahtlose Auto-Installation
-- **🛠️ Maintainable Codebase**: Deutlich einfachere und wartbarere Code-Struktur für zukünftige Entwicklungen
-
-### 🔧 Technical Excellence
-- **🐋 100% Docker Compatibility**: Voll kompatibel mit friendsofredaxo/docker-redaxo Auto-Setup Features und Best Practices
-- **🔐 SSL Configuration Preserved**: Komplette Beibehaltung aller mkcert-basierten SSL-Konfigurationen und Apache-Einstellungen
-- **💾 Database Persistence**: MySQL Volume-Persistenz funktioniert jetzt konfliktfrei mit der Auto-Installation
-- **🎨 Clean Code Architecture**: Entfernung redundanter Database-Cleanup Logik zugunsten nativer Docker Image Funktionalität
-
-### 🏆 What This Means for You
-- **✅ Zero Installation Conflicts**: Keine "admin already exists" Fehler mehr
-- **✅ Faster Setup**: Docker Image übernimmt die gesamte REDAXO Installation automatisch
-- **✅ SSL Still Works**: Alle HTTPS-Features funktionieren weiterhin perfekt
-- **✅ Easier Maintenance**: Einfachere Codebasis bedeutet stabilere Updates
+### 🏆 Technical Excellence
+- **Bundle Size**: 160 KB (minimized)
+- **Three Core Services**: RedaxoConsoleService, DatabaseQueryService, FileSystemService
+- **Follow-up Suggestions**: Context-aware command suggestions in chat
+- **Error Handling**: Robust error handling with helpful user messages
