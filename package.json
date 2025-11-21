@@ -2,7 +2,7 @@
   "name": "redaxo-multi-instances-manager",
   "displayName": "REDAXO Multi-Instances Manager",
   "description": "Complete REDAXO multi-instance management with Docker containers, SSL support, and automatic port management integrated into VS Code",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "publisher": "skerbis",
   "icon": "resources/icon.png",
   "repository": {
@@ -25,6 +25,85 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "chatParticipants": [
+      {
+        "id": "redaxo-instances.chat",
+        "name": "redaxo",
+        "fullName": "REDAXO Multi-Instances",
+        "description": "Manage REDAXO Docker instances, execute console commands, query databases",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "create",
+            "description": "Create a new REDAXO instance"
+          },
+          {
+            "name": "start",
+            "description": "Start a REDAXO instance"
+          },
+          {
+            "name": "stop",
+            "description": "Stop a REDAXO instance"
+          },
+          {
+            "name": "console",
+            "description": "Execute REDAXO console command"
+          },
+          {
+            "name": "query",
+            "description": "Execute database query"
+          },
+          {
+            "name": "articles",
+            "description": "Show REDAXO articles"
+          },
+          {
+            "name": "addons",
+            "description": "List or manage REDAXO addons"
+          },
+          {
+            "name": "config",
+            "description": "Show REDAXO configuration"
+          },
+          {
+            "name": "logs",
+            "description": "Show instance logs"
+          }
+        ],
+        "disambiguation": [
+          {
+            "category": "redaxo_instance_management",
+            "description": "The user wants to create, start, stop, or manage REDAXO instances",
+            "examples": [
+              "Create a new REDAXO instance with PHP 8.4",
+              "Start my demo-site instance",
+              "Stop all running instances",
+              "Show me all REDAXO instances"
+            ]
+          },
+          {
+            "category": "redaxo_console",
+            "description": "The user wants to execute REDAXO console commands or clear cache",
+            "examples": [
+              "Clear cache for demo-site",
+              "Execute console command on my instance",
+              "Install yform addon",
+              "List all packages"
+            ]
+          },
+          {
+            "category": "redaxo_database",
+            "description": "The user wants to query the REDAXO database or view content",
+            "examples": [
+              "Show me all articles in demo-site",
+              "How many users does my instance have?",
+              "Query the database",
+              "Show templates"
+            ]
+          }
+        ]
+      }
+    ],
     "commands": [
       {
         "command": "redaxo-instances.createInstance",
@@ -272,13 +351,27 @@
         "redaxo-instances.defaultPhpVersion": {
           "type": "string",
           "default": "8.3",
-          "enum": ["7.4", "8.0", "8.1", "8.2", "8.3", "8.4"],
+          "enum": [
+            "7.4",
+            "8.0",
+            "8.1",
+            "8.2",
+            "8.3",
+            "8.4"
+          ],
           "description": "Default PHP version for new instances"
         },
         "redaxo-instances.defaultMariaDbVersion": {
           "type": "string",
           "default": "10.11",
-          "enum": ["10.4", "10.5", "10.6", "10.11", "11.0", "latest"],
+          "enum": [
+            "10.4",
+            "10.5",
+            "10.6",
+            "10.11",
+            "11.0",
+            "latest"
+          ],
           "description": "Default MariaDB version for new instances"
         },
         "redaxo-instances.autoRefresh": {
@@ -301,17 +394,17 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.103.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
+    "@types/vscode": "^1.103.0",
     "@typescript-eslint/eslint-plugin": "^8.39.0",
     "@typescript-eslint/parser": "^8.39.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.32.0",
-    "typescript": "^5.9.2",
     "ts-loader": "^9.5.2",
+    "typescript": "^5.9.2",
     "webpack": "^5.101.0",
-    "webpack-cli": "^6.0.1",
-    "@vscode/test-cli": "^0.0.11",
-    "@vscode/test-electron": "^2.5.2"
+    "webpack-cli": "^6.0.1"
   }
 }

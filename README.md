@@ -25,9 +25,11 @@ Eine  TreeView (Seitenleiste)
 
 ### 🎯 Kern-Funktionen
 - **🏗️ Instanz-Management** - Erstellen, starten, stoppen und löschen von REDAXO-Instanzen
+- **🤖 Copilot Chat Integration** - Verwalte Instanzen direkt via GitHub Copilot Chat mit @redaxo
+- **⚡ Direkte Instance-Kommunikation** - Console Commands, Datenbank-Queries, Logs - alles aus VS Code
 - **🔒 SSL/HTTPS Support** - Automatische SSL-Zertifikate mit mkcert
 - **🐳 Docker Integration** - Vollständig containerisierte Umgebung
-- **📊 Info Pages* - Modernes Webview-Dashboard je Instanz
+- **📊 Info Pages** - Modernes Webview-Dashboard je Instanz
 - **🔑 Login-Informationen** - Automatische Anzeige von Zugangsdaten und URLs
 - **📱 TreeView** - Seitenleiste mit allen Instanzen und deren Status
 
@@ -67,11 +69,67 @@ npm run compile
 
 1. **Extension aktivieren** - `Cmd+Shift+P` → `REDAXO: Show Dashboard`
 2. **Erste Instanz erstellen** - `REDAXO: Create New Instance`
-3. **Instanz konfigurieren** - Name, PHP-Version (7.4 + 8.1–8.5), MariaDB 11.3
+3. **Instanz konfigurieren** - Name, PHP-Version (7.4 + 8.1–8.5), MariaDB 11.8 LTS
 4. **SSL aktivieren** - Optional für HTTPS-Support
 5. **Zugriff** - Automatisch generierte URLs verwenden
 
 ## 📖 Verwendung
+
+### 🤖 GitHub Copilot Chat Integration
+
+**REDAXO Multi-Instances** bietet einen Chat Participant für GitHub Copilot Chat, mit dem du deine REDAXO-Instanzen direkt aus dem Chat heraus verwalten kannst!
+
+#### Chat Participant verwenden
+
+Öffne GitHub Copilot Chat und verwende **@redaxo** um mit deinen Instanzen zu interagieren:
+
+```
+@redaxo /start demo-site
+@redaxo /console demo-site cache:clear
+@redaxo /query demo-site SELECT * FROM rex_article LIMIT 5
+```
+
+#### Verfügbare Slash Commands
+
+| Command | Beschreibung | Beispiel |
+|---------|--------------|----------|
+| `/create` | Neue Instanz erstellen | `@redaxo /create` |
+| `/start [name]` | Instanz starten | `@redaxo /start demo-site` |
+| `/stop [name]` | Instanz stoppen | `@redaxo /stop demo-site` |
+| `/console <instance> <command>` | REDAXO Console Command ausführen | `@redaxo /console demo-site cache:clear` |
+| `/query <instance> <SQL>` | SQL Query ausführen | `@redaxo /query demo-site SELECT * FROM rex_article` |
+| `/articles [instance]` | Artikel auflisten | `@redaxo /articles demo-site` |
+| `/addons [instance]` | AddOns verwalten | `@redaxo /addons demo-site` |
+| `/config <instance> <key>` | Config-Werte lesen | `@redaxo /config demo-site server` |
+| `/logs <instance>` | Container-Logs anzeigen | `@redaxo /logs demo-site` |
+
+#### Praktische Anwendungsfälle
+
+**Cache verwalten:**
+```
+@redaxo /console demo-site cache:clear
+@redaxo /console demo-site cache:warmup
+```
+
+**Datenbank abfragen:**
+```
+@redaxo /query demo-site SELECT id, name FROM rex_article WHERE status=1
+@redaxo /query demo-site SHOW TABLES
+```
+
+**AddOns verwalten:**
+```
+@redaxo /console demo-site package:list
+@redaxo /console demo-site package:install yform
+@redaxo /console demo-site package:activate yform
+```
+
+**Debugging:**
+```
+@redaxo /logs demo-site
+@redaxo /config demo-site debug
+@redaxo /query demo-site SELECT * FROM rex_system_log ORDER BY id DESC LIMIT 10
+```
 
 ### Alle VS Code Kommandos (Auswahl)
 - `REDAXO: Create New Instance` - Neue Instanz erstellen

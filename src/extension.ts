@@ -7,6 +7,7 @@ import { DockerService } from './docker/dockerService';
 import { ResourceMonitor } from './docker/resourceMonitor';
 import { InstancesProvider } from './providers/instancesProvider';
 import { EmptyInstanceProvider } from './emptyInstance/emptyInstanceProvider';
+import { RedaxoChatParticipant } from './chat/redaxoChatParticipant';
 
 const execAsync = promisify(exec);
 
@@ -23,6 +24,7 @@ let dockerService: DockerService;
 let instancesProvider: InstancesProvider;
 let emptyInstanceProvider: EmptyInstanceProvider;
 let outputChannel: vscode.OutputChannel;
+let chatParticipant: RedaxoChatParticipant;
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('REDAXO Multi-Instances Manager is now active!');
@@ -35,6 +37,9 @@ export function activate(context: vscode.ExtensionContext) {
     dockerService = new DockerService(outputChannel);
     instancesProvider = new InstancesProvider(dockerService);
     emptyInstanceProvider = new EmptyInstanceProvider(context.extensionUri, dockerService);
+    
+    // Initialize Chat Participant
+    chatParticipant = new RedaxoChatParticipant(context, dockerService);
 
     // Register Tree Views
     const treeView = vscode.window.createTreeView('redaxo-instances.instancesView', {
@@ -1000,10 +1005,13 @@ async function getInstanceCreationOptions(): Promise<any> {
     }
 
     const mariadbVersion = await vscode.window.showQuickPick([
+        { label: 'MariaDB 11.8 (LTS - Neueste)', value: '11.8' },
+        { label: 'MariaDB 11.4 (LTS)', value: '11.4' },
+        { label: 'MariaDB 11.6', value: '11.6' },
+        { label: 'MariaDB 11.5', value: '11.5' },
+        { label: 'MariaDB 11.3', value: '11.3' },
         { label: 'MariaDB 11.2', value: '11.2' },
-        { label: 'MariaDB 11.1', value: '11.1' },
-        { label: 'MariaDB 10.11', value: '10.11' },
-        { label: 'MariaDB 10.6', value: '10.6' }
+        { label: 'MariaDB 10.11 (LTS - Legacy)', value: '10.11' }
     ], {
         placeHolder: 'Select MariaDB version'
     });
@@ -1377,6 +1385,57 @@ function getHelpHtml(): string {
                         <button class="quick-action" onclick="executeCommand('redaxo-instances.openReadme')">
                             README anzeigen
                         </button>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>🤖 GitHub Copilot Chat Integration</h2>
+                    <p>Verwalte deine REDAXO-Instanzen direkt aus GitHub Copilot Chat heraus mit dem <strong>@redaxo</strong> Chat Participant!</p>
+                    
+                    <div class="feature-grid">
+                        <div class="feature-item">
+                            <h3>💬 Chat Participant</h3>
+                            <p>Öffne Copilot Chat und nutze <code>@redaxo</code> um mit deinen Instanzen zu interagieren</p>
+                        </div>
+                        <div class="feature-item">
+                            <h3>⚡ Slash Commands</h3>
+                            <p>9 verschiedene Commands für Instance Management, Console, Datenbank-Queries und mehr</p>
+                        </div>
+                        <div class="feature-item">
+                            <h3>🔍 Direkte Kommunikation</h3>
+                            <p>Führe Console Commands aus, lies Logs, query die Datenbank - alles aus dem Chat heraus</p>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 1.5rem;">Verfügbare Commands</h3>
+                    <ul class="command-list">
+                        <li><code>@redaxo /start demo-site</code> - Instanz starten</li>
+                        <li><code>@redaxo /stop demo-site</code> - Instanz stoppen</li>
+                        <li><code>@redaxo /console demo-site cache:clear</code> - Console Command ausführen</li>
+                        <li><code>@redaxo /query demo-site SELECT * FROM rex_article</code> - SQL Query ausführen</li>
+                        <li><code>@redaxo /articles demo-site</code> - Artikel auflisten</li>
+                        <li><code>@redaxo /addons demo-site</code> - AddOns verwalten</li>
+                        <li><code>@redaxo /config demo-site server</code> - Config-Werte lesen</li>
+                        <li><code>@redaxo /logs demo-site</code> - Container-Logs anzeigen</li>
+                    </ul>
+
+                    <h3 style="margin-top: 1.5rem;">Praktische Beispiele</h3>
+                    <div class="feature-grid">
+                        <div class="feature-item">
+                            <h3>🔄 Cache Management</h3>
+                            <p><code>@redaxo /console demo-site cache:clear</code><br>
+                            <code>@redaxo /console demo-site cache:warmup</code></p>
+                        </div>
+                        <div class="feature-item">
+                            <h3>📦 AddOns installieren</h3>
+                            <p><code>@redaxo /console demo-site package:install yform</code><br>
+                            <code>@redaxo /console demo-site package:activate yform</code></p>
+                        </div>
+                        <div class="feature-item">
+                            <h3>🔍 Debugging</h3>
+                            <p><code>@redaxo /logs demo-site</code><br>
+                            <code>@redaxo /query demo-site SELECT * FROM rex_system_log</code></p>
+                        </div>
                     </div>
                 </div>
 

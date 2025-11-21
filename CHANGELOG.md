@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.8.0] - 2025-01-21
+
+### Added
+- 🤖 **GitHub Copilot Chat Integration**: Neuer Chat Participant `@redaxo` für direkte Instanz-Verwaltung aus Copilot Chat
+- ⚡ **9 Slash Commands**: `/create`, `/start`, `/stop`, `/console`, `/query`, `/articles`, `/addons`, `/config`, `/logs`
+- 🔧 **REDAXO Console Service**: Direkte Ausführung von REDAXO Console Commands via Docker exec
+- 🗄️ **Database Query Service**: MySQL-Queries direkt auf REDAXO-Datenbank ausführen
+- 📁 **FileSystem Service**: Dateien in REDAXO-Containern lesen/schreiben
+- 📖 **Erweiterte Dokumentation**: README und Hilfe-Webview um Copilot Chat Features erweitert
+
+### Technical
+- Neue Services: `RedaxoConsoleService`, `DatabaseQueryService`, `FileSystemService`
+- Chat Participant Handler mit 9 Command-Handlern
+- Follow-up Provider für Chat-Vorschläge
+- Package.json: ChatParticipants Contribution Point
+- Dokumentation: `COMMUNICATION_SERVICES.md` für Service-APIs
+
+---
+
 ## [1.7.1] - 2025-08-30
 
 ### Fixed

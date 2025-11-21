@@ -8,6 +8,9 @@ import { DockerComposeGenerator } from './dockerCompose';
 import { SSLManager } from './sslManager';
 import { PortManager } from './portManager';
 import { SetupTemplates } from './templates';
+import { RedaxoConsoleService } from './redaxoConsoleService';
+import { DatabaseQueryService } from './databaseQueryService';
+import { FileSystemService } from './fileSystemService';
 
 const execPromise = promisify(exec);
 
@@ -677,5 +680,30 @@ touch /tmp/setup-complete.flag
 
 echo "✅ Instance setup complete!"
 `;
+    }
+    
+    // ========================================
+    // Public accessors for communication services
+    // ========================================
+    
+    /**
+     * Get the REDAXO Console Service for executing console commands
+     */
+    get console() {
+        return RedaxoConsoleService;
+    }
+    
+    /**
+     * Get the Database Query Service for database operations
+     */
+    get database() {
+        return DatabaseQueryService;
+    }
+    
+    /**
+     * Get the File System Service for file operations
+     */
+    get fileSystem() {
+        return FileSystemService;
     }
 }
