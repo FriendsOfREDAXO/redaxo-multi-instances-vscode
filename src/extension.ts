@@ -985,10 +985,12 @@ async function getInstanceCreationOptions(): Promise<any> {
     }
 
     const phpVersion = await vscode.window.showQuickPick([
+        { label: 'PHP 8.5 (neueste)', value: '8.5' },
         { label: 'PHP 8.4 (empfohlen)', value: '8.4' },
         { label: 'PHP 8.3', value: '8.3' },
         { label: 'PHP 8.2', value: '8.2' },
-        { label: 'PHP 8.1', value: '8.1' }
+        { label: 'PHP 8.1', value: '8.1' },
+        { label: 'PHP 7.4 (legacy, für Migration)', value: '7.4' }
     ], {
         placeHolder: 'Select PHP version'
     });

@@ -1,4 +1,4 @@
-# Version Update Summary - November 2024
+# Version Update Summary - November 2025
 
 ## Überblick
 Diese Aktualisierung modernisiert die unterstützten PHP- und MariaDB-Versionen basierend auf aktuellen Empfehlungen und Best Practices für REDAXO-Installationen.
@@ -6,21 +6,22 @@ Diese Aktualisierung modernisiert die unterstützten PHP- und MariaDB-Versionen 
 ## PHP-Versionen
 
 ### Entfernte Versionen
-- **PHP 7.4** - End of Life (EOL) seit November 2022
 - **PHP 8.0** - End of Life (EOL) seit November 2023
-- **PHP 8.5** - Noch nicht stabil (geplant für November 2025)
 
 ### Aktuelle Unterstützte Versionen
+- **PHP 7.4** - Legacy (EOL, aber für Migration beibehalten)
 - **PHP 8.1** - Minimum für REDAXO 5.20.0+
 - **PHP 8.2** - Stabil und empfohlen
 - **PHP 8.3** - Stabil und empfohlen
-- **PHP 8.4** (NEU) - **Standard/Empfohlen** - Stabil seit 21. November 2024
+- **PHP 8.4** - **Standard/Empfohlen** - Stabil seit 21. November 2024
+- **PHP 8.5** (NEU) - **Neueste** - Stabil seit 20. November 2025
 
 ### Begründung
-- PHP 7.4 und 8.0 erhalten keine Sicherheitsupdates mehr
+- PHP 8.0 erhält keine Sicherheitsupdates mehr
+- PHP 7.4 ist EOL, wird aber für Migrationszwecke beibehalten
 - REDAXO 5.20.0+ erfordert mindestens PHP 8.1
-- PHP 8.4 ist die neueste stabile Version mit aktiver Unterstützung bis Dezember 2028
-- PHP 8.5 ist noch in der Entwicklung und sollte nicht in Produktionsumgebungen verwendet werden
+- PHP 8.4 ist die empfohlene stabile Version mit aktiver Unterstützung bis Dezember 2028
+- PHP 8.5 ist jetzt stabil (seit 20. November 2025) und bietet neue Features wie Pipe Operator und URI Extension
 
 ## MariaDB-Versionen
 
@@ -48,9 +49,9 @@ Diese Aktualisierung modernisiert die unterstützten PHP- und MariaDB-Versionen 
 ## Änderungen in den Dateien
 
 ### package.json
-- PHP Standard von 8.3 → 8.4
-- PHP-Versionen: [8.1, 8.2, 8.3, 8.4]
-- MariaDB Standard von 10.11 → 11.4
+- PHP Standard: 8.4 (beibehalten)
+- PHP-Versionen: [7.4, 8.1, 8.2, 8.3, 8.4, 8.5]
+- MariaDB Standard: 11.4 (beibehalten)
 - MariaDB-Versionen: [10.11, 11.4, 11.6, 11.8, latest]
 
 ### src/extension.ts
@@ -90,19 +91,22 @@ Diese Aktualisierung modernisiert die unterstützten PHP- und MariaDB-Versionen 
 - MariaDB 11.4 (Standard, LTS)
 
 ### Bestehende Installationen
-- PHP 7.4/8.0 sollten auf mindestens PHP 8.1 aktualisiert werden
+- PHP 7.4/8.0 sollten auf mindestens PHP 8.1 aktualisiert werden (7.4 verfügbar für Migration)
+- PHP 8.5 ist verfügbar für Early Adopters
 - MariaDB 10.4-10.6 sollten auf 10.11 oder 11.4 (LTS) aktualisiert werden
 - Backups vor Upgrades erstellen!
 
 ### Langzeit-Projekte
-- PHP 8.3 oder 8.4 (lange aktive Unterstützung)
+- PHP 8.3 oder 8.4 (lange aktive Unterstützung, empfohlen)
+- PHP 8.5 (neueste Features, für experimentelle Projekte)
 - MariaDB 11.4 oder 11.8 (LTS mit Support bis 2029)
 
 ## Quellen
 - [PHP Supported Versions](https://www.php.net/supported-versions.php)
+- [PHP 8.5 Release](https://www.php.net/releases/8.5/index.php)
 - [MariaDB Lifecycle](https://endoflife.date/mariadb)
 - [REDAXO System Requirements](https://redaxo.org/download/core/)
 - [FriendsOfREDAXO Docker Image](https://github.com/FriendsOfREDAXO/docker-redaxo)
 
 ## Datum
-November 2024 (erstellt am 21. November 2024)
+November 2025 (aktualisiert am 21. November 2025)

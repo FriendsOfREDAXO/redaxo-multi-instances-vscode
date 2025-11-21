@@ -440,10 +440,12 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
                         <div class="form-group">
                             <label for="phpVersion">PHP Version:</label>
                             <select id="phpVersion" required>
+                                    <option value="8.5">PHP 8.5 (Neueste)</option>
                                     <option value="8.4">PHP 8.4 (Empfohlen)</option>
                                     <option value="8.3">PHP 8.3</option>
                                     <option value="8.2">PHP 8.2</option>
                                     <option value="8.1">PHP 8.1</option>
+                                    <option value="7.4">PHP 7.4 (Legacy, für Migration)</option>
                             </select>
                         </div>
 

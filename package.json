@@ -272,7 +272,7 @@
         "redaxo-instances.defaultPhpVersion": {
           "type": "string",
           "default": "8.4",
-          "enum": ["8.1", "8.2", "8.3", "8.4"],
+          "enum": ["7.4", "8.1", "8.2", "8.3", "8.4", "8.5"],
           "description": "Default PHP version for new instances"
         },
         "redaxo-instances.defaultMariaDbVersion": {
