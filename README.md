@@ -17,8 +17,8 @@ Eine  TreeView (Seitenleiste)
 ![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue?style=flat-square&logo=visual-studio-code)
 ![Docker](https://img.shields.io/badge/Docker-Required-blue?style=flat-square&logo=docker)
 ![REDAXO](https://img.shields.io/badge/REDAXO-5.x-green?style=flat-square)
-![PHP](https://img.shields.io/badge/PHP-7.4%20|%208.1--8.5-purple?style=flat-square&logo=php)
-![MariaDB](https://img.shields.io/badge/MariaDB-11.3-blue?style=flat-square)
+![PHP](https://img.shields.io/badge/PHP-8.1%20|%208.2%20|%208.3%20|%208.4-purple?style=flat-square&logo=php)
+![MariaDB](https://img.shields.io/badge/MariaDB-10.11%20|%2011.4%20|%2011.6%20|%2011.8-blue?style=flat-square)
 ![SSL](https://img.shields.io/badge/SSL-mkcert-orange?style=flat-square&logo=letsencrypt)
 
 ## ✨ Features
@@ -32,8 +32,8 @@ Eine  TreeView (Seitenleiste)
 - **📱 TreeView** - Seitenleiste mit allen Instanzen und deren Status
 
 ### 🔧 Technische Features
-- **PHP Support** - PHP 7.4, 8.1, 8.2, 8.3, 8.4, 8.5
-- **MariaDB Support** - Aktuell 11.3
+- **PHP Support** - PHP 8.1, 8.2, 8.3, 8.4 (empfohlen: 8.4)
+- **MariaDB Support** - MariaDB 10.11 (LTS), 11.4 (LTS), 11.6, 11.8 (LTS, empfohlen: 11.4)
 - **Port Management** - Automatische Port-Zuweisung und -Verwaltung
 - **SSL Zertifikate** - Lokale Entwicklungszertifikate mit mkcert
 - **Docker Compose** - Automatische Container-Orchestrierung
@@ -67,7 +67,7 @@ npm run compile
 
 1. **Extension aktivieren** - `Cmd+Shift+P` → `REDAXO: Show Dashboard`
 2. **Erste Instanz erstellen** - `REDAXO: Create New Instance`
-3. **Instanz konfigurieren** - Name, PHP-Version (7.4 + 8.1–8.5), MariaDB 11.3
+3. **Instanz konfigurieren** - Name, PHP-Version (8.1–8.4, Standard: 8.4), MariaDB (10.11–11.8, Standard: 11.4)
 4. **SSL aktivieren** - Optional für HTTPS-Support
 5. **Zugriff** - Automatisch generierte URLs verwenden
 

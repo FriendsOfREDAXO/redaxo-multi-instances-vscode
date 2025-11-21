@@ -7,8 +7,8 @@ suite('Docker Compose SSL Configuration Test Suite', () => {
     test('SSL volumes should mount to /etc/apache2/ssl to preserve CA certificates', () => {
         const options: CreateInstanceOptions = {
             name: 'test-instance',
-            phpVersion: '8.3',
-            mariadbVersion: '10.11',
+            phpVersion: '8.4',
+            mariadbVersion: '11.4',
             autoInstall: false,
             importDump: false,
             webserverOnly: false,
@@ -41,8 +41,8 @@ suite('Docker Compose SSL Configuration Test Suite', () => {
     test('Non-SSL configuration should not include SSL volumes', () => {
         const options: CreateInstanceOptions = {
             name: 'test-instance-no-ssl',
-            phpVersion: '8.3', 
-            mariadbVersion: '10.11',
+            phpVersion: '8.4', 
+            mariadbVersion: '11.4',
             autoInstall: false,
             importDump: false,
             webserverOnly: false,

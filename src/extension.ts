@@ -985,12 +985,10 @@ async function getInstanceCreationOptions(): Promise<any> {
     }
 
     const phpVersion = await vscode.window.showQuickPick([
-        { label: 'PHP 8.5', value: '8.5' },
-        { label: 'PHP 8.4', value: '8.4' },
+        { label: 'PHP 8.4 (empfohlen)', value: '8.4' },
         { label: 'PHP 8.3', value: '8.3' },
         { label: 'PHP 8.2', value: '8.2' },
-        { label: 'PHP 8.1', value: '8.1' },
-        { label: 'PHP 7.4', value: '7.4' }
+        { label: 'PHP 8.1', value: '8.1' }
     ], {
         placeHolder: 'Select PHP version'
     });
@@ -1000,10 +998,11 @@ async function getInstanceCreationOptions(): Promise<any> {
     }
 
     const mariadbVersion = await vscode.window.showQuickPick([
-        { label: 'MariaDB 11.2', value: '11.2' },
-        { label: 'MariaDB 11.1', value: '11.1' },
-        { label: 'MariaDB 10.11', value: '10.11' },
-        { label: 'MariaDB 10.6', value: '10.6' }
+        { label: 'MariaDB 11.8 (LTS, neueste)', value: '11.8' },
+        { label: 'MariaDB 11.6', value: '11.6' },
+        { label: 'MariaDB 11.4 (LTS, empfohlen)', value: '11.4' },
+        { label: 'MariaDB 10.11 (LTS, legacy)', value: '10.11' },
+        { label: 'MariaDB Latest', value: 'latest' }
     ], {
         placeHolder: 'Select MariaDB version'
     });
