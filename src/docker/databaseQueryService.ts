@@ -26,19 +26,70 @@ export interface DatabaseConnection {
 export class DatabaseQueryService {
     
     /**
+     * Check if MySQL/MariaDB CLI tools are installed in container, install if missing
+     * @param containerName The database container name
+     */
+    private static async ensureMysqlClient(containerName: string): Promise<boolean> {
+        try {
+            // Check if mariadb command exists (MariaDB images)
+            try {
+                await execAsync(`docker exec ${containerName} which mariadb`);
+                return true; // MariaDB client already installed
+            } catch {}
+            
+            // Check if mysql command exists (MySQL images)
+            try {
+                await execAsync(`docker exec ${containerName} which mysql`);
+                return true; // MySQL client already installed
+            } catch {}
+            
+            // Neither found, try to install
+            console.log(`📦 Database client not found in ${containerName}, attempting to install...`);
+            
+            // Try different package managers
+            const installCommands = [
+                // For MariaDB images with apt (Debian/Ubuntu)
+                `docker exec ${containerName} sh -c 'apt-get update && apt-get install -y mariadb-client'`,
+                // For MySQL images with apt (Debian/Ubuntu)
+                `docker exec ${containerName} sh -c 'apt-get update && apt-get install -y default-mysql-client'`,
+                // For Alpine based images
+                `docker exec ${containerName} sh -c 'apk add --no-cache mariadb-client'`,
+                // Alternative for Alpine
+                `docker exec ${containerName} sh -c 'apk add --no-cache mysql-client'`,
+                // For Red Hat based images
+                `docker exec ${containerName} sh -c 'yum install -y mariadb'`
+            ];
+            
+            for (const cmd of installCommands) {
+                try {
+                    await execAsync(cmd, { timeout: 60000 }); // 60 seconds timeout
+                    console.log(`✅ Database client installed successfully`);
+                    return true;
+                } catch {
+                    continue; // Try next package manager
+                }
+            }
+            
+            console.error(`❌ Failed to install database client in ${containerName}`);
+            return false;
+        } catch (error) {
+            console.error(`❌ Error checking/installing database client:`, error);
+            return false;
+        }
+    }
+    
+    /**
      * Execute a SELECT query on the REDAXO database
-     * @param instanceName The instance name
+     * @param containerName The database container name (e.g., 'redaxo-demo_db' or 'wellingdb')
      * @param query The SQL query to execute
      * @param dbConnection Database connection info (optional, will be fetched if not provided)
      */
     static async query(
-        instanceName: string,
+        containerName: string,
         query: string,
         dbConnection?: DatabaseConnection
     ): Promise<DatabaseQueryResult> {
         try {
-            const containerName = `redaxo-${instanceName}_db`;
-            
             // Check if container is running
             const isRunning = await this.isContainerRunning(containerName);
             if (!isRunning) {
@@ -51,9 +102,21 @@ export class DatabaseQueryService {
                 };
             }
             
+            // Ensure MySQL client is installed
+            const hasClient = await this.ensureMysqlClient(containerName);
+            if (!hasClient) {
+                return {
+                    success: false,
+                    rows: [],
+                    rowCount: 0,
+                    error: `MySQL client not available in ${containerName}. Please install it manually or use a MariaDB image with built-in tools.`,
+                    query
+                };
+            }
+            
             // Get database connection info if not provided
             if (!dbConnection) {
-                dbConnection = await this.getConnectionInfo(instanceName);
+                dbConnection = await this.getConnectionInfoFromContainer(containerName);
             }
             
             // Escape query for shell
@@ -63,7 +126,7 @@ export class DatabaseQueryService {
             const mysqlCommand = `mysql -h localhost -u ${dbConnection.user} -p${dbConnection.password} ${dbConnection.database} -e "${escapedQuery}" --batch --skip-column-names`;
             const fullCommand = `docker exec ${containerName} sh -c '${mysqlCommand}'`;
             
-            console.log(`🗄️  Executing database query on ${instanceName}`);
+            console.log(`🗄️  Executing database query on ${containerName}`);
             
             const { stdout, stderr } = await execAsync(fullCommand, {
                 timeout: 30000 // 30 seconds timeout
@@ -275,6 +338,36 @@ export class DatabaseQueryService {
                 port: 3306,
                 user: 'redaxo',
                 password: 'redaxo',
+                database: 'redaxo'
+            };
+        }
+    }
+    
+    /**
+     * Get connection info directly from database container environment
+     */
+    private static async getConnectionInfoFromContainer(containerName: string): Promise<DatabaseConnection> {
+        try {
+            // Read environment variables from DB container
+            const envCommand = `docker exec ${containerName} env`;
+            const { stdout } = await execAsync(envCommand);
+            
+            const env = this.parseEnvVars(stdout);
+            
+            return {
+                host: 'localhost',
+                port: 3306,
+                user: env.MYSQL_USER || env.MARIADB_USER || 'root',
+                password: env.MYSQL_PASSWORD || env.MARIADB_PASSWORD || env.MYSQL_ROOT_PASSWORD || env.MARIADB_ROOT_PASSWORD || '',
+                database: env.MYSQL_DATABASE || env.MARIADB_DATABASE || 'redaxo'
+            };
+        } catch (error) {
+            // Fallback to defaults
+            return {
+                host: 'localhost',
+                port: 3306,
+                user: 'root',
+                password: '',
                 database: 'redaxo'
             };
         }

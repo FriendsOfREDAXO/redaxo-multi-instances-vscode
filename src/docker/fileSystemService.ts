@@ -369,16 +369,46 @@ export class FileSystemService {
     /**
      * Get recent log entries (last n lines)
      */
-    static async getRecentLogs(instanceName: string, lines: number = 50): Promise<string[]> {
+    static async getRecentLogs(containerName: string, lines: number = 50): Promise<string[]> {
         try {
-            const containerName = `redaxo-${instanceName}`;
-            const logPath = '/var/www/html/redaxo/data/log/redaxo.log';
-            const command = `docker exec ${containerName} tail -n ${lines} "${logPath}"`;
+            // Check if container is running
+            const isRunning = await FileSystemService.isContainerRunning(containerName);
+            if (!isRunning) {
+                throw new Error(`Container ${containerName} is not running. Start the instance first.`);
+            }
             
-            const { stdout } = await execAsync(command);
-            return stdout.split('\n').filter(l => l.trim().length > 0);
-        } catch (error) {
-            return [];
+            // Try multiple log file names and paths
+            const logPaths = [
+                '/var/www/html/redaxo/data/log/redaxo.log',
+                '/var/www/html/redaxo/data/log/system.log',
+                '/var/www/html/data/log/redaxo.log',
+                '/var/www/html/data/log/system.log',
+                '/var/www/html/project/data/log/redaxo.log',
+                '/var/www/html/project/data/log/system.log',
+                '/var/www/html/public/redaxo/data/log/redaxo.log',
+                '/var/www/html/public/redaxo/data/log/system.log'
+            ];
+            
+            for (const logPath of logPaths) {
+                try {
+                    const command = `docker exec ${containerName} tail -n ${lines} "${logPath}" 2>/dev/null`;
+                    const { stdout } = await execAsync(command);
+                    
+                    if (stdout && stdout.trim().length > 0) {
+                        return stdout.split('\n').filter(l => l.trim().length > 0);
+                    }
+                } catch {
+                    // Try next path
+                    continue;
+                }
+            }
+            
+            throw new Error(`No REDAXO logs found in container ${containerName}. The log file may not exist yet or the instance hasn't logged anything.`);
+        } catch (error: any) {
+            if (error.message) {
+                throw error;
+            }
+            throw new Error(`Could not read logs from container ${containerName}: ${error.message || 'Unknown error'}`);
         }
     }
     

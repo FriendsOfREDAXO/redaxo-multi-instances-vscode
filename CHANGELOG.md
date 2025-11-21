@@ -1,13 +1,30 @@
 # Changelog
 
+## [1.8.1] - 2025-11-21
+
+### Improved
+- 🔍 **MariaDB/MySQL Tool-Erkennung**: `/install-tools` erkennt jetzt automatisch MariaDB vs MySQL Container
+- 🛠️ **Native Database Tools**: Verwendet `mariadb`/`mariadb-dump` für MariaDB-Images und `mysql`/`mysqldump` für MySQL-Images
+- 📦 **Intelligente Installation**: Prüft auf vorhandene Tools vor Installation und vermeidet redundante Operationen
+- 📊 **Präzise Reporting**: Zeigt tatsächlich installierte/gefundene Tool-Namen an statt generischer Bezeichnungen
+
+### Technical
+- `DatabaseQueryService.ensureMysqlClient()`: Erkennt MariaDB und MySQL native Clients
+- `redaxoChatParticipant.installDbContainerTools()`: Unterstützt beide Datenbanksysteme mit korrekter Tool-Erkennung
+- Verbesserte Fallback-Logik für verschiedene Package Manager (apt-get, apk, yum)
+
+---
+
 ## [1.8.0] - 2025-01-21
 
 ### Added
 - 🤖 **GitHub Copilot Chat Integration**: Neuer Chat Participant `@redaxo` für direkte Instanz-Verwaltung aus Copilot Chat
-- ⚡ **9 Slash Commands**: `/create`, `/start`, `/stop`, `/console`, `/query`, `/articles`, `/addons`, `/config`, `/logs`
+- ⚡ **10 Slash Commands**: `/create`, `/start`, `/stop`, `/console`, `/query`, `/articles`, `/addons`, `/config`, `/logs`, `/install-tools`
+- 🛠️ **CLI Tools Installation**: `/install-tools` Command installiert automatisch vim, nano, curl, wget, unzip, git, mysql, mysqldump
 - 🔧 **REDAXO Console Service**: Direkte Ausführung von REDAXO Console Commands via Docker exec
-- 🗄️ **Database Query Service**: MySQL-Queries direkt auf REDAXO-Datenbank ausführen
+- 🗄️ **Database Query Service**: MySQL-Queries direkt auf REDAXO-Datenbank ausführen mit automatischer MySQL Client Installation
 - 📁 **FileSystem Service**: Dateien in REDAXO-Containern lesen/schreiben
+- 🔍 **Dynamische Container-Erkennung**: Unterstützung für Standard (`redaxo-name`) und Custom (`nameweb`) Container-Namen
 - 📖 **Erweiterte Dokumentation**: README und Hilfe-Webview um Copilot Chat Features erweitert
 
 ### Technical

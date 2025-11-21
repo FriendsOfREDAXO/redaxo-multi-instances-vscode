@@ -83,6 +83,9 @@ export class RedaxoChatParticipant {
                 case 'logs':
                     return await this.handleLogs(request, stream, token);
                 
+                case 'install-tools':
+                    return await this.handleInstallTools(request, stream, token);
+                
                 default:
                     return await this.handleGeneral(request, stream, token);
             }
@@ -218,17 +221,24 @@ export class RedaxoChatParticipant {
         stream: vscode.ChatResponseStream,
         token: vscode.CancellationToken
     ): Promise<RedaxoChatResult> {
-        const { instanceName, query } = this.parseDatabaseQuery(request.prompt);
+        const parsed = this.parseDatabaseQuery(request.prompt);
         
-        if (!instanceName || !query) {
+        if (!parsed.instanceName || !parsed.query) {
             stream.markdown('Please specify instance and query. For example: `@redaxo /query demo-site SELECT * FROM rex_article LIMIT 5`');
             return { metadata: { command: 'query' } };
         }
         
-        stream.progress(`Executing query on ${instanceName}...`);
+        stream.progress(`Executing query on ${parsed.instanceName}...`);
         
         try {
-            const result = await this.dockerService.database.query(instanceName, query);
+            // Get actual DB container name
+            const dbContainerName = await this.dockerService.getDbContainerName(parsed.instanceName);
+            if (!dbContainerName) {
+                stream.markdown(`❌ Database container not found for instance "${parsed.instanceName}". Instance may not exist.`);
+                return { metadata: { command: 'query', instanceName: parsed.instanceName } };
+            }
+            
+            const result = await this.dockerService.database.query(dbContainerName, parsed.query);
             
             if (result.success) {
                 stream.markdown(`✅ **Query executed successfully** (${result.rowCount} rows)\n\n`);
@@ -244,7 +254,7 @@ export class RedaxoChatParticipant {
             stream.markdown(`❌ Error: ${error.message}`);
         }
         
-        return { metadata: { command: 'query', instanceName } };
+        return { metadata: { command: 'query', instanceName: parsed.instanceName } };
     }
     
     /**
@@ -265,7 +275,14 @@ export class RedaxoChatParticipant {
         stream.progress(`Loading articles from ${instanceName}...`);
         
         try {
-            const result = await this.dockerService.database.getArticles(instanceName, 20);
+            // Get actual DB container name
+            const dbContainerName = await this.dockerService.getDbContainerName(instanceName);
+            if (!dbContainerName) {
+                stream.markdown(`❌ Database container not found for instance "${instanceName}". Instance may not exist.`);
+                return { metadata: { command: 'articles', instanceName } };
+            }
+            
+            const result = await this.dockerService.database.getArticles(dbContainerName, 20);
             
             if (result.success && result.rows.length > 0) {
                 stream.markdown(`## 📄 Articles in ${instanceName} (${result.rowCount} total)\n\n`);
@@ -367,7 +384,14 @@ export class RedaxoChatParticipant {
         stream.progress(`Reading logs from ${instanceName}...`);
         
         try {
-            const logs = await this.dockerService.fileSystem.getRecentLogs(instanceName, 20);
+            // Get actual container name
+            const containerName = await this.dockerService.getWebContainerName(instanceName);
+            if (!containerName) {
+                stream.markdown(`❌ Container not found for instance "${instanceName}". Instance may not exist.`);
+                return { metadata: { command: 'logs', instanceName } };
+            }
+            
+            const logs = await this.dockerService.fileSystem.getRecentLogs(containerName, 20);
             
             if (logs.length > 0) {
                 stream.markdown(`## 📊 Recent logs for ${instanceName}\n\n`);
@@ -380,6 +404,237 @@ export class RedaxoChatParticipant {
         }
         
         return { metadata: { command: 'logs', instanceName } };
+    }
+    
+    /**
+     * Handle /install-tools command
+     */
+    private async handleInstallTools(
+        request: vscode.ChatRequest,
+        stream: vscode.ChatResponseStream,
+        token: vscode.CancellationToken
+    ): Promise<RedaxoChatResult> {
+        const instanceName = this.extractInstanceName(request.prompt);
+        
+        if (!instanceName) {
+            stream.markdown('Please specify an instance name. For example: `@redaxo /install-tools demo-site`');
+            return { metadata: { command: 'install-tools' } };
+        }
+        
+        stream.progress(`Installing CLI tools for ${instanceName}...`);
+        
+        try {
+            // Get both container names
+            const webContainer = await this.dockerService.getWebContainerName(instanceName);
+            const dbContainer = await this.dockerService.getDbContainerName(instanceName);
+            
+            if (!webContainer && !dbContainer) {
+                stream.markdown(`❌ No containers found for instance "${instanceName}"`);
+                return { metadata: { command: 'install-tools', instanceName } };
+            }
+            
+            stream.markdown(`## 🔧 Installing CLI Tools for ${instanceName}\n\n`);
+            
+            // Install tools in web container
+            if (webContainer) {
+                stream.markdown(`### Web Container: ${webContainer}\n`);
+                stream.progress(`Installing tools in ${webContainer}...`);
+                
+                const webTools = await this.installWebContainerTools(webContainer, stream);
+                stream.markdown(`✅ Installed ${webTools.installed.length} tools\n`);
+                if (webTools.installed.length > 0) {
+                    stream.markdown(`- ${webTools.installed.join(', ')}\n`);
+                }
+                if (webTools.failed.length > 0) {
+                    stream.markdown(`⚠️ Failed: ${webTools.failed.join(', ')}\n`);
+                }
+                stream.markdown('\n');
+            }
+            
+            // Install tools in database container
+            if (dbContainer) {
+                stream.markdown(`### Database Container: ${dbContainer}\n`);
+                stream.progress(`Installing tools in ${dbContainer}...`);
+                
+                const dbTools = await this.installDbContainerTools(dbContainer, stream);
+                stream.markdown(`✅ Installed ${dbTools.installed.length} tools\n`);
+                if (dbTools.installed.length > 0) {
+                    stream.markdown(`- ${dbTools.installed.join(', ')}\n`);
+                }
+                if (dbTools.failed.length > 0) {
+                    stream.markdown(`⚠️ Failed: ${dbTools.failed.join(', ')}\n`);
+                }
+            }
+            
+            stream.markdown(`\n🎉 Tool installation complete!`);
+            
+        } catch (error: any) {
+            stream.markdown(`❌ Error: ${error.message}`);
+        }
+        
+        return { metadata: { command: 'install-tools', instanceName } };
+    }
+    
+    /**
+     * Install tools in web container
+     */
+    private async installWebContainerTools(containerName: string, stream: vscode.ChatResponseStream): Promise<{installed: string[], failed: string[]}> {
+        const tools = ['vim', 'nano', 'curl', 'wget', 'unzip', 'git'];
+        const installed: string[] = [];
+        const failed: string[] = [];
+        
+        for (const tool of tools) {
+            try {
+                // Check if already installed
+                const checkCmd = `docker exec ${containerName} which ${tool}`;
+                try {
+                    await this.execCommand(checkCmd);
+                    installed.push(tool);
+                    continue;
+                } catch {
+                    // Not installed, try to install
+                }
+                
+                // Try apt-get first (Debian/Ubuntu)
+                try {
+                    await this.execCommand(`docker exec ${containerName} sh -c 'apt-get update && apt-get install -y ${tool}'`, 60000);
+                    installed.push(tool);
+                    continue;
+                } catch {}
+                
+                // Try apk (Alpine)
+                try {
+                    await this.execCommand(`docker exec ${containerName} apk add --no-cache ${tool}`, 60000);
+                    installed.push(tool);
+                    continue;
+                } catch {}
+                
+                failed.push(tool);
+            } catch {
+                failed.push(tool);
+            }
+        }
+        
+        return { installed, failed };
+    }
+    
+    /**
+     * Install tools in database container
+     */
+    private async installDbContainerTools(containerName: string, stream: vscode.ChatResponseStream): Promise<{installed: string[], failed: string[]}> {
+        const tools = ['vim', 'nano'];
+        const installed: string[] = [];
+        const failed: string[] = [];
+        
+        // Check which database tools are available (MySQL vs MariaDB)
+        let dbClientTool = '';
+        let dbDumpTool = '';
+        
+        // Try mariadb first (MariaDB images)
+        try {
+            await this.execCommand(`docker exec ${containerName} which mariadb`);
+            dbClientTool = 'mariadb';
+            installed.push('mariadb');
+        } catch {
+            // Try mysql (MySQL images)
+            try {
+                await this.execCommand(`docker exec ${containerName} which mysql`);
+                dbClientTool = 'mysql';
+                installed.push('mysql');
+            } catch {
+                // Neither installed, try to install
+                try {
+                    // Try apt-get first (Debian/Ubuntu)
+                    await this.execCommand(`docker exec ${containerName} sh -c 'apt-get update && apt-get install -y default-mysql-client'`, 60000);
+                    dbClientTool = 'mysql';
+                    installed.push('mysql');
+                } catch {
+                    // Try apk (Alpine)
+                    try {
+                        await this.execCommand(`docker exec ${containerName} apk add --no-cache mariadb-client`, 60000);
+                        dbClientTool = 'mariadb';
+                        installed.push('mariadb');
+                    } catch {
+                        failed.push('mysql/mariadb');
+                    }
+                }
+            }
+        }
+        
+        // Check dump tool
+        try {
+            await this.execCommand(`docker exec ${containerName} which mariadb-dump`);
+            dbDumpTool = 'mariadb-dump';
+            installed.push('mariadb-dump');
+        } catch {
+            try {
+                await this.execCommand(`docker exec ${containerName} which mysqldump`);
+                dbDumpTool = 'mysqldump';
+                installed.push('mysqldump');
+            } catch {
+                // Usually comes with client package
+                if (dbClientTool === 'mariadb') {
+                    dbDumpTool = 'mariadb-dump';
+                    // Check again after client installation
+                    try {
+                        await this.execCommand(`docker exec ${containerName} which mariadb-dump`);
+                        installed.push('mariadb-dump');
+                    } catch {}
+                } else if (dbClientTool === 'mysql') {
+                    dbDumpTool = 'mysqldump';
+                    try {
+                        await this.execCommand(`docker exec ${containerName} which mysqldump`);
+                        installed.push('mysqldump');
+                    } catch {}
+                }
+            }
+        }
+        
+        // Install other tools
+        for (const tool of tools) {
+            try {
+                // Check if already installed
+                try {
+                    await this.execCommand(`docker exec ${containerName} which ${tool}`);
+                    installed.push(tool);
+                    continue;
+                } catch {
+                    // Not installed, try to install
+                }
+                
+                // Try apt-get first
+                try {
+                    await this.execCommand(`docker exec ${containerName} sh -c 'apt-get update && apt-get install -y ${tool}'`, 60000);
+                    installed.push(tool);
+                    continue;
+                } catch {}
+                
+                // Try apk (Alpine)
+                try {
+                    await this.execCommand(`docker exec ${containerName} apk add --no-cache ${tool}`, 60000);
+                    installed.push(tool);
+                    continue;
+                } catch {}
+                
+                failed.push(tool);
+            } catch {
+                failed.push(tool);
+            }
+        }
+        
+        return { installed, failed };
+    }
+    
+    /**
+     * Execute command with promisified exec
+     */
+    private async execCommand(command: string, timeout: number = 30000): Promise<string> {
+        const { exec } = require('child_process');
+        const { promisify } = require('util');
+        const execAsync = promisify(exec);
+        
+        const { stdout } = await execAsync(command, { timeout });
+        return stdout.trim();
     }
     
     /**
@@ -402,7 +657,8 @@ export class RedaxoChatParticipant {
         stream.markdown('- `/articles <name>` - Show articles\n');
         stream.markdown('- `/addons <name>` - List addons\n');
         stream.markdown('- `/config <name>` - Show configuration\n');
-        stream.markdown('- `/logs <name>` - Show recent logs\n\n');
+        stream.markdown('- `/logs <name>` - Show recent logs\n');
+        stream.markdown('- `/install-tools <name>` - Install CLI tools (vim, nano, curl, mysql, etc.)\n\n');
         
         // Try to list instances
         try {

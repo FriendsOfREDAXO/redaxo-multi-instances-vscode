@@ -706,4 +706,83 @@ echo "✅ Instance setup complete!"
     get fileSystem() {
         return FileSystemService;
     }
+    
+    /**
+     * Get the actual web container name for an instance
+     * Handles both standard REDAXO instances (redaxo-{name}) and custom instances ({name}web)
+     */
+    async getWebContainerName(instanceName: string): Promise<string | null> {
+        try {
+            // Try standard REDAXO naming first
+            const standardName = `redaxo-${instanceName}`;
+            const { stdout: stdCheck } = await execPromise(`docker ps -a --filter "name=^${standardName}$" --format "{{.Names}}"`);
+            if (stdCheck.trim() === standardName) {
+                return standardName;
+            }
+            
+            // Try custom instance naming patterns
+            const patterns = [
+                `${instanceName}web`,
+                `${instanceName}-web`,
+                `${instanceName}_web`,
+                instanceName
+            ];
+            
+            for (const pattern of patterns) {
+                const { stdout } = await execPromise(`docker ps -a --filter "name=^${pattern}$" --format "{{.Names}}"`);
+                const containerName = stdout.trim();
+                if (containerName === pattern) {
+                    return containerName;
+                }
+            }
+            
+            return null;
+        } catch (error) {
+            return null;
+        }
+    }
+    
+    /**
+     * Get the actual database container name for an instance
+     * Handles both standard REDAXO instances (redaxo-{name}_db) and custom instances ({name}db)
+     */
+    async getDbContainerName(instanceName: string): Promise<string | null> {
+        try {
+            // Try standard REDAXO naming first
+            const standardName = `redaxo-${instanceName}_db`;
+            const { stdout: stdCheck } = await execPromise(`docker ps -a --filter "name=^${standardName}$" --format "{{.Names}}"`);
+            if (stdCheck.trim() === standardName) {
+                return standardName;
+            }
+            
+            // Try alternative standard naming
+            const altStandardName = `redaxo-${instanceName}-mysql`;
+            const { stdout: altCheck } = await execPromise(`docker ps -a --filter "name=^${altStandardName}$" --format "{{.Names}}"`);
+            if (altCheck.trim() === altStandardName) {
+                return altStandardName;
+            }
+            
+            // Try custom instance naming patterns
+            const patterns = [
+                `${instanceName}db`,
+                `${instanceName}-db`,
+                `${instanceName}_db`,
+                `${instanceName}-mysql`,
+                `${instanceName}_mysql`,
+                `db_${instanceName}`
+            ];
+            
+            for (const pattern of patterns) {
+                const { stdout } = await execPromise(`docker ps -a --filter "name=^${pattern}$" --format "{{.Names}}"`);
+                const containerName = stdout.trim();
+                if (containerName === pattern) {
+                    return containerName;
+                }
+            }
+            
+            return null;
+        } catch (error) {
+            return null;
+        }
+    }
 }

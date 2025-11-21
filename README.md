@@ -102,6 +102,7 @@ npm run compile
 | `/addons [instance]` | AddOns verwalten | `@redaxo /addons demo-site` |
 | `/config <instance> <key>` | Config-Werte lesen | `@redaxo /config demo-site server` |
 | `/logs <instance>` | Container-Logs anzeigen | `@redaxo /logs demo-site` |
+| `/install-tools <instance>` | CLI-Tools installieren | `@redaxo /install-tools demo-site` |
 
 #### Praktische Anwendungsfälle
 
@@ -130,6 +131,16 @@ npm run compile
 @redaxo /config demo-site debug
 @redaxo /query demo-site SELECT * FROM rex_system_log ORDER BY id DESC LIMIT 10
 ```
+
+**CLI-Tools installieren:**
+```
+@redaxo /install-tools demo-site
+```
+Installiert automatisch:
+- **Web Container**: vim, nano, curl, wget, unzip, git
+- **DB Container**: mariadb/mariadb-dump (MariaDB) oder mysql/mysqldump (MySQL), vim, nano
+
+Die Extension erkennt automatisch, ob es sich um einen MariaDB oder MySQL Container handelt und verwendet die nativen Tools des jeweiligen Datenbanksystems.
 
 ### Alle VS Code Kommandos (Auswahl)
 - `REDAXO: Create New Instance` - Neue Instanz erstellen
