@@ -441,22 +441,23 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
                             <label for="phpVersion">PHP Version:</label>
                             <select id="phpVersion" required>
                                     <option value="8.5">PHP 8.5 (Neueste)</option>
-                                    <option value="8.4">PHP 8.4 (Empfohlen)</option>
+                                    <option value="8.4">PHP 8.4</option>
                                     <option value="8.3">PHP 8.3</option>
                                     <option value="8.2">PHP 8.2</option>
                                     <option value="8.1">PHP 8.1</option>
-                                    <option value="7.4">PHP 7.4 (Legacy, für Migration)</option>
+                                    <option value="7.4">PHP 7.4 (Letzte 7.x)</option>
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label for="mariadbVersion">MariaDB Version:</label>
                             <select id="mariadbVersion" required>
-                                <option value="11.8">MariaDB 11.8 (LTS, Neueste)</option>
-                                <option value="11.6">MariaDB 11.6</option>
-                                <option value="11.4">MariaDB 11.4 (LTS, Empfohlen)</option>
+                                <option value="11.6">MariaDB 11.6 (Neueste LTS)</option>
+                                <option value="11.5">MariaDB 11.5 (Stabil)</option>
+                                <option value="11.4">MariaDB 11.4 (Empfohlen)</option>
+                                <option value="11.3">MariaDB 11.3</option>
+                                <option value="11.2">MariaDB 11.2</option>
                                 <option value="10.11">MariaDB 10.11 (Legacy LTS)</option>
-                                <option value="latest">MariaDB Latest</option>
                             </select>
                         </div>
                     </div>
@@ -696,15 +697,15 @@ export class EmptyInstanceProvider implements vscode.WebviewViewProvider {
                             clearFieldError(field);
                         });
                         
-                        phpVersionSelect.value = '8.4';
-                        mariadbVersionSelect.value = '11.4';
+                        phpVersionSelect.value = '8.3';
+                        mariadbVersionSelect.value = '11.2';
                         xdebugCheckbox.checked = false;
                         openInNewWindowCheckbox.checked = true;
                     }
                     
                     // Initialize
-                    phpVersionSelect.value = '8.4';
-                    mariadbVersionSelect.value = '11.4';
+                    phpVersionSelect.value = '8.3';
+                    mariadbVersionSelect.value = '11.2';
                     openInNewWindowCheckbox.checked = true;
                 })();
             </script>
