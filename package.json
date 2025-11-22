@@ -194,21 +194,7 @@
         "title": "🎨 Modern Login Info (Preview)",
         "icon": "$(preview)"
       },
-      {
-        "command": "redaxo-instances.importDump",
-        "title": "Import Dump",
-        "icon": "$(cloud-upload)"
-      },
-      {
-        "command": "redaxo-instances.exportDatabase",
-        "title": "Export Database",
-        "icon": "$(cloud-download)"
-      },
-      {
-        "command": "redaxo-instances.importDatabaseNow",
-        "title": "Import Dump (now)",
-        "icon": "$(cloud-upload)"
-      },
+      
       {
         "command": "redaxo-instances.setupSSL",
         "title": "Setup HTTPS/SSL",
@@ -358,21 +344,7 @@
           "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
           "group": "4_info@2"
         },
-        {
-          "command": "redaxo-instances.importDump",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "4_info@3"
-        },
-        {
-          "command": "redaxo-instances.exportDatabase",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "4_info@3"
-        },
-        {
-          "command": "redaxo-instances.importDatabaseNow",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "4_info@3"
-        },
+        
         {
           "command": "redaxo-instances.setupSSL",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",

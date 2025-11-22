@@ -43,7 +43,6 @@ export interface CreateInstanceOptions {
     phpVersion: string;
     mariadbVersion: string;
     autoInstall: boolean;
-    importDump: boolean;
     webserverOnly: boolean;
     dumpFile?: string;
     port?: number;

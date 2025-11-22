@@ -86,8 +86,7 @@ export class RedaxoChatParticipant {
                 case 'install-tools':
                     return await this.handleInstallTools(request, stream, token);
 
-                case 'dump':
-                    return await this.handleDump(request, stream, token);
+                // 'dump' command removed — use Adminer for DB exports/imports
                 
                 default:
                     return await this.handleGeneral(request, stream, token);
@@ -478,67 +477,7 @@ export class RedaxoChatParticipant {
         return { metadata: { command: 'install-tools', instanceName } };
     }
 
-    /**
-     * Handle /dump command
-     * Usage:
-     *  - @redaxo /dump export <instance>
-     *  - @redaxo /dump import <instance> <local-path>
-     */
-    private async handleDump(
-        request: vscode.ChatRequest,
-        stream: vscode.ChatResponseStream,
-        token: vscode.CancellationToken
-    ): Promise<RedaxoChatResult> {
-        const parts = request.prompt.trim().split(/\s+/);
-        // prompt might be like "dump export welling" or "dump import welling /tmp/dump.sql"
-        const action = parts[1] || 'export';
-        const instanceName = parts[2];
-
-        if (!instanceName) {
-            stream.markdown('Please specify an instance. Example: `@redaxo /dump export welling`');
-            return { metadata: { command: 'dump', instanceName: undefined } };
-        }
-
-        try {
-            if (action === 'export') {
-                stream.progress(`Exporting DB for ${instanceName}...`);
-                // export to temp file
-                const os = require('os');
-                const path = require('path');
-                const tmp = os.tmpdir();
-                const out = path.join(tmp, `${instanceName}-${new Date().toISOString().replace(/[:.]/g,'-')}.sql.gz`);
-
-                const result = await this.dockerService.database.exportDatabase(instanceName, out);
-                if (result.success) {
-                    stream.markdown(`✅ Database exported to: 
-    ${out}`);
-                } else {
-                    stream.markdown(`❌ Export failed: ${result.error}`);
-                }
-            } else if (action === 'import') {
-                const filePath = parts.slice(3).join(' ');
-                if (!filePath) {
-                    stream.markdown('Please provide a local path to import from. Example: `@redaxo /dump import welling /tmp/dump.sql`');
-                    return { metadata: { command: 'dump', instanceName } };
-                }
-
-                stream.progress(`Importing DB for ${instanceName} from ${filePath}...`);
-                const force = parts.includes('force');
-                const res = await this.dockerService.database.importDatabase(instanceName, filePath, { allowSchemaChanges: force });
-                if (res.success) {
-                    stream.markdown(`✅ Import completed successfully`);
-                } else {
-                    stream.markdown(`❌ Import failed: ${res.error}`);
-                }
-            } else {
-                stream.markdown('Unknown dump action. Use `export` or `import`');
-            }
-        } catch (error: any) {
-            stream.markdown(`❌ Error: ${error.message}`);
-        }
-
-        return { metadata: { command: 'dump', instanceName } };
-    }
+    // Dump handlers removed — use Adminer for DB export/import workflows
     
     /**
      * Install tools in web container

@@ -538,28 +538,7 @@ export class DockerService {
         }
     }
 
-    async importDump(instanceName: string, dumpPath: string): Promise<void> {
-        try {
-            const instancesDir = await this.getInstancesDirectory();
-            const instancePath = path.join(instancesDir, instanceName);
-            
-            this.log(`📥 Importing dump for instance: ${instanceName}`);
-            
-            // Copy dump file to mysql-init directory
-            const mysqlInitPath = path.join(instancePath, 'mysql-init');
-            const dumpFileName = path.basename(dumpPath);
-            const targetDumpPath = path.join(mysqlInitPath, dumpFileName);
-            
-            await fs.copyFile(dumpPath, targetDumpPath);
-            
-            this.log(`✅ Dump imported successfully for ${instanceName}`);
-            vscode.window.showInformationMessage(`Dump imported successfully! Restart the instance to apply changes.`);
-        } catch (error: any) {
-            this.log(`❌ Failed to import dump: ${error.message}`);
-            vscode.window.showErrorMessage(`Failed to import dump: ${error.message}`);
-            throw error;
-        }
-    }
+    // importDump removed — DB import/export should be done via Adminer or external tools
 
     async setupInstanceSSL(instanceName: string): Promise<void> {
         try {

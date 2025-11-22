@@ -61,8 +61,7 @@ const result = await DatabaseQueryService.query('demo-site', 'SELECT * FROM rex_
 - `getPackages(instanceName)` - Installierte Packages
 - `getTables(instanceName)` - Tabellen auflisten
 - `describeTable(instanceName, tableName)` - Tabellenstruktur
-- `exportDatabase(instanceName, outputPath)` - Datenbank exportieren
-- `importDatabase(instanceName, inputPath)` - SQL Dump (plain or gz) direkt in die laufende DB importieren
+- Database export/import: handled via Adminer UI or external tools; direct export/import methods were removed from the extension to avoid duplication and to rely on Adminer for safe interactive imports/exports.
 
 ### 3. FileSystemService
 Dateien im Container lesen/schreiben.

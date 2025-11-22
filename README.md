@@ -193,7 +193,7 @@ Die Extension erkennt automatisch, ob es sich um einen MariaDB oder MySQL Contai
 - **Show REDAXO Logs** - redaxo.log und system.log anzeigen
 - **Install CLI Tools** - vim, nano, curl, wget, git, mysql/mariadb installieren
 - **Login Information** - Zugangsdaten anzeigen
-- **Import Dump** - SQL-Dump importieren
+- **Import Dump** - removed (use Adminer for import/export)
 - **Setup HTTPS/SSL** - SSL-Zertifikate einrichten
 - **Open Workspace** - Projekt-Ordner in VS Code öffnen
 - **Delete Instance** - Instanz entfernen

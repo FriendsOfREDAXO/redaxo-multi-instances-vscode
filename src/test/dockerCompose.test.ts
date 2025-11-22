@@ -10,7 +10,6 @@ suite('Docker Compose SSL Configuration Test Suite', () => {
             phpVersion: '8.3',
             mariadbVersion: '10.11',
             autoInstall: false,
-            importDump: false,
             webserverOnly: false,
             releaseType: 'standard',
             imageVariant: 'stable'
@@ -44,7 +43,6 @@ suite('Docker Compose SSL Configuration Test Suite', () => {
             phpVersion: '8.3', 
             mariadbVersion: '10.11',
             autoInstall: false,
-            importDump: false,
             webserverOnly: false,
             releaseType: 'standard',
             imageVariant: 'stable'
