@@ -2,6 +2,16 @@
 
 # Release Notes
 
+## Version 1.10.0 (2025-11-22)
+
+### ⚠️ Change: DB import/export handled via Adminer
+- Removed the extension's direct export/import capabilities. Adminer (global container) is the recommended, interactive tool for importing and exporting database dumps (Open in Adminer / Start Adminer). This avoids accidental destructive imports and keeps the extension lean.
+
+### 🧪 Tests & Cleanup
+- Unit tests that referenced export/import were updated or removed and the codebase simplified. Export/import related UI/Chat commands were removed.
+
+---
+
 ## Version 1.9.0 (2025-11-21)
 
 ### 🎯 Custom Instance Full Support

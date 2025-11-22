@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.10.0] - 2025-11-22
+
+### Changed
+- 🧹 **DB import/export removed from extension**: Direct export/import methods were removed from the extension codebase and UI. Use the global Adminer UI (Open in Adminer / Start Adminer) or external tools for database dump workflows.
+- 🔒 **Safer default**: Avoid running dumps/imports from the extension to reduce accidental destructive imports; Adminer provides a safer interactive experience with pre-filled credentials.
+- 🧪 **Tests updated**: Unit tests referencing export/import adjusted or removed where relevant.
+
+### Notes
+- This release simplifies maintenance and improves reliability by delegating DB dump responsibilities to Adminer which already ships with upload/size limits and a container lifecycle.
+
 ## [1.9.0] - 2025-11-21
 
 ### Added
