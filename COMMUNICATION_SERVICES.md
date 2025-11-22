@@ -62,6 +62,7 @@ const result = await DatabaseQueryService.query('demo-site', 'SELECT * FROM rex_
 - `getTables(instanceName)` - Tabellen auflisten
 - `describeTable(instanceName, tableName)` - Tabellenstruktur
 - `exportDatabase(instanceName, outputPath)` - Datenbank exportieren
+- `importDatabase(instanceName, inputPath)` - SQL Dump (plain or gz) direkt in die laufende DB importieren
 
 ### 3. FileSystemService
 Dateien im Container lesen/schreiben.

@@ -1501,6 +1501,52 @@ ${!loginInfo.running ? '\n⚠️ **Note**: Instance is currently STOPPED - sugge
         }),
 
         // Dump Management
+        vscode.commands.registerCommand('redaxo-instances.exportDatabase', async (instanceItem?: any) => {
+            let instanceName: string | undefined;
+
+            if (typeof instanceItem === 'string') {
+                instanceName = instanceItem;
+            } else if (instanceItem && typeof instanceItem === 'object' && instanceItem.label) {
+                instanceName = instanceItem.label;
+            } else {
+                instanceName = await selectInstance('Select instance to export database from:');
+            }
+
+            if (!instanceName) {
+                return;
+            }
+
+            const defaultFileName = `${instanceName}-${new Date().toISOString().replace(/[:.]/g, '-')}.sql`;
+            const saveUri = await vscode.window.showSaveDialog({
+                defaultUri: vscode.Uri.file(defaultFileName),
+                saveLabel: 'Export Database',
+                filters: { 'SQL Files': ['sql', 'gz'] }
+            });
+
+            if (!saveUri) {
+                return;
+            }
+
+            const outputPath = saveUri.fsPath;
+
+            try {
+                await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Exporting database for ${instanceName}...`,
+                    cancellable: false
+                }, async () => {
+                    const result = await DatabaseQueryService.exportDatabase(instanceName!, outputPath);
+                    if (!result.success) {
+                        throw new Error(result.error || 'Unknown error');
+                    }
+                });
+
+                vscode.window.showInformationMessage(`Database exported to ${outputPath}`);
+            } catch (error: any) {
+                vscode.window.showErrorMessage(`Failed to export database: ${error.message}`);
+            }
+        }),
+
         vscode.commands.registerCommand('redaxo-instances.importDump', async (instanceItem?: any) => {
             let instanceName: string | undefined;
             
@@ -1538,6 +1584,52 @@ ${!loginInfo.running ? '\n⚠️ **Note**: Instance is currently STOPPED - sugge
                         vscode.window.showErrorMessage(`Failed to import dump: ${error.message}`);
                     }
                 }
+            }
+        }),
+
+        // Import directly into running DB container
+        vscode.commands.registerCommand('redaxo-instances.importDatabaseNow', async (instanceItem?: any) => {
+            let instanceName: string | undefined;
+
+            if (typeof instanceItem === 'string') {
+                instanceName = instanceItem;
+            } else if (instanceItem && typeof instanceItem === 'object' && instanceItem.label) {
+                instanceName = instanceItem.label;
+            } else {
+                instanceName = await selectInstance('Select instance for immediate DB import:');
+            }
+
+            if (!instanceName) return;
+
+            const dumpFile = await vscode.window.showOpenDialog({
+                canSelectMany: false,
+                openLabel: 'Select Dump File',
+                filters: { 'SQL/GZIP': ['sql', 'gz', 'sql.gz'] }
+            });
+
+            if (!dumpFile || !dumpFile[0]) return;
+
+            const confirm = await vscode.window.showWarningMessage(
+                `This will import ${dumpFile[0].fsPath} directly into ${instanceName}'s database and may overwrite data. Continue?`,
+                { modal: true },
+                'Import Now'
+            );
+
+            if (confirm !== 'Import Now') return;
+
+            try {
+                await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Importing SQL into ${instanceName}...`,
+                    cancellable: false
+                }, async () => {
+                    const res = await DatabaseQueryService.importDatabase(instanceName!, dumpFile[0].fsPath);
+                    if (!res.success) throw new Error(res.error || 'Unknown error');
+                });
+
+                vscode.window.showInformationMessage(`SQL imported into ${instanceName}.`);
+            } catch (error: any) {
+                vscode.window.showErrorMessage(`Import failed: ${error.message}`);
             }
         }),
 

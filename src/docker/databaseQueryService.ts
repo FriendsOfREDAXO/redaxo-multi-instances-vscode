@@ -322,6 +322,44 @@ export class DatabaseQueryService {
             };
         }
     }
+
+    /**
+     * Import a SQL dump file into the database container
+     * Supports plain .sql files and gzip compressed .sql.gz files
+     */
+    static async importDatabase(instanceName: string, inputPath: string): Promise<{ success: boolean; error?: string }> {
+        try {
+            // Resolve DB container
+            const containerName = await this.dockerService.getDbContainerName(instanceName);
+            if (!containerName) {
+                return { success: false, error: `Database container not found for instance "${instanceName}"` };
+            }
+
+            // Get DB credentials from DB container env if possible
+            const dbConn = await this.getConnectionInfoFromContainer(containerName);
+
+            // Determine if the input file is gzipped
+            const isGz = inputPath.endsWith('.gz');
+
+            // Build the import command. We stream the file into the container's mysql client.
+            // Use gzip -dc for gz files, cat otherwise. Keep quoting of password safe.
+            const passwordPart = dbConn.password ? `-p'${dbConn.password.replace(/'/g, "'\\''")}'` : "";
+            const mysqlCmd = `mysql -h ${dbConn.host} -P ${dbConn.port} -u ${dbConn.user} ${passwordPart} ${dbConn.database}`.trim();
+
+            let fullCommand: string;
+            if (isGz) {
+                fullCommand = `gzip -dc "${inputPath}" | docker exec -i ${containerName} sh -c '${mysqlCmd}'`;
+            } else {
+                fullCommand = `cat "${inputPath}" | docker exec -i ${containerName} sh -c '${mysqlCmd}'`;
+            }
+
+            await execAsync(fullCommand, { timeout: 120000 });
+
+            return { success: true };
+        } catch (error: any) {
+            return { success: false, error: error.message };
+        }
+    }
     
     /**
      * Parse tab-separated MySQL output to array of objects
