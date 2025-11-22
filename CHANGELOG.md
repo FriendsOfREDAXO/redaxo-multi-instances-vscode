@@ -1,5 +1,59 @@
 # Changelog
 
+## [1.9.0] - 2025-11-21
+
+### Added
+- 🎯 **Custom Instance Full Support**: Vollständige Unterstützung für Custom REDAXO Instanzen mit individuellen Verzeichnisstrukturen
+- 🔍 **Smart Path Detection**: Automatische Erkennung von REDAXO Verzeichnisstrukturen (Standard, Custom mit public/, Root-Level)
+- 🚀 **Dynamic Console Path Resolution**: Intelligente Erkennung des REDAXO Console-Pfads (`/var/www/html/bin/console` oder `/var/www/html/redaxo/bin/console`)
+- 📁 **Flexible FileSystem Service**: Unterstützt alle REDAXO-Pfadstrukturen (redaxo/, public/redaxo/, root-level)
+- ⚡ **Performance Caching**: Path-Detection wird gecacht für schnellere wiederholte Zugriffe
+- 🔧 **Enhanced Chat Participant**: Alle @redaxo Commands funktionieren jetzt mit Custom Instances
+
+### Fixed
+- ✅ `/addons` Command funktioniert jetzt mit Custom Instances (z.B. welling)
+- ✅ `/console` Command erkennt korrekte Console-Pfade automatisch
+- ✅ `/config` und `/logs` Commands unterstützen verschiedene Verzeichnisstrukturen
+- ✅ Container-Namens-Auflösung für Custom Instances (wellingweb, coredb statt redaxo-welling)
+
+### Technical
+- `RedaxoConsoleService.getConsolePath()`: Prüft `/var/www/html/bin/console` vor Standard-Pfad
+- `FileSystemService.detectRedaxoBasePath()`: Erkennt 3 Strukturen (root-level mit /data/core/ Check, redaxo/, public/redaxo/)
+- Cache-Maps für Console-Pfade und Base-Pfade zur Performance-Optimierung
+- Robustere Fehlerbehandlung mit try-catch pro Pfad-Check
+- Alle convenience methods (readConfig, listAddons, readLog, etc.) verwenden dynamische Pfaderkennung
+
+### Improved
+- 📊 Bessere Fehlerbehandlung wenn Container nicht gefunden werden
+- 🎨 Konsistente Error-Returns mit korrekten Typen (FileReadResult, FileListResult, FileInfo[], boolean)
+- 🔄 Helper-Methoden für Container-Namen-Auflösung in allen Services
+- 📝 Service-Initialisierung mit DockerService für zentrale Container-Verwaltung
+
+---
+
+## [1.8.2] - 2025-11-21
+
+### Added
+- 🗄️ **Adminer Database Management**: Globaler Adminer-Container für Datenbankverwaltung aller Instanzen
+- 🔗 **One-Click Database Access**: Rechtsklick auf laufende Instanz → "Open in Adminer" öffnet Browser mit vorausgefüllten Credentials
+- 📋 **Clipboard Integration**: Passwort wird automatisch in Zwischenablage kopiert für schnellen Login
+- 🐳 **Docker Network Integration**: Automatische Verbindung der DB-Container zum Adminer-Netzwerk
+- 📊 **Large File Support**: PHP konfiguriert für 512MB Uploads (Dump-Import/Export)
+- 🔧 **Context Menu Commands**: "Show REDAXO Logs" und "Install CLI Tools" direkt im Kontextmenü
+- 🌐 **Port 9200**: Adminer läuft auf dediziertem Port 9200
+- 🎯 **Custom Instance Support**: Intelligente Container-Namens-Auflösung für Custom und Standard REDAXO Instanzen
+
+### Technical
+- Neue `AdminerService`: Lifecycle-Management für globalen Adminer-Container
+- `adminer:latest` Image mit custom PHP-Konfiguration (upload_max_filesize, post_max_size, memory_limit: 512M)
+- Automatische Netzwerk-Erstellung (`redaxo-adminer-network`) für Container-zu-Container Kommunikation
+- DNS-konforme Hostname-Auflösung für Custom-Instanzen (entfernt Unterstriche)
+- Adminer URL-Parameter: `?username=X&db=Y&server=Z` für Pre-Fill
+- Context Menu: `showRedaxoLogs`, `installCLITools`, `openInAdminer` Commands
+- FileSystemService Integration für REDAXO Log-Dateien (redaxo.log, system.log)
+
+---
+
 ## [1.8.1] - 2025-11-21
 
 ### Improved

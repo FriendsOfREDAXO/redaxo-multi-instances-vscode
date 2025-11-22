@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import * as fsSync from 'fs';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { DockerService } from './docker/dockerService';
@@ -8,6 +9,10 @@ import { ResourceMonitor } from './docker/resourceMonitor';
 import { InstancesProvider } from './providers/instancesProvider';
 import { EmptyInstanceProvider } from './emptyInstance/emptyInstanceProvider';
 import { RedaxoChatParticipant } from './chat/redaxoChatParticipant';
+import { AdminerService } from './docker/adminerService';
+import { RedaxoConsoleService } from './docker/redaxoConsoleService';
+import { DatabaseQueryService } from './docker/databaseQueryService';
+import { FileSystemService } from './docker/fileSystemService';
 
 const execAsync = promisify(exec);
 
@@ -25,6 +30,7 @@ let instancesProvider: InstancesProvider;
 let emptyInstanceProvider: EmptyInstanceProvider;
 let outputChannel: vscode.OutputChannel;
 let chatParticipant: RedaxoChatParticipant;
+let adminerService: AdminerService;
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('REDAXO Multi-Instances Manager is now active!');
@@ -37,6 +43,12 @@ export function activate(context: vscode.ExtensionContext) {
     dockerService = new DockerService(outputChannel);
     instancesProvider = new InstancesProvider(dockerService);
     emptyInstanceProvider = new EmptyInstanceProvider(context.extensionUri, dockerService);
+    adminerService = new AdminerService(outputChannel);
+    
+    // Initialize services with DockerService
+    RedaxoConsoleService.initialize(dockerService);
+    DatabaseQueryService.initialize(dockerService);
+    FileSystemService.initialize(dockerService);
     
     // Initialize Chat Participant
     chatParticipant = new RedaxoChatParticipant(context, dockerService);
@@ -513,6 +525,877 @@ function registerCommands(context: vscode.ExtensionContext) {
                     });
                     terminal.show();
                     terminal.sendText(`docker logs -f ${containerChoice.value}`);
+                }
+            }
+        }),
+
+        vscode.commands.registerCommand('redaxo-instances.showRedaxoLogs', async (instanceItem?: any) => {
+            let instanceName: string | undefined;
+            let instanceType: 'redaxo' | 'custom' = 'redaxo';
+            
+            // Extract instance name and type from different input types
+            if (typeof instanceItem === 'string') {
+                instanceName = instanceItem;
+            } else if (instanceItem && instanceItem.instance && instanceItem.instance.name) {
+                instanceName = instanceItem.instance.name;
+                instanceType = instanceItem.instance.instanceType === 'custom' ? 'custom' : 'redaxo';
+            } else if (instanceItem && instanceItem.name) {
+                instanceName = instanceItem.name;
+            }
+            
+            if (!instanceName) {
+                instanceName = await selectInstance('Select instance to show REDAXO logs:');
+                if (instanceName) {
+                    // Try to get instance type from provider
+                    const instances = await dockerService.listInstances();
+                    const foundInstance = instances.find(i => i.name === instanceName);
+                    if (foundInstance) {
+                        instanceType = foundInstance.instanceType === 'custom' ? 'custom' : 'redaxo';
+                    }
+                }
+            }
+            
+            if (instanceName) {
+                try {
+                    // Get web container name dynamically
+                    const webContainerName = await dockerService.getWebContainerName(instanceName);
+                    
+                    if (!webContainerName) {
+                        vscode.window.showErrorMessage(`❌ Could not find web container for ${instanceName}`);
+                        return;
+                    }
+                    
+                    // Check if container is running
+                    const { stdout: psOutput } = await execAsync(`docker ps --filter "name=${webContainerName}" --format "{{.Names}}"`);
+                    if (!psOutput.trim()) {
+                        vscode.window.showWarningMessage(`⚠️ Container ${webContainerName} is not running. Please start the instance first.`);
+                        return;
+                    }
+                    
+                    // Import FileSystemService to read logs
+                    const { FileSystemService } = await import('./docker/fileSystemService');
+                    const logs = await FileSystemService.getRecentLogs(webContainerName, 100);
+                    
+                    if (!logs || logs.length === 0) {
+                        vscode.window.showInformationMessage(`ℹ️ No REDAXO logs found for ${instanceName}`);
+                        return;
+                    }
+                    
+                    // Create output channel and show logs
+                    const logsChannel = vscode.window.createOutputChannel(`REDAXO Logs: ${instanceName}`);
+                    logsChannel.clear();
+                    logsChannel.appendLine(`📋 REDAXO Logs for ${instanceName} (${webContainerName})`);
+                    logsChannel.appendLine(`${'='.repeat(80)}\n`);
+                    logs.forEach(log => logsChannel.appendLine(log));
+                    logsChannel.show();
+                    
+                } catch (error: any) {
+                    vscode.window.showErrorMessage(`❌ Failed to read REDAXO logs: ${error.message}`);
+                    outputChannel.appendLine(`Error reading REDAXO logs: ${error.message}`);
+                }
+            }
+        }),
+
+        vscode.commands.registerCommand('redaxo-instances.installCLITools', async (instanceItem?: any) => {
+            let instanceName: string | undefined;
+            let instanceType: 'redaxo' | 'custom' = 'redaxo';
+            
+            // Extract instance name and type from different input types
+            if (typeof instanceItem === 'string') {
+                instanceName = instanceItem;
+            } else if (instanceItem && instanceItem.instance && instanceItem.instance.name) {
+                instanceName = instanceItem.instance.name;
+                instanceType = instanceItem.instance.instanceType === 'custom' ? 'custom' : 'redaxo';
+            } else if (instanceItem && instanceItem.name) {
+                instanceName = instanceItem.name;
+            }
+            
+            if (!instanceName) {
+                instanceName = await selectInstance('Select instance to install CLI tools:');
+                if (instanceName) {
+                    // Try to get instance type from provider
+                    const instances = await dockerService.listInstances();
+                    const foundInstance = instances.find(i => i.name === instanceName);
+                    if (foundInstance) {
+                        instanceType = foundInstance.instanceType === 'custom' ? 'custom' : 'redaxo';
+                    }
+                }
+            }
+            
+            if (instanceName) {
+                try {
+                    // Get container names dynamically
+                    const webContainerName = await dockerService.getWebContainerName(instanceName);
+                    const dbContainerName = await dockerService.getDbContainerName(instanceName);
+                    
+                    if (!webContainerName || !dbContainerName) {
+                        vscode.window.showErrorMessage(`❌ Could not find containers for ${instanceName}`);
+                        return;
+                    }
+                    
+                    // Show progress
+                    await vscode.window.withProgress({
+                        location: vscode.ProgressLocation.Notification,
+                        title: `Installing CLI tools for ${instanceName}`,
+                        cancellable: false
+                    }, async (progress) => {
+                        progress.report({ increment: 0, message: 'Installing web container tools...' });
+                        
+                        const webTools = ['vim', 'nano', 'curl', 'wget', 'unzip', 'git'];
+                        const webInstalled: string[] = [];
+                        const webFailed: string[] = [];
+                        
+                        for (const tool of webTools) {
+                            try {
+                                // Check if tool already exists
+                                await execAsync(`docker exec ${webContainerName} which ${tool}`);
+                                webInstalled.push(tool);
+                            } catch {
+                                // Try to install
+                                try {
+                                    const installCommands = [
+                                        `docker exec ${webContainerName} sh -c 'apt-get update && apt-get install -y ${tool}'`,
+                                        `docker exec ${webContainerName} sh -c 'apk add --no-cache ${tool}'`,
+                                        `docker exec ${webContainerName} sh -c 'yum install -y ${tool}'`
+                                    ];
+                                    
+                                    let installed = false;
+                                    for (const cmd of installCommands) {
+                                        try {
+                                            await execAsync(cmd, { timeout: 60000 });
+                                            webInstalled.push(tool);
+                                            installed = true;
+                                            break;
+                                        } catch {
+                                            continue;
+                                        }
+                                    }
+                                    
+                                    if (!installed) {
+                                        webFailed.push(tool);
+                                    }
+                                } catch {
+                                    webFailed.push(tool);
+                                }
+                            }
+                        }
+                        
+                        progress.report({ increment: 50, message: 'Installing database container tools...' });
+                        
+                        const dbInstalled: string[] = [];
+                        const dbFailed: string[] = [];
+                        
+                        // Check for MariaDB client first, then MySQL
+                        let dbClientTool = 'mysql';
+                        let dumpTool = 'mysqldump';
+                        
+                        try {
+                            await execAsync(`docker exec ${dbContainerName} which mariadb`);
+                            dbClientTool = 'mariadb';
+                            dumpTool = 'mariadb-dump';
+                            dbInstalled.push('mariadb', 'mariadb-dump');
+                        } catch {
+                            try {
+                                await execAsync(`docker exec ${dbContainerName} which mysql`);
+                                dbInstalled.push('mysql', 'mysqldump');
+                            } catch {
+                                // Try to install
+                                const installCommands = [
+                                    `docker exec ${dbContainerName} sh -c 'apt-get update && apt-get install -y mariadb-client'`,
+                                    `docker exec ${dbContainerName} sh -c 'apt-get update && apt-get install -y default-mysql-client'`,
+                                    `docker exec ${dbContainerName} sh -c 'apk add --no-cache mariadb-client'`,
+                                    `docker exec ${dbContainerName} sh -c 'yum install -y mariadb'`
+                                ];
+                                
+                                let installed = false;
+                                for (const cmd of installCommands) {
+                                    try {
+                                        await execAsync(cmd, { timeout: 60000 });
+                                        // Check which tool was installed
+                                        try {
+                                            await execAsync(`docker exec ${dbContainerName} which mariadb`);
+                                            dbInstalled.push('mariadb', 'mariadb-dump');
+                                        } catch {
+                                            dbInstalled.push('mysql', 'mysqldump');
+                                        }
+                                        installed = true;
+                                        break;
+                                    } catch {
+                                        continue;
+                                    }
+                                }
+                                
+                                if (!installed) {
+                                    dbFailed.push('mysql/mariadb', 'mysqldump/mariadb-dump');
+                                }
+                            }
+                        }
+                        
+                        // Install vim and nano in DB container
+                        for (const tool of ['vim', 'nano']) {
+                            try {
+                                await execAsync(`docker exec ${dbContainerName} which ${tool}`);
+                                dbInstalled.push(tool);
+                            } catch {
+                                try {
+                                    const installCommands = [
+                                        `docker exec ${dbContainerName} sh -c 'apt-get update && apt-get install -y ${tool}'`,
+                                        `docker exec ${dbContainerName} sh -c 'apk add --no-cache ${tool}'`,
+                                        `docker exec ${dbContainerName} sh -c 'yum install -y ${tool}'`
+                                    ];
+                                    
+                                    let installed = false;
+                                    for (const cmd of installCommands) {
+                                        try {
+                                            await execAsync(cmd, { timeout: 60000 });
+                                            dbInstalled.push(tool);
+                                            installed = true;
+                                            break;
+                                        } catch {
+                                            continue;
+                                        }
+                                    }
+                                    
+                                    if (!installed) {
+                                        dbFailed.push(tool);
+                                    }
+                                } catch {
+                                    dbFailed.push(tool);
+                                }
+                            }
+                        }
+                        
+                        progress.report({ increment: 50, message: 'Done!' });
+                        
+                        // Show results
+                        const message = [
+                            `✅ CLI Tools Installation Complete for ${instanceName}`,
+                            ``,
+                            `📦 Web Container (${webContainerName}):`,
+                            `  ✓ Installed: ${webInstalled.join(', ')}`,
+                            webFailed.length > 0 ? `  ✗ Failed: ${webFailed.join(', ')}` : '',
+                            ``,
+                            `🗄️ Database Container (${dbContainerName}):`,
+                            `  ✓ Installed: ${dbInstalled.join(', ')}`,
+                            dbFailed.length > 0 ? `  ✗ Failed: ${dbFailed.join(', ')}` : ''
+                        ].filter(Boolean).join('\n');
+                        
+                        vscode.window.showInformationMessage(message);
+                        outputChannel.appendLine(message);
+                    });
+                    
+                } catch (error: any) {
+                    vscode.window.showErrorMessage(`❌ Failed to install CLI tools: ${error.message}`);
+                    outputChannel.appendLine(`Error installing CLI tools: ${error.message}`);
+                }
+            }
+        }),
+
+        vscode.commands.registerCommand('redaxo-instances.openInAdminer', async (instanceItem?: any) => {
+            let instanceName: string | undefined;
+            let instanceType: 'redaxo' | 'custom' = 'redaxo';
+            
+            // Extract instance name and type
+            if (typeof instanceItem === 'string') {
+                instanceName = instanceItem;
+            } else if (instanceItem && instanceItem.instance && instanceItem.instance.name) {
+                instanceName = instanceItem.instance.name;
+                instanceType = instanceItem.instance.instanceType === 'custom' ? 'custom' : 'redaxo';
+            } else if (instanceItem && instanceItem.name) {
+                instanceName = instanceItem.name;
+            }
+            
+            if (!instanceName) {
+                instanceName = await selectInstance('Select instance to open in Adminer:');
+                if (instanceName) {
+                    const instances = await dockerService.listInstances();
+                    const foundInstance = instances.find(i => i.name === instanceName);
+                    if (foundInstance) {
+                        instanceType = foundInstance.instanceType === 'custom' ? 'custom' : 'redaxo';
+                    }
+                }
+            }
+            
+            if (instanceName) {
+                try {
+                    // Ensure Adminer is running
+                    const isRunning = await adminerService.isAdminerRunning();
+                    if (!isRunning) {
+                        const startIt = await vscode.window.showInformationMessage(
+                            '🔧 Adminer is not running. Start it now?',
+                            'Yes', 'No'
+                        );
+                        
+                        if (startIt === 'Yes') {
+                            const started = await adminerService.startAdminer();
+                            if (!started) {
+                                return;
+                            }
+                        } else {
+                            return;
+                        }
+                    }
+                    
+                    // Get DB container name
+                    const dbContainerName = await dockerService.getDbContainerName(instanceName);
+                    if (!dbContainerName) {
+                        vscode.window.showErrorMessage(`❌ Could not find database container for ${instanceName}`);
+                        return;
+                    }
+                    
+                    // Connect DB container to Adminer network
+                    await adminerService.connectInstanceToAdminer(instanceName, dbContainerName);
+                    
+                    // Get login info
+                    const loginInfo = await dockerService.getLoginInfo(instanceName);
+                    
+                    // Build Adminer URL with credentials
+                    // For custom instances, use the DNS-compliant hostname (remove underscores)
+                    const server = instanceType === 'custom' 
+                        ? `${instanceName.replace(/_/g, '')}db`  // Custom: wellingdb
+                        : dbContainerName; // Standard: redaxo-{name}-mysql
+                    const username = instanceType === 'custom' ? instanceName : 'redaxo';
+                    const database = instanceType === 'custom' ? instanceName : 'redaxo';
+                    const password = loginInfo.dbPassword;
+                    
+                    // Copy password to clipboard FIRST
+                    await vscode.env.clipboard.writeText(password);
+                    
+                    // Create Adminer URL with pre-filled server and database
+                    const adminerUrl = `http://localhost:9200/?username=${encodeURIComponent(username)}&db=${encodeURIComponent(database)}&server=${encodeURIComponent(server)}`;
+                    
+                    // Open in external browser
+                    await vscode.env.openExternal(vscode.Uri.parse(adminerUrl));
+                    
+                    // Show notification
+                    vscode.window.showInformationMessage(
+                        `🗄️ Adminer opened for ${instanceName}\n✅ Password copied to clipboard - paste with Cmd+V`
+                    );
+                    
+                } catch (error: any) {
+                    vscode.window.showErrorMessage(`❌ Failed to open Adminer: ${error.message}`);
+                    outputChannel.appendLine(`Error opening Adminer: ${error.message}`);
+                }
+            }
+        }),
+
+        vscode.commands.registerCommand('redaxo-instances.startAdminer', async () => {
+            try {
+                const started = await adminerService.startAdminer();
+                if (started) {
+                    const status = await adminerService.getStatus();
+                    vscode.window.showInformationMessage(`✅ Adminer started successfully!\n${status}`);
+                }
+            } catch (error: any) {
+                vscode.window.showErrorMessage(`❌ Failed to start Adminer: ${error.message}`);
+            }
+        }),
+
+        vscode.commands.registerCommand('redaxo-instances.stopAdminer', async () => {
+            try {
+                const stopped = await adminerService.stopAdminer();
+                if (stopped) {
+                    vscode.window.showInformationMessage('✅ Adminer stopped successfully');
+                }
+            } catch (error: any) {
+                vscode.window.showErrorMessage(`❌ Failed to stop Adminer: ${error.message}`);
+            }
+        }),
+
+        vscode.commands.registerCommand('redaxo-instances.copyCopilotInstructions', async (instanceItem?: any) => {
+            let instanceName: string | undefined;
+            
+            // Extract instance name
+            if (typeof instanceItem === 'string') {
+                instanceName = instanceItem;
+            } else if (instanceItem && instanceItem.instance && instanceItem.instance.name) {
+                instanceName = instanceItem.instance.name;
+            } else if (instanceItem && instanceItem.name) {
+                instanceName = instanceItem.name;
+            }
+            
+            if (!instanceName) {
+                instanceName = await selectInstance('Select instance for Copilot instructions:');
+            }
+            
+            if (instanceName) {
+                try {
+                    // Get instance info
+                    const loginInfo = await dockerService.getLoginInfo(instanceName);
+                    const instances = await dockerService.listInstances();
+                    const instance = instances.find(i => i.name === instanceName);
+                    
+                    if (!instance) {
+                        vscode.window.showErrorMessage(`❌ Instance ${instanceName} not found`);
+                        return;
+                    }
+                    
+                    const isCustom = instance.instanceType === 'custom';
+                    
+                    // Get container names
+                    const webContainerName = await dockerService.getWebContainerName(instanceName);
+                    const dbContainerName = await dockerService.getDbContainerName(instanceName);
+                    
+                    // Build comprehensive instructions
+                    const instructions = `# Context: REDAXO Instance "${instanceName}"
+
+I'm working with a ${isCustom ? 'Custom REDAXO' : 'Standard REDAXO'} instance in a Docker environment. Here are all the technical details you need to help me:
+
+## Instance Overview
+- **Name**: \`${instanceName}\`
+- **Type**: ${isCustom ? '📦 Custom Instance (manually configured)' : '🔷 Standard REDAXO Instance (pre-configured)'}
+- **Status**: ${loginInfo.running ? '🟢 Running' : '🔴 Stopped'}
+- **PHP Version**: ${instance.phpVersion || 'N/A'}
+- **Database**: MariaDB 11.3
+
+## Docker Environment
+**Containers:**
+- Web: \`${webContainerName || 'N/A'}\`
+- Database: \`${dbContainerName || 'N/A'}\`
+
+**Quick Shell Access:**
+\`\`\`bash
+# Web container (PHP/REDAXO)
+docker exec -it ${webContainerName} bash
+
+# Database container (MariaDB)
+docker exec -it ${dbContainerName} bash
+
+# View logs
+docker logs ${webContainerName}
+docker logs ${dbContainerName}
+\`\`\`
+
+## Web Access
+**URLs:**
+- Frontend: ${loginInfo.frontendUrl}
+- Backend: ${loginInfo.backendUrl}
+${loginInfo.frontendUrlHttps ? `- Frontend HTTPS: ${loginInfo.frontendUrlHttps}\n- Backend HTTPS: ${loginInfo.backendUrlHttps}` : ''}
+
+**REDAXO Admin:**
+${isCustom ? '⚠️ Custom instance - REDAXO may need to be installed via Setup' : `- Username: \`${loginInfo.adminUser}\`\n- Password: \`${loginInfo.adminPassword}\``}
+
+## Database Configuration
+**Internal (Container-to-Container):**
+\`\`\`
+Host: ${loginInfo.dbHost}
+Database: ${loginInfo.dbName}
+User: ${loginInfo.dbUser}
+Password: ${loginInfo.dbPassword}
+Root Password: ${loginInfo.dbRootPassword}
+\`\`\`
+
+**External (Host Access):**
+\`\`\`bash
+# MySQL CLI Connection
+mysql -h ${loginInfo.dbExternalHost} -P ${loginInfo.dbExternalPort} -u ${loginInfo.dbUser} -p${loginInfo.dbPassword} ${loginInfo.dbName}
+
+# Or via Adminer: http://localhost:9200
+# Server: ${isCustom ? `${instanceName.replace(/_/g, '')}db` : dbContainerName}
+# Username: ${isCustom ? instanceName : 'redaxo'}
+# Password: ${loginInfo.dbPassword}
+# Database: ${isCustom ? instanceName : 'redaxo'}
+\`\`\`
+
+## REDAXO Console Commands
+\`\`\`bash
+# Via Docker exec
+docker exec ${webContainerName} php redaxo/bin/console <command>
+
+# Common commands:
+docker exec ${webContainerName} php redaxo/bin/console cache:clear
+docker exec ${webContainerName} php redaxo/bin/console package:list
+docker exec ${webContainerName} php redaxo/bin/console package:install <addon>
+docker exec ${webContainerName} php redaxo/bin/console user:list
+
+# Via @redaxo Chat (easier):
+@redaxo /console ${instanceName} cache:clear
+@redaxo /console ${instanceName} package:list
+\`\`\`
+
+## File System Access
+**Project Structure:**
+\`\`\`
+${isCustom ? `./                              # Workspace Root
+├── docker-compose.yml          # Docker configuration
+├── Dockerfile                  # Custom PHP image
+├── .env                        # Environment variables
+├── database/                   # MariaDB data directory
+├── logs/                       # Application logs
+└── project/                    # Application root
+    ├── composer.json
+    ├── src/                    # Custom PHP code
+    ├── var/                    # Runtime data (cache, logs)
+    ├── vendor/                 # Composer dependencies
+    └── public/                 # Web root (Document Root)
+        ├── index.php
+        ├── assets/             # Public assets
+        ├── media/              # Media files
+        └── redaxo/             # REDAXO installation (if installed)
+            ├── index.php
+            ├── src/
+            │   ├── core/
+            │   └── addons/
+            └── bin/console     # REDAXO CLI` : `./                              # Workspace Root
+├── docker-compose.yml          # Docker configuration
+├── .env                        # Environment variables
+├── data/                       # Data directory
+│   ├── mysql/                  # MariaDB data
+│   └── redaxo/                 # REDAXO installation (Web root = Document Root)
+│       ├── index.php
+│       ├── assets/
+│       ├── media/              # Media uploads
+│       ├── redaxo/
+│       │   ├── bin/console     # REDAXO CLI
+│       │   ├── data/
+│       │   │   ├── addons/
+│       │   │   ├── cache/
+│       │   │   └── core/
+│       │   │       ├── config.yml
+│       │   │       ├── redaxo.log
+│       │   │       └── system.log
+│       │   └── src/
+│       │       ├── core/
+│       │       └── addons/
+│       ├── apache-ssl.conf/    # SSL configuration
+│       ├── mysql-init/         # Database init scripts
+│       └── ssl/                # SSL certificates`}
+\`\`\`
+
+**Important Paths (relative to workspace):**
+- Docker Config: \`./docker-compose.yml\`
+- Environment: \`./env\`
+${isCustom ? `- Web Root: \`./project/public/\`
+- REDAXO Root: \`./project/public/redaxo/\` (if installed)
+- REDAXO Console: \`./project/public/redaxo/bin/console\`
+- REDAXO Config: \`./project/public/redaxo/redaxo/data/core/config.yml\`
+- REDAXO Logs: \`./project/public/redaxo/redaxo/data/core/\`
+- Application Code: \`./project/src/\`
+- Composer Vendor: \`./project/vendor/\`
+- Runtime Cache: \`./project/var/cache/\`
+- Application Logs: \`./logs/\`
+- Database Data: \`./database/\`` : `- Web Root: \`./data/redaxo/\`
+- REDAXO Root: \`./data/redaxo/\`
+- REDAXO Console: \`./data/redaxo/redaxo/bin/console\`
+- REDAXO Config: \`./data/redaxo/redaxo/data/core/config.yml\`
+- REDAXO Logs: \`./data/redaxo/redaxo/data/core/\`
+- Media Files: \`./data/redaxo/media/\`
+- Database Data: \`./data/mysql/\`
+- SSL Certificates: \`./ssl/\``}
+
+## Quick Actions via VS Code Extension
+**Use @redaxo in GitHub Copilot Chat:**
+\`\`\`
+@redaxo /start ${instanceName}              # Start instance
+@redaxo /stop ${instanceName}               # Stop instance
+@redaxo /console ${instanceName} <cmd>      # Run REDAXO console command
+@redaxo /query ${instanceName} <SQL>        # Execute SQL query
+@redaxo /articles ${instanceName}           # List articles
+@redaxo /addons ${instanceName}             # List addons
+@redaxo /logs ${instanceName}               # View container logs
+@redaxo /install-tools ${instanceName}      # Install CLI tools (vim, nano, git, etc.)
+\`\`\`
+
+## Common Tasks & Solutions
+${isCustom ? `
+**Custom Instance - REDAXO Installation:**
+1. Download REDAXO: https://redaxo.org/download/core/
+2. Extract to: \`./project/public/\`
+3. Open browser: ${loginInfo.frontendUrl}
+4. Follow REDAXO setup wizard
+5. Use database credentials above
+
+**Custom Instance - Manual Setup:**
+- PHP available via: \`docker exec ${webContainerName} php <file>\`
+- Composer: \`docker exec ${webContainerName} composer <command>\`
+- NPM/Node: Install via \`@redaxo /install-tools ${instanceName}\`
+` : `
+**Standard REDAXO Instance:**
+- Pre-installed and configured
+- Admin access ready to use
+- AddOns installable via Backend or Console
+`}
+**Database Management:**
+- Quick access via context menu: Right-click → "Open in Adminer"
+- Password auto-copied to clipboard
+- Or use MySQL CLI with credentials above
+
+**Debugging:**
+- REDAXO Logs: Right-click instance → "Show REDAXO Logs"
+- Container Logs: \`docker logs ${webContainerName}\`
+- PHP Errors: Check \`${isCustom ? './project/public' : './data'}/redaxo/redaxo/data/core/redaxo.log\`
+- System Logs: Check \`${isCustom ? './project/public' : './data'}/redaxo/redaxo/data/core/system.log\`
+
+**Performance:**
+- Clear cache: \`@redaxo /console ${instanceName} cache:clear\`
+- Check MySQL: \`@redaxo /query ${instanceName} SHOW PROCESSLIST\`
+- Container stats: \`docker stats ${webContainerName} ${dbContainerName}\`
+
+---
+
+## 📚 REDAXO Development Guidelines
+
+**Important File Paths:**
+\`\`\`
+${isCustom ? `./project/public/redaxo/        # REDAXO installation (if installed)
+├── index.php
+├── assets/                    # Frontend assets
+├── media/                     # Media files
+└── redaxo/                    # Backend & Core
+    ├── index.php              # Backend entry
+    ├── bin/console            # REDAXO CLI
+    ├── data/
+    │   ├── core/
+    │   │   ├── config.yml     # Main configuration
+    │   │   ├── redaxo.log
+    │   │   └── system.log
+    │   ├── addons/            # AddOn data
+    │   └── cache/             # Cache files
+    └── src/
+        ├── core/              # REDAXO Core
+        └── addons/            # System AddOns
+            └── <addon>/
+                ├── boot.php
+                ├── install.php
+                ├── uninstall.php
+                ├── package.yml
+                ├── lib/       # PHP Classes
+                ├── pages/     # Backend pages
+                ├── fragments/ # UI fragments
+                ├── lang/      # Translations
+                ├── assets/    # CSS/JS/Images
+                └── vendor/    # Composer deps` : `./data/redaxo/                # REDAXO installation (Web Root)
+├── index.php
+├── assets/                    # Frontend assets
+├── media/                     # Media files
+└── redaxo/                    # Backend & Core
+    ├── index.php              # Backend entry
+    ├── bin/console            # REDAXO CLI
+    ├── data/
+    │   ├── core/
+    │   │   ├── config.yml     # Main configuration
+    │   │   ├── redaxo.log
+    │   │   └── system.log
+    │   ├── addons/            # AddOn data
+    │   └── cache/             # Cache files
+    └── src/
+        ├── core/              # REDAXO Core
+        └── addons/            # System AddOns
+            └── <addon>/
+                ├── boot.php
+                ├── install.php
+                ├── uninstall.php
+                ├── package.yml
+                ├── lib/       # PHP Classes
+                ├── pages/     # Backend pages
+                ├── fragments/ # UI fragments
+                ├── lang/      # Translations
+                ├── assets/    # CSS/JS/Images
+                └── vendor/    # Composer deps`}
+\`\`\`
+
+**REDAXO Best Practices - MANDATORY:**
+
+1. **Use REDAXO APIs First** ⚠️
+   - Always check if REDAXO provides native methods before implementing custom solutions
+   - Study existing AddOns and Core code for patterns
+   - Reference: https://redaxo.org/doku/main/
+
+2. **Common REDAXO Classes & Methods:**
+   \`\`\`php
+   // Articles & Categories
+   rex_article::get($id)
+   rex_article::getAll()
+   rex_category::get($id)
+   
+   // Database (rex_sql)
+   $sql = rex_sql::factory();
+   $sql->setQuery("SELECT * FROM rex_article");
+   
+   // Config & Settings
+   rex_config::get('addon', 'key')
+   rex_config::set('addon', 'key', 'value')
+   
+   // Media Manager
+   rex_media::get($filename)
+   rex_media_manager::getUrl($type, $file)
+   
+   // Extensions (Hooks)
+   rex_extension::register('EP_NAME', callback);
+   rex_extension::registerPoint('EP_NAME', $subject);
+   
+   // Fragments (UI)
+   $fragment = new rex_fragment();
+   $fragment->setVar('items', $items);
+   echo $fragment->parse('core/navigations/pagination.php');
+   
+   // Translation
+   rex_i18n::msg('addon_key')
+   rex_i18n::translate('addon_key', false)
+   
+   // User & Permissions
+   rex::getUser()
+   rex::requireUser()
+   rex_complex_perm::register('addon', 'class');
+   \`\`\`
+
+3. **Code Quality - MANDATORY:**
+   - **PHPStan**: Static analysis required (Level 6+ recommended)
+     \`\`\`bash
+     docker exec ${webContainerName} ./vendor/bin/phpstan analyse ${isCustom ? './project/public/redaxo' : './data/redaxo'}/src/addons/<addon>
+     \`\`\`
+   
+   - **Psalm**: Type checking required
+     \`\`\`bash
+     docker exec ${webContainerName} ./vendor/bin/psalm
+     \`\`\`
+   
+   - **PHP-CS-Fixer**: Code style enforcement (PSR-12)
+     \`\`\`bash
+     docker exec ${webContainerName} ./vendor/bin/php-cs-fixer fix ${isCustom ? './project/public/redaxo' : './data/redaxo'}/src/addons/<addon>
+     \`\`\`
+
+4. **REDAXO Coding Standards:**
+   - PSR-12 for PHP code style
+   - Use type hints (PHP 7.4+ / 8.x)
+   - Document all public methods with PHPDoc
+   - Follow REDAXO's naming conventions:
+     - Classes: \`rex_<addon>_<class>\`
+     - Database tables: \`rex_<addon>_<table>\`
+     - Config keys: lowercase, underscore-separated
+
+5. **AddOn Development:**
+   - Always provide \`package.yml\` with version, author, supportpage
+   - Use \`boot.php\` for initialization only
+   - Register permissions in \`boot.php\`: \`rex_perm::register('addon[]')\`
+   - Use REDAXO's backend layout system (fragments)
+   - Provide German + English translations
+
+6. **AddOn Backend Pages (index.php Pattern):**
+   \`\`\`php
+   <?php
+   // MANDATORY structure for pages/index.php
+   $addon = rex_addon::get('addonkey');
+   echo rex_view::title($addon->i18n('page_title'));
+   rex_be_controller::includeCurrentPageSubPath();
+   \`\`\`
+   - ⚠️ **ALWAYS use this pattern** for main page index.php
+   - Sub-pages in same directory will be included automatically
+   - Use fragments for consistent UI components
+
+7. **AddOn Assets Management:**
+   - ⚠️ **Store assets in AddOn directory during development**: \`./src/addons/<addon>/assets/\`
+   - **NOT** in main assets folder (\`./assets/addons/<addon>/\`)
+   - Assets are automatically copied on install/reinstall
+   - Reference in templates: \`rex_url::addonAssets('addon', 'file.css')\`
+   - CSS/JS will be available at: \`/assets/addons/<addon>/file.css\`
+
+8. **Autoloading:**
+   - ⚠️ **No manual autoloader registration needed**
+   - Classes in \`lib/\` are auto-loaded by REDAXO
+   - Composer \`vendor/\` also auto-loaded
+   - Naming: \`lib/MyClass.php\` → class \`rex_addonkey_MyClass\`
+
+9. **Composer in AddOns:**
+   - Install vendor packages **inside AddOn**: \`./src/addons/<addon>/vendor/\`
+   - Use \`composer.json\` in AddOn root
+   - ⚠️ **Avoid conflicts with REDAXO Core libraries**
+   - Check existing Core dependencies: Symfony, Guzzle, PSR-x
+   - Prefer REDAXO's built-in libraries when possible
+
+10. **Frontend Framework:**
+    - ⚠️ **REDAXO Backend uses Bootstrap 3.4**
+    - Use Bootstrap 3.4 classes for backend pages
+    - Don't include custom Bootstrap versions (conflicts!)
+    - Use REDAXO fragments for consistent styling
+    - Frontend is independent (use any framework)
+
+11. **Security:**
+   - Use \`rex_sql\` with prepared statements (never direct SQL)
+   - Sanitize user input: \`rex_request::get('param', 'string')\`
+   - Check permissions: \`rex::requireUser() / rex::getUser()->hasPerm()\`
+   - Use CSRF tokens in forms: \`rex_csrf_token\`
+
+12. **Performance:**
+   - Use REDAXO's caching: \`rex_file::getCache()\`, \`rex_file::putCache()\`
+   - Register cache dependencies in \`package.yml\`
+   - Avoid queries in loops - use rex_sql batch operations
+
+---
+
+## 💡 Instructions for AI Assistant
+When helping with this instance:
+- **ALWAYS suggest REDAXO built-in methods before custom implementations**
+- Use the container names for docker commands
+- Reference correct file paths based on instance type
+- Consider this is a ${isCustom ? 'custom setup - user may need basic PHP/Docker help' : 'standard REDAXO setup - focus on REDAXO-specific solutions'}
+- Suggest @redaxo chat commands for common tasks
+- Remember database credentials for query suggestions
+- **Enforce code quality**: Remind about PHPStan, Psalm, PHP-CS-Fixer before finalizing code
+- **Check REDAXO docs**: https://redaxo.org/doku/main/ and https://github.com/redaxo/redaxo
+${!loginInfo.running ? '\n⚠️ **Note**: Instance is currently STOPPED - suggest starting it first for most operations' : ''}
+`;
+
+                    // Copy to clipboard
+                    await vscode.env.clipboard.writeText(instructions);
+                    
+                    // Show notification with preview
+                    const action = await vscode.window.showInformationMessage(
+                        `📋 Copilot Instructions copied for ${instanceName}!\n✨ Ready to paste into Copilot Chat for context-aware help.`,
+                        'Show Preview',
+                        'Save to .github/'
+                    );
+                    
+                    if (action === 'Show Preview') {
+                        // Show in new document
+                        const doc = await vscode.workspace.openTextDocument({
+                            content: instructions,
+                            language: 'markdown'
+                        });
+                        await vscode.window.showTextDocument(doc, { preview: true });
+                    } else if (action === 'Save to .github/') {
+                        // Save to .github/copilot-instructions.md in instance workspace
+                        const instancePath = instance.path;
+                        if (!instancePath) {
+                            vscode.window.showErrorMessage('❌ Instance path not found');
+                            return;
+                        }
+                        
+                        const githubDir = path.join(instancePath, '.github');
+                        const instructionsFile = path.join(githubDir, 'copilot-instructions.md');
+                        
+                        try {
+                            // Create .github directory if it doesn't exist
+                            if (!fsSync.existsSync(githubDir)) {
+                                fsSync.mkdirSync(githubDir, { recursive: true });
+                            }
+                            
+                            // Write instructions file
+                            fsSync.writeFileSync(instructionsFile, instructions, 'utf8');
+                            
+                            // Show success and offer to open
+                            const openAction = await vscode.window.showInformationMessage(
+                                `✅ Copilot Instructions saved to .github/copilot-instructions.md`,
+                                'Open File',
+                                'Open in Workspace'
+                            );
+                            
+                            if (openAction === 'Open File') {
+                                const doc = await vscode.workspace.openTextDocument(instructionsFile);
+                                await vscode.window.showTextDocument(doc);
+                            } else if (openAction === 'Open in Workspace') {
+                                // Open instance folder as workspace
+                                const uri = vscode.Uri.file(instancePath);
+                                await vscode.commands.executeCommand('vscode.openFolder', uri, false);
+                            }
+                        } catch (error: any) {
+                            vscode.window.showErrorMessage(`❌ Failed to save instructions: ${error.message}`);
+                        }
+                    }
+                    
+                } catch (error: any) {
+                    vscode.window.showErrorMessage(`❌ Failed to generate instructions: ${error.message}`);
+                    outputChannel.appendLine(`Error generating Copilot instructions: ${error.message}`);
                 }
             }
         }),
@@ -1638,6 +2521,251 @@ function getHelpHtml(): string {
         </body>
         </html>
     `;
+}
+
+/**
+ * Generate Adminer Webview HTML with embedded iframe
+ */
+function getAdminerWebviewHtml(adminerUrl: string, instanceName: string, credentials: {
+    server: string;
+    username: string;
+    password: string;
+    database: string;
+}): string {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adminer - ${instanceName}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--vscode-editor-background);
+            color: var(--vscode-editor-foreground);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: var(--vscode-titleBar-activeBackground);
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .header-title {
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .credentials {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .credential-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .credential-label {
+            opacity: 0.6;
+        }
+        
+        .credential-value {
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            background: var(--vscode-input-background);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn {
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        
+        .btn:hover {
+            background: var(--vscode-button-hoverBackground);
+        }
+        
+        .btn-secondary {
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
+        }
+        
+        .iframe-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+        
+        .info-banner {
+            background: var(--vscode-inputValidation-infoBackground);
+            color: var(--vscode-inputValidation-infoForeground);
+            padding: 8px 20px;
+            font-size: 12px;
+            border-bottom: 1px solid var(--vscode-inputValidation-infoBorder);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .copy-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--vscode-notifications-background);
+            color: var(--vscode-notifications-foreground);
+            padding: 12px 20px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        
+        .copy-notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="header-title">
+                <span>🗄️</span>
+                <span>Adminer - ${instanceName}</span>
+            </div>
+            <div class="credentials">
+                <div class="credential-item">
+                    <span class="credential-label">Server:</span>
+                    <span class="credential-value" id="server">${credentials.server}</span>
+                </div>
+                <div class="credential-item">
+                    <span class="credential-label">User:</span>
+                    <span class="credential-value" id="username">${credentials.username}</span>
+                </div>
+                <div class="credential-item">
+                    <span class="credential-label">DB:</span>
+                    <span class="credential-value" id="database">${credentials.database}</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="copyPassword()">
+                📋 Copy Password
+            </button>
+            <button class="btn" onclick="openInBrowser()">
+                🌐 Open in Browser
+            </button>
+        </div>
+    </div>
+    
+    <div class="info-banner">
+        ℹ️ Upload limit: 512MB | Execution time: 600s | Use credentials above to login
+    </div>
+    
+    <div class="iframe-container">
+        <iframe src="${adminerUrl}" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-downloads"></iframe>
+    </div>
+    
+    <div class="copy-notification" id="notification"></div>
+    
+    <script>
+        const vscode = acquireVsCodeApi();
+        const password = '${credentials.password}';
+        
+        function copyPassword() {
+            navigator.clipboard.writeText(password).then(() => {
+                showNotification('✅ Password copied to clipboard');
+            }).catch(err => {
+                console.error('Failed to copy password:', err);
+                showNotification('❌ Failed to copy password');
+            });
+        }
+        
+        function openInBrowser() {
+            vscode.postMessage({
+                command: 'openExternal',
+                url: '${adminerUrl}'
+            });
+        }
+        
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Listen for messages from extension
+        window.addEventListener('message', event => {
+            const message = event.data;
+            switch (message.command) {
+                case 'showNotification':
+                    showNotification(message.text);
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>`;
 }
 
 /**

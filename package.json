@@ -2,7 +2,7 @@
   "name": "redaxo-multi-instances-manager",
   "displayName": "REDAXO Multi-Instances Manager",
   "description": "Complete REDAXO multi-instance management with Docker containers, SSL support, and automatic port management integrated into VS Code",
-  "version": "1.8.1",
+  "version": "1.9.0",
   "publisher": "skerbis",
   "icon": "resources/icon.png",
   "repository": {
@@ -155,6 +155,36 @@
         "icon": "$(output)"
       },
       {
+        "command": "redaxo-instances.showRedaxoLogs",
+        "title": "Show REDAXO Logs",
+        "icon": "$(file-text)"
+      },
+      {
+        "command": "redaxo-instances.installCLITools",
+        "title": "Install CLI Tools",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "redaxo-instances.openInAdminer",
+        "title": "Open in Adminer",
+        "icon": "$(database)"
+      },
+      {
+        "command": "redaxo-instances.startAdminer",
+        "title": "Start Adminer",
+        "icon": "$(play)"
+      },
+      {
+        "command": "redaxo-instances.stopAdminer",
+        "title": "Stop Adminer",
+        "icon": "$(stop)"
+      },
+      {
+        "command": "redaxo-instances.copyCopilotInstructions",
+        "title": "Copy Copilot Instructions",
+        "icon": "$(clippy)"
+      },
+      {
         "command": "redaxo-instances.getLoginInfo",
         "title": "Login Information",
         "icon": "$(key)"
@@ -294,9 +324,29 @@
           "group": "3_docker@2"
         },
         {
+          "command": "redaxo-instances.showRedaxoLogs",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
+          "group": "3_docker@3"
+        },
+        {
+          "command": "redaxo-instances.installCLITools",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "group": "3_docker@4"
+        },
+        {
+          "command": "redaxo-instances.openInAdminer",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
+          "group": "3_docker@5"
+        },
+        {
           "command": "redaxo-instances.getLoginInfo",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
           "group": "4_info@1"
+        },
+        {
+          "command": "redaxo-instances.copyCopilotInstructions",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
+          "group": "4_info@2"
         },
         {
           "command": "redaxo-instances.importDump",

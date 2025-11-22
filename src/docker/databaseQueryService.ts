@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { DockerService } from './dockerService';
 
 const execAsync = promisify(exec);
 
@@ -24,6 +25,35 @@ export interface DatabaseConnection {
  * Service for executing MySQL queries in REDAXO database via Docker exec
  */
 export class DatabaseQueryService {
+    
+    private static dockerService: DockerService;
+    
+    /**
+     * Initialize the service with DockerService instance
+     */
+    static initialize(dockerService: DockerService) {
+        this.dockerService = dockerService;
+    }
+    
+    /**
+     * Get the web container name for an instance
+     */
+    private static async getWebContainerName(instanceName: string): Promise<string | null> {
+        if (this.dockerService) {
+            return await this.dockerService.getWebContainerName(instanceName);
+        }
+        return `redaxo-${instanceName}`;
+    }
+    
+    /**
+     * Get the DB container name for an instance
+     */
+    private static async getDbContainerName(instanceName: string): Promise<string | null> {
+        if (this.dockerService) {
+            return await this.dockerService.getDbContainerName(instanceName);
+        }
+        return `redaxo-${instanceName}_db`;
+    }
     
     /**
      * Check if MySQL/MariaDB CLI tools are installed in container, install if missing
@@ -268,7 +298,15 @@ export class DatabaseQueryService {
      */
     static async exportDatabase(instanceName: string, outputPath: string): Promise<{ success: boolean; error?: string }> {
         try {
-            const containerName = `redaxo-${instanceName}_db`;
+            // Get actual DB container name
+            const containerName = await this.dockerService.getDbContainerName(instanceName);
+            if (!containerName) {
+                return {
+                    success: false,
+                    error: `Database container not found for instance "${instanceName}"`
+                };
+            }
+            
             const dbConnection = await this.getConnectionInfo(instanceName);
             
             const dumpCommand = `mysqldump -h localhost -u ${dbConnection.user} -p${dbConnection.password} ${dbConnection.database}`;
@@ -316,7 +354,11 @@ export class DatabaseQueryService {
      */
     private static async getConnectionInfo(instanceName: string): Promise<DatabaseConnection> {
         try {
-            const containerName = `redaxo-${instanceName}`;
+            // Get actual web container name
+            const containerName = await this.getWebContainerName(instanceName);
+            if (!containerName) {
+                throw new Error(`Web container not found for instance "${instanceName}"`);
+            }
             
             // Read environment variables from container
             const envCommand = `docker exec ${containerName} env`;

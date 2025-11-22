@@ -26,7 +26,9 @@ Eine  TreeView (Seitenleiste)
 ### 🎯 Kern-Funktionen
 - **🏗️ Instanz-Management** - Erstellen, starten, stoppen und löschen von REDAXO-Instanzen
 - **🤖 Copilot Chat Integration** - Verwalte Instanzen direkt via GitHub Copilot Chat mit @redaxo
+- **🎯 Custom Instance Support** - Vollständige Unterstützung für Custom REDAXO Instanzen mit individuellen Verzeichnisstrukturen
 - **⚡ Direkte Instance-Kommunikation** - Console Commands, Datenbank-Queries, Logs - alles aus VS Code
+- **🔍 Smart Path Detection** - Automatische Erkennung verschiedener REDAXO-Verzeichnisstrukturen
 - **🔒 SSL/HTTPS Support** - Automatische SSL-Zertifikate mit mkcert
 - **🐳 Docker Integration** - Vollständig containerisierte Umgebung
 - **📊 Info Pages** - Modernes Webview-Dashboard je Instanz
@@ -36,6 +38,9 @@ Eine  TreeView (Seitenleiste)
 ### 🔧 Technische Features
 - **PHP Support** - PHP 7.4, 8.1, 8.2, 8.3, 8.4, 8.5
 - **MariaDB Support** - Aktuell 11.3
+- **🗄️ Adminer Integration** - Globaler Adminer-Container für Datenbankverwaltung
+- **🚀 Dynamic Path Resolution** - Intelligente Erkennung von Console-Pfaden und REDAXO-Strukturen
+- **⚡ Performance Caching** - Path-Detection wird gecacht für schnellere Zugriffe
 - **Port Management** - Automatische Port-Zuweisung und -Verwaltung
 - **SSL Zertifikate** - Lokale Entwicklungszertifikate mit mkcert
 - **Docker Compose** - Automatische Container-Orchestrierung
@@ -142,13 +147,56 @@ Installiert automatisch:
 
 Die Extension erkennt automatisch, ob es sich um einen MariaDB oder MySQL Container handelt und verwendet die nativen Tools des jeweiligen Datenbanksystems.
 
+### 🗄️ Adminer - Datenbank-Management
+
+**REDAXO Multi-Instances** enthält einen globalen Adminer-Container für einfache Datenbankverwaltung:
+
+#### Features
+- 🚀 **One-Click Access**: Rechtsklick auf laufende Instanz → "Open in Adminer"
+- 🔗 **Auto-Login**: Browser öffnet mit vorausgefüllten Credentials (Server, Username, Database)
+- 📋 **Clipboard Integration**: Passwort wird automatisch kopiert - einfach einfügen (Cmd+V)
+- 📊 **Large File Support**: 512MB Upload-Limit für große Dumps
+- 🌐 **Port 9200**: Adminer läuft auf http://localhost:9200
+- 🐳 **Network Integration**: Automatische Verbindung zu DB-Containern
+
+#### Verwendung
+1. **Instanz starten** (muss laufen)
+2. **Rechtsklick** auf Instanz in TreeView
+3. **"Open in Adminer"** wählen
+4. Browser öffnet sich mit vorausgefüllten Feldern
+5. **Passwort einfügen** (Cmd+V) - wurde automatisch kopiert
+6. **Login** - fertig!
+
+#### Manuelle Steuerung
+- `Cmd+Shift+P` → `REDAXO: Start Adminer` - Adminer manuell starten
+- `Cmd+Shift+P` → `REDAXO: Stop Adminer` - Adminer stoppen
+
+#### Technische Details
+- Container: `redaxo-adminer` auf Port 9200
+- Image: `adminer:latest`
+- PHP Limits: 512MB upload_max_filesize, post_max_size, memory_limit
+- Netzwerk: `redaxo-adminer-network` für Container-Kommunikation
+- Unterstützt Custom und Standard REDAXO Instanzen
+
 ### Alle VS Code Kommandos (Auswahl)
 - `REDAXO: Create New Instance` - Neue Instanz erstellen
 - `REDAXO: Show Dashboard` - Dashboard öffnen
 - `REDAXO: Show Login Info` - Login-Daten anzeigen (inkl. DB-Zugang)
 - `REDAXO: Start/Stop Instance` - Instanzen verwalten
+- `REDAXO: Open in Adminer` - Datenbankverwaltung mit Adminer
 - `REDAXO: Setup HTTPS/SSL` - SSL für Instanz einrichten
 - **`REDAXO: Show Help & Documentation`** - 📖 Vollständige Anleitung & Hilfe
+
+### Kontextmenü (Rechtsklick auf Instanz)
+- **Start/Stop Instance** - Container starten/stoppen
+- **Open in Adminer** - Datenbank verwalten (nur bei laufenden Instanzen)
+- **Show REDAXO Logs** - redaxo.log und system.log anzeigen
+- **Install CLI Tools** - vim, nano, curl, wget, git, mysql/mariadb installieren
+- **Login Information** - Zugangsdaten anzeigen
+- **Import Dump** - SQL-Dump importieren
+- **Setup HTTPS/SSL** - SSL-Zertifikate einrichten
+- **Open Workspace** - Projekt-Ordner in VS Code öffnen
+- **Delete Instance** - Instanz entfernen
 
 ### TreeView (Seitenleiste)
 - �️ **Server-Symbol** = REDAXO-Instanz (Grün=läuft, Gelb=gestoppt, Rot=Fehler)

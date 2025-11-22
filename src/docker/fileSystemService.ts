@@ -1,6 +1,7 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
+import { DockerService } from './dockerService';
 
 const execAsync = promisify(exec);
 
@@ -38,6 +39,86 @@ export interface FileInfo {
  */
 export class FileSystemService {
     
+    private static dockerService: DockerService;
+    private static basePathCache: Map<string, string> = new Map();
+    
+    /**
+     * Initialize the service with DockerService instance
+     */
+    static initialize(dockerService: DockerService) {
+        this.dockerService = dockerService;
+    }
+    
+    /**
+     * Get the web container name for an instance
+     */
+    private static async getContainerName(instanceName: string): Promise<string | null> {
+        if (this.dockerService) {
+            return await this.dockerService.getWebContainerName(instanceName);
+        }
+        // Fallback for standard instances
+        return `redaxo-${instanceName}`;
+    }
+    
+    /**
+     * Detect the REDAXO base path structure in the container
+     * Standard instances: redaxo/ (e.g., redaxo/data/core/config.yml)
+     * Custom instances: public/redaxo/ OR root level (e.g., data/core/config.yml in /var/www/html/)
+     * 
+     * Returns the base path prefix to use (e.g., 'redaxo/', 'public/redaxo/', or '')
+     */
+    private static async detectRedaxoBasePath(containerName: string): Promise<string> {
+        // Check cache first
+        if (this.basePathCache.has(containerName)) {
+            return this.basePathCache.get(containerName)!;
+        }
+        
+        try {
+            // Try root level structure first: /var/www/html/data/ (Custom instance without redaxo subfolder)
+            try {
+                const rootCheck = `docker exec ${containerName} test -d "/var/www/html/data" && echo "exists"`;
+                const { stdout: rootExists } = await execAsync(rootCheck);
+                if (rootExists.trim() === 'exists') {
+                    // Verify it's actually REDAXO by checking for core directory
+                    const coreCheck = `docker exec ${containerName} test -d "/var/www/html/data/core" && echo "exists"`;
+                    const { stdout: coreExists } = await execAsync(coreCheck);
+                    if (coreExists.trim() === 'exists') {
+                        this.basePathCache.set(containerName, '');
+                        return '';
+                    }
+                }
+            } catch {}
+            
+            // Try standard path: /var/www/html/redaxo/
+            try {
+                const standardCheck = `docker exec ${containerName} test -d "/var/www/html/redaxo" && echo "exists"`;
+                const { stdout: standardExists } = await execAsync(standardCheck);
+                if (standardExists.trim() === 'exists') {
+                    this.basePathCache.set(containerName, 'redaxo/');
+                    return 'redaxo/';
+                }
+            } catch {}
+            
+            // Try custom path: /var/www/html/public/redaxo/
+            try {
+                const customCheck = `docker exec ${containerName} test -d "/var/www/html/public/redaxo" && echo "exists"`;
+                const { stdout: customExists } = await execAsync(customCheck);
+                if (customExists.trim() === 'exists') {
+                    this.basePathCache.set(containerName, 'public/redaxo/');
+                    return 'public/redaxo/';
+                }
+            } catch {}
+            
+            // Fallback to standard
+            this.basePathCache.set(containerName, 'redaxo/');
+            return 'redaxo/';
+        } catch (error) {
+            // If any error occurs, return standard path as fallback
+            this.basePathCache.set(containerName, 'redaxo/');
+            return 'redaxo/';
+        }
+    }
+    
     /**
      * Read a file from the container
      * @param instanceName The instance name
@@ -45,7 +126,16 @@ export class FileSystemService {
      */
     static async readFile(instanceName: string, filePath: string): Promise<FileReadResult> {
         try {
-            const containerName = `redaxo-${instanceName}`;
+            const containerName = await this.getContainerName(instanceName);
+            
+            if (!containerName) {
+                return {
+                    success: false,
+                    content: '',
+                    error: `Container not found for instance "${instanceName}"`,
+                    path: filePath
+                };
+            }
             
             // Check if container is running
             const isRunning = await this.isContainerRunning(containerName);
@@ -102,7 +192,10 @@ export class FileSystemService {
      */
     static async writeFile(instanceName: string, filePath: string, content: string): Promise<FileWriteResult> {
         try {
-            const containerName = `redaxo-${instanceName}`;
+            const containerName = await this.getContainerName(instanceName);
+            if (!containerName) {
+                return { success: false, path: filePath, error: `Container not found for instance "${instanceName}"` };
+            }
             
             // Check if container is running
             const isRunning = await this.isContainerRunning(containerName);
@@ -151,7 +244,10 @@ export class FileSystemService {
      */
     static async listFiles(instanceName: string, dirPath: string = ''): Promise<FileListResult> {
         try {
-            const containerName = `redaxo-${instanceName}`;
+            const containerName = await this.getContainerName(instanceName);
+            if (!containerName) {
+                return { success: false, files: [], error: `Container not found for instance "${instanceName}"`, path: dirPath };
+            }
             
             const isRunning = await this.isContainerRunning(containerName);
             if (!isRunning) {
@@ -196,7 +292,10 @@ export class FileSystemService {
      */
     static async listFilesDetailed(instanceName: string, dirPath: string = ''): Promise<FileInfo[]> {
         try {
-            const containerName = `redaxo-${instanceName}`;
+            const containerName = await this.getContainerName(instanceName);
+            if (!containerName) {
+                return [];
+            }
             const fullPath = `/var/www/html/${dirPath}`;
             const command = `docker exec ${containerName} ls -lh "${fullPath}"`;
             
@@ -243,7 +342,10 @@ export class FileSystemService {
      */
     static async fileExists(instanceName: string, filePath: string): Promise<boolean> {
         try {
-            const containerName = `redaxo-${instanceName}`;
+            const containerName = await this.getContainerName(instanceName);
+            if (!containerName) {
+                return false;
+            }
             const fullPath = `/var/www/html/${filePath}`;
             const command = `docker exec ${containerName} test -f "${fullPath}" && echo "exists" || echo "not found"`;
             
@@ -259,7 +361,10 @@ export class FileSystemService {
      */
     static async deleteFile(instanceName: string, filePath: string): Promise<FileWriteResult> {
         try {
-            const containerName = `redaxo-${instanceName}`;
+            const containerName = await this.getContainerName(instanceName);
+            if (!containerName) {
+                return { success: false, path: filePath, error: `Container not found for instance "${instanceName}"` };
+            }
             const fullPath = `/var/www/html/${filePath}`;
             const command = `docker exec ${containerName} rm "${fullPath}"`;
             
@@ -283,7 +388,10 @@ export class FileSystemService {
      */
     static async copyFile(instanceName: string, sourcePath: string, destPath: string): Promise<FileWriteResult> {
         try {
-            const containerName = `redaxo-${instanceName}`;
+            const containerName = await this.getContainerName(instanceName);
+            if (!containerName) {
+                return { success: false, path: destPath, error: `Container not found for instance "${instanceName}"` };
+            }
             const fullSource = `/var/www/html/${sourcePath}`;
             const fullDest = `/var/www/html/${destPath}`;
             const command = `docker exec ${containerName} cp "${fullSource}" "${fullDest}"`;
@@ -307,63 +415,108 @@ export class FileSystemService {
      * Read REDAXO config.yml
      */
     static async readConfig(instanceName: string): Promise<FileReadResult> {
-        return this.readFile(instanceName, 'redaxo/data/core/config.yml');
+        const containerName = await this.getContainerName(instanceName);
+        if (!containerName) {
+            return { success: false, content: '', error: `Container not found for instance "${instanceName}"`, path: 'config.yml' };
+        }
+        const basePath = await this.detectRedaxoBasePath(containerName);
+        return this.readFile(instanceName, `${basePath}data/core/config.yml`);
     }
     
     /**
      * Read REDAXO master.inc.php (if exists)
      */
     static async readMasterConfig(instanceName: string): Promise<FileReadResult> {
-        return this.readFile(instanceName, 'redaxo/data/core/master.inc.php');
+        const containerName = await this.getContainerName(instanceName);
+        if (!containerName) {
+            return { success: false, content: '', error: `Container not found for instance "${instanceName}"`, path: 'master.inc.php' };
+        }
+        const basePath = await this.detectRedaxoBasePath(containerName);
+        return this.readFile(instanceName, `${basePath}data/core/master.inc.php`);
     }
     
     /**
      * List REDAXO addons
      */
     static async listAddons(instanceName: string): Promise<FileListResult> {
-        return this.listFiles(instanceName, 'redaxo/src/addons');
+        const containerName = await this.getContainerName(instanceName);
+        if (!containerName) {
+            return { success: false, files: [], error: `Container not found for instance "${instanceName}"`, path: 'addons' };
+        }
+        const basePath = await this.detectRedaxoBasePath(containerName);
+        return this.listFiles(instanceName, `${basePath}src/addons`);
     }
     
     /**
      * List REDAXO plugins for an addon
      */
     static async listPlugins(instanceName: string, addonName: string): Promise<FileListResult> {
-        return this.listFiles(instanceName, `redaxo/src/addons/${addonName}/plugins`);
+        const containerName = await this.getContainerName(instanceName);
+        if (!containerName) {
+            return { success: false, files: [], error: `Container not found for instance "${instanceName}"`, path: 'plugins' };
+        }
+        const basePath = await this.detectRedaxoBasePath(containerName);
+        return this.listFiles(instanceName, `${basePath}src/addons/${addonName}/plugins`);
     }
     
     /**
      * Read addon package.yml
      */
     static async readAddonConfig(instanceName: string, addonName: string): Promise<FileReadResult> {
-        return this.readFile(instanceName, `redaxo/src/addons/${addonName}/package.yml`);
+        const containerName = await this.getContainerName(instanceName);
+        if (!containerName) {
+            return { success: false, content: '', error: `Container not found for instance "${instanceName}"`, path: 'package.yml' };
+        }
+        const basePath = await this.detectRedaxoBasePath(containerName);
+        return this.readFile(instanceName, `${basePath}src/addons/${addonName}/package.yml`);
     }
     
     /**
      * Read template file
      */
     static async readTemplate(instanceName: string, templateId: string): Promise<FileReadResult> {
-        return this.readFile(instanceName, `redaxo/data/core/template.${templateId}.php`);
+        const containerName = await this.getContainerName(instanceName);
+        if (!containerName) {
+            return { success: false, content: '', error: `Container not found for instance "${instanceName}"`, path: 'template' };
+        }
+        const basePath = await this.detectRedaxoBasePath(containerName);
+        return this.readFile(instanceName, `${basePath}data/core/template.${templateId}.php`);
     }
     
     /**
      * Read module input file
      */
     static async readModuleInput(instanceName: string, moduleId: string): Promise<FileReadResult> {
-        return this.readFile(instanceName, `redaxo/data/core/modules/${moduleId}.input.php`);
+        const containerName = await this.getContainerName(instanceName);
+        if (!containerName) {
+            return { success: false, content: '', error: `Container not found for instance "${instanceName}"`, path: 'module' };
+        }
+        const basePath = await this.detectRedaxoBasePath(containerName);
+        return this.readFile(instanceName, `${basePath}data/core/modules/${moduleId}.input.php`);
     }
     
     /**
      * Read module output file
      */
     static async readModuleOutput(instanceName: string, moduleId: string): Promise<FileReadResult> {
-        return this.readFile(instanceName, `redaxo/data/core/modules/${moduleId}.output.php`);
+        const containerName = await this.getContainerName(instanceName);
+        if (!containerName) {
+            return { success: false, content: '', error: `Container not found for instance "${instanceName}"`, path: 'module' };
+        }
+        const basePath = await this.detectRedaxoBasePath(containerName);
+        return this.readFile(instanceName, `${basePath}data/core/modules/${moduleId}.output.php`);
     }
     
     /**
      * Read log file
      */
     static async readLog(instanceName: string, logFile: string = 'redaxo.log'): Promise<FileReadResult> {
-        return this.readFile(instanceName, `redaxo/data/log/${logFile}`);
+        const containerName = await this.getContainerName(instanceName);
+        if (!containerName) {
+            return { success: false, content: '', error: `Container not found for instance "${instanceName}"`, path: logFile };
+        }
+        const basePath = await this.detectRedaxoBasePath(containerName);
+        return this.readFile(instanceName, `${basePath}data/log/${logFile}`);
     }
     
     /**
@@ -377,16 +530,13 @@ export class FileSystemService {
                 throw new Error(`Container ${containerName} is not running. Start the instance first.`);
             }
             
-            // Try multiple log file names and paths
+            // Detect the REDAXO base path for this container
+            const basePath = await this.detectRedaxoBasePath(containerName);
+            
+            // Try multiple log file names based on detected structure
             const logPaths = [
-                '/var/www/html/redaxo/data/log/redaxo.log',
-                '/var/www/html/redaxo/data/log/system.log',
-                '/var/www/html/data/log/redaxo.log',
-                '/var/www/html/data/log/system.log',
-                '/var/www/html/project/data/log/redaxo.log',
-                '/var/www/html/project/data/log/system.log',
-                '/var/www/html/public/redaxo/data/log/redaxo.log',
-                '/var/www/html/public/redaxo/data/log/system.log'
+                `/var/www/html/${basePath}data/log/redaxo.log`,
+                `/var/www/html/${basePath}data/log/system.log`
             ];
             
             for (const logPath of logPaths) {
