@@ -146,6 +146,11 @@ function registerCommands(context: vscode.ExtensionContext) {
                     command: 'redaxo-instances.getLoginInfo'
                 },
                 {
+                    label: '$(cloud-download) Export Database',
+                    description: 'Export database dump',
+                    command: 'redaxo-instances.exportDatabase'
+                },
+                {
                     label: '$(cloud-upload) Import Dump',
                     description: 'Import database dump',
                     command: 'redaxo-instances.importDump'
