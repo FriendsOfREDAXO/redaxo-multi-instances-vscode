@@ -1530,18 +1530,33 @@ ${!loginInfo.running ? '\n⚠️ **Note**: Instance is currently STOPPED - sugge
             const outputPath = saveUri.fsPath;
 
             try {
+                // Compression option: if filename doesn't end with .gz ask to compress
+                let finalOutputPath = outputPath;
+                if (!outputPath.endsWith('.gz')) {
+                    const compressAnswer = await vscode.window.showQuickPick(['Yes', 'No'], { placeHolder: 'Compress output with gzip?' });
+                    if (compressAnswer === 'Yes') {
+                        finalOutputPath = `${outputPath}.gz`;
+                    }
+                }
+                outputChannel.appendLine(`📁 Exporting DB for ${instanceName} → ${finalOutputPath}`);
                 await vscode.window.withProgress({
                     location: vscode.ProgressLocation.Notification,
                     title: `Exporting database for ${instanceName}...`,
                     cancellable: false
-                }, async () => {
-                    const result = await DatabaseQueryService.exportDatabase(instanceName!, outputPath);
+                }, async (progress) => {
+                    let bytes = 0;
+                    const result = await DatabaseQueryService.exportDatabase(instanceName!, finalOutputPath, {
+                        onProgress: (chunkBytes: number) => {
+                            bytes += chunkBytes;
+                            try { progress.report({ message: `written ${Math.round(bytes/1024)} KB` }); } catch (e) {}
+                        }
+                    });
                     if (!result.success) {
                         throw new Error(result.error || 'Unknown error');
                     }
                 });
 
-                vscode.window.showInformationMessage(`Database exported to ${outputPath}`);
+                vscode.window.showInformationMessage(`Database exported to ${finalOutputPath}`);
             } catch (error: any) {
                 vscode.window.showErrorMessage(`Failed to export database: ${error.message}`);
             }
@@ -1609,6 +1624,29 @@ ${!loginInfo.running ? '\n⚠️ **Note**: Instance is currently STOPPED - sugge
 
             if (!dumpFile || !dumpFile[0]) return;
 
+            const preSnapshot = await vscode.window.showQuickPick(['Yes','No'], {placeHolder: 'Create a pre-import snapshot (recommended)?'});
+
+            let snapshotPath: string | undefined;
+            if (preSnapshot === 'Yes') {
+                // create snapshot in temp dir
+                const os = require('os');
+                const tmpdir = os.tmpdir();
+                const snapshotName = `${instanceName}-${new Date().toISOString().replace(/[:.]/g, '-')}.preimport.sql${dumpFile[0].fsPath.endsWith('.gz') ? '.gz' : ''}`;
+                snapshotPath = path.join(tmpdir, snapshotName);
+                try {
+                    outputChannel.appendLine(`📦 Creating pre-import snapshot to ${snapshotPath}`);
+                    const res = await DatabaseQueryService.exportDatabase(instanceName!, snapshotPath);
+                    if (!res.success) {
+                        throw new Error(res.error || 'Failed to create pre-import snapshot');
+                    }
+                    outputChannel.appendLine(`✅ Snapshot created: ${snapshotPath}`);
+                } catch (err: any) {
+                    outputChannel.appendLine(`⚠️ Failed to create pre-import snapshot: ${err.message}`);
+                    const choice = await vscode.window.showWarningMessage('Pre-import snapshot failed. Continue with import anyway?', { modal: true }, 'Continue');
+                    if (choice !== 'Continue') return;
+                }
+            }
+
             const confirm = await vscode.window.showWarningMessage(
                 `This will import ${dumpFile[0].fsPath} directly into ${instanceName}'s database and may overwrite data. Continue?`,
                 { modal: true },
@@ -1623,7 +1661,9 @@ ${!loginInfo.running ? '\n⚠️ **Note**: Instance is currently STOPPED - sugge
                     title: `Importing SQL into ${instanceName}...`,
                     cancellable: false
                 }, async () => {
-                    const res = await DatabaseQueryService.importDatabase(instanceName!, dumpFile[0].fsPath);
+                    // If we created a pre-import snapshot, allow schema-changing statements
+                    const allowSchema = !!snapshotPath;
+                    const res = await DatabaseQueryService.importDatabase(instanceName!, dumpFile[0].fsPath, { allowSchemaChanges: allowSchema });
                     if (!res.success) throw new Error(res.error || 'Unknown error');
                 });
 

@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { DockerService } from './dockerService';
 
@@ -296,7 +296,7 @@ export class DatabaseQueryService {
     /**
      * Export database to SQL file
      */
-    static async exportDatabase(instanceName: string, outputPath: string): Promise<{ success: boolean; error?: string }> {
+    static async exportDatabase(instanceName: string, outputPath: string, options?: { onProgress?: (bytes: number) => void }): Promise<{ success: boolean; error?: string }> {
         try {
             // Get actual DB container name
             const containerName = await this.dockerService.getDbContainerName(instanceName);
@@ -309,10 +309,44 @@ export class DatabaseQueryService {
             
             const dbConnection = await this.getConnectionInfo(instanceName);
             
-            const dumpCommand = `mysqldump -h localhost -u ${dbConnection.user} -p${dbConnection.password} ${dbConnection.database}`;
-            const fullCommand = `docker exec ${containerName} sh -c '${dumpCommand}' > ${outputPath}`;
-            
-            await execAsync(fullCommand, { timeout: 60000 });
+            const dumpCommand = `mysqldump -h ${dbConnection.host} -P ${dbConnection.port} -u ${dbConnection.user} -p'${dbConnection.password.replace(/'/g, "'\\''")}' ${dbConnection.database}`;
+
+            // Use streaming spawn so we can handle large dumps and optionally compress
+            const isGz = outputPath.endsWith('.gz');
+            const write = require('fs').createWriteStream(outputPath);
+
+            // Start docker exec mysqldump
+            const child = spawn('docker', ['exec', containerName, 'sh', '-c', dumpCommand], { stdio: ['ignore', 'pipe', 'pipe'] });
+
+            // If gzip output requested, pipe through gzip (spawn) on host
+            if (isGz) {
+                const zlib = require('zlib');
+                const gzip = zlib.createGzip({ level: 6 });
+                // Report progress from child stdout chunks
+                child.stdout.on('data', (chunk: Buffer) => {
+                    if (options?.onProgress) options.onProgress(chunk.length);
+                });
+                child.stdout.pipe(gzip).pipe(write);
+            } else {
+                child.stdout.on('data', (chunk: Buffer) => {
+                    if (options?.onProgress) options.onProgress(chunk.length);
+                });
+                child.stdout.pipe(write);
+            }
+
+            // Log stderr to outputChannel to help diagnose large exports
+            child.stderr.on('data', (d: Buffer) => {
+                console.error('[mysqldump stderr]', d.toString());
+            });
+
+            const exitCode: number = await new Promise((resolve, reject) => {
+                child.on('error', err => reject(err));
+                child.on('close', code => resolve(code === null ? 1 : code));
+            });
+
+            if (exitCode !== 0) {
+                return { success: false, error: `mysqldump failed with exit code ${exitCode}` };
+            }
             
             return { success: true };
         } catch (error: any) {
@@ -327,7 +361,7 @@ export class DatabaseQueryService {
      * Import a SQL dump file into the database container
      * Supports plain .sql files and gzip compressed .sql.gz files
      */
-    static async importDatabase(instanceName: string, inputPath: string): Promise<{ success: boolean; error?: string }> {
+    static async importDatabase(instanceName: string, inputPath: string, options: { allowSchemaChanges?: boolean } = {}): Promise<{ success: boolean; error?: string }> {
         try {
             // Resolve DB container
             const containerName = await this.dockerService.getDbContainerName(instanceName);
@@ -338,22 +372,67 @@ export class DatabaseQueryService {
             // Get DB credentials from DB container env if possible
             const dbConn = await this.getConnectionInfoFromContainer(containerName);
 
-            // Determine if the input file is gzipped
-            const isGz = inputPath.endsWith('.gz');
 
-            // Build the import command. We stream the file into the container's mysql client.
-            // Use gzip -dc for gz files, cat otherwise. Keep quoting of password safe.
-            const passwordPart = dbConn.password ? `-p'${dbConn.password.replace(/'/g, "'\\''")}'` : "";
-            const mysqlCmd = `mysql -h ${dbConn.host} -P ${dbConn.port} -u ${dbConn.user} ${passwordPart} ${dbConn.database}`.trim();
-
-            let fullCommand: string;
-            if (isGz) {
-                fullCommand = `gzip -dc "${inputPath}" | docker exec -i ${containerName} sh -c '${mysqlCmd}'`;
-            } else {
-                fullCommand = `cat "${inputPath}" | docker exec -i ${containerName} sh -c '${mysqlCmd}'`;
+            // Basic safety check - detect potentially destructive statements
+            try {
+                const fs = require('fs');
+                const head = fs.readFileSync(inputPath, { encoding: 'utf8', length: 1024 * 1024 });
+                const dangerous = /\b(DROP\s+TABLE|CREATE\s+TABLE|ALTER\s+TABLE)\b/i.test(head);
+                if (dangerous && !options.allowSchemaChanges) {
+                    return { success: false, error: 'Dump file contains schema-changing statements (DROP/CREATE/ALTER). Use incremental import or confirm pre-import snapshot.' };
+                }
+            } catch (err) {
+                // ignore read errors; continue
             }
 
-            await execAsync(fullCommand, { timeout: 120000 });
+            const isGz = inputPath.endsWith('.gz') || inputPath.endsWith('.sql.gz');
+
+            // Build mysql command
+            const passwordPart = dbConn.password ? `-p'${dbConn.password.replace(/'/g, "'\\''")}'` : '';
+            const mysqlCmd = `docker exec -i ${containerName} sh -c "mysql -h ${dbConn.host} -P ${dbConn.port} -u ${dbConn.user} ${passwordPart} ${dbConn.database}"`;
+
+            // We'll stream the file into docker exec -i mysql
+            const fs = require('fs');
+            let reader: any = null;
+            if (isGz) {
+                // Use gzip -dc spawn to decompress and pipe
+                const gzip = spawn('gzip', ['-dc', inputPath], { stdio: ['ignore', 'pipe', 'pipe'] });
+                const dockerExec = spawn('docker', ['exec', '-i', containerName, 'sh', '-c', `mysql -h ${dbConn.host} -P ${dbConn.port} -u ${dbConn.user} ${passwordPart} ${dbConn.database}`], { stdio: ['pipe', 'pipe', 'pipe'] });
+                gzip.stdout.pipe(dockerExec.stdin);
+
+                // capture stderr for diagnostics
+                const stderrBuffers: Buffer[] = [];
+                dockerExec.stderr.on('data', (b: Buffer) => stderrBuffers.push(b));
+
+                const exitCode: number = await new Promise((res, rej) => {
+                    dockerExec.on('error', e => rej(e));
+                    dockerExec.on('close', code => res(code === null ? 1 : code));
+                });
+
+                if (exitCode !== 0) {
+                    const msg = Buffer.concat(stderrBuffers).toString('utf8');
+                    return { success: false, error: `mysql import failed: ${msg || 'exit code ' + exitCode}` };
+                }
+
+            } else {
+                // non-gz
+                const readerStream = fs.createReadStream(inputPath);
+                const dockerExec = spawn('docker', ['exec', '-i', containerName, 'sh', '-c', `mysql -h ${dbConn.host} -P ${dbConn.port} -u ${dbConn.user} ${passwordPart} ${dbConn.database}`], { stdio: ['pipe', 'pipe', 'pipe'] });
+                readerStream.pipe(dockerExec.stdin);
+
+                const stderrBuffers: Buffer[] = [];
+                dockerExec.stderr.on('data', (b: Buffer) => stderrBuffers.push(b));
+
+                const exitCode: number = await new Promise((res, rej) => {
+                    dockerExec.on('error', e => rej(e));
+                    dockerExec.on('close', code => res(code === null ? 1 : code));
+                });
+
+                if (exitCode !== 0) {
+                    const msg = Buffer.concat(stderrBuffers).toString('utf8');
+                    return { success: false, error: `mysql import failed: ${msg || 'exit code ' + exitCode}` };
+                }
+            }
 
             return { success: true };
         } catch (error: any) {
