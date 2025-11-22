@@ -2,7 +2,7 @@
   "name": "redaxo-multi-instances-manager",
   "displayName": "REDAXO Multi-Instances Manager",
   "description": "Complete REDAXO multi-instance management with Docker containers, SSL support, and automatic port management integrated into VS Code",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "publisher": "skerbis",
   "icon": "resources/icon.png",
   "repository": {
@@ -194,7 +194,6 @@
         "title": "🎨 Modern Login Info (Preview)",
         "icon": "$(preview)"
       },
-      
       {
         "command": "redaxo-instances.setupSSL",
         "title": "Setup HTTPS/SSL",
@@ -344,7 +343,6 @@
           "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
           "group": "4_info@2"
         },
-        
         {
           "command": "redaxo-instances.setupSSL",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
