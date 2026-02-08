@@ -144,7 +144,20 @@ function registerCommands(context: vscode.ExtensionContext) {
                     label: '$(key) Login Information',
                     description: 'Show login credentials and database info',
                     command: 'redaxo-instances.getLoginInfo'
-                },
+                }
+            );
+
+            // Database actions (only for running instances)
+            if (instance.running) {
+                items.push({
+                    label: '$(add) Create Additional Database',
+                    description: 'Create a new database in this instance',
+                    command: 'redaxo-instances.createDatabase'
+                });
+            }
+
+            // More actions
+            items.push(
                 // Export/Import handled through Adminer → removed
                 {
                     label: '$(shield) Setup HTTPS/SSL',
@@ -895,6 +908,106 @@ function registerCommands(context: vscode.ExtensionContext) {
                 }
             } catch (error: any) {
                 vscode.window.showErrorMessage(`❌ Failed to stop Adminer: ${error.message}`);
+            }
+        }),
+
+        vscode.commands.registerCommand('redaxo-instances.createDatabase', async (instanceItem?: any) => {
+            let instanceName: string | undefined;
+            
+            // Extract instance name
+            if (typeof instanceItem === 'string') {
+                instanceName = instanceItem;
+            } else if (instanceItem && typeof instanceItem === 'object' && instanceItem.label) {
+                instanceName = instanceItem.label;
+            } else {
+                instanceName = await selectInstance('Select instance to create database:');
+            }
+            
+            if (!instanceName) {
+                return;
+            }
+
+            // Get instance status
+            const instances = await dockerService.listInstances();
+            const instance = instances.find((i: any) => i.name === instanceName);
+            
+            if (!instance?.running) {
+                vscode.window.showWarningMessage(`Instance ${instanceName} is not running. Please start it first.`);
+                return;
+            }
+
+            // First show existing databases
+            const listResult = await DatabaseQueryService.listDatabases(instanceName);
+            let infoMessage = `Creating new database for instance: ${instanceName}\n\n`;
+            
+            if (listResult.success && listResult.databases) {
+                const userDatabases = listResult.databases.filter(db => 
+                    !['information_schema', 'performance_schema', 'mysql', 'sys'].includes(db)
+                );
+                if (userDatabases.length > 0) {
+                    infoMessage += `Existing databases: ${userDatabases.join(', ')}`;
+                }
+            }
+
+            // Ask for database name
+            const databaseName = await vscode.window.showInputBox({
+                prompt: infoMessage,
+                placeHolder: 'e.g., my_additional_db',
+                validateInput: (value) => {
+                    if (!value) {
+                        return 'Database name is required';
+                    }
+                    if (!/^[a-zA-Z0-9_]+$/.test(value)) {
+                        return 'Database name must contain only letters, numbers, and underscores';
+                    }
+                    if (value.length > 64) {
+                        return 'Database name must be 64 characters or less';
+                    }
+                    return null;
+                }
+            });
+
+            if (!databaseName) {
+                return;
+            }
+
+            // Create the database
+            try {
+                await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Creating database "${databaseName}" in ${instanceName}...`,
+                    cancellable: false
+                }, async () => {
+                    const result = await DatabaseQueryService.createDatabase(instanceName!, databaseName);
+                    
+                    if (!result.success) {
+                        throw new Error(result.error || 'Unknown error');
+                    }
+                });
+
+                const action = await vscode.window.showInformationMessage(
+                    `✅ Database "${databaseName}" created successfully in ${instanceName}!`,
+                    'Open in Adminer',
+                    'Show All Databases',
+                    'OK'
+                );
+
+                if (action === 'Open in Adminer') {
+                    vscode.commands.executeCommand('redaxo-instances.openInAdminer', instanceName);
+                } else if (action === 'Show All Databases') {
+                    const result = await DatabaseQueryService.listDatabases(instanceName);
+                    if (result.success && result.databases) {
+                        const userDbs = result.databases.filter(db => 
+                            !['information_schema', 'performance_schema', 'mysql', 'sys'].includes(db)
+                        );
+                        vscode.window.showInformationMessage(
+                            `Databases in ${instanceName}:\n${userDbs.join('\n')}`,
+                            { modal: true }
+                        );
+                    }
+                }
+            } catch (error: any) {
+                vscode.window.showErrorMessage(`❌ Failed to create database: ${error.message}`);
             }
         }),
 

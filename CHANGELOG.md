@@ -1,5 +1,85 @@
 # Changelog
 
+## Version 1.11.3 (2026-02-09)
+
+### ✨ New Features
+- **💾 Create Additional Databases**: Neue Funktion zum Erstellen zusätzlicher Datenbanken in einer Instanz
+  - Verfügbar über Kontext-Menü bei laufenden Instanzen
+  - Automatische GRANT ALL PRIVILEGES für den Standard-User
+  - Sofortige Sichtbarkeit in Adminer nach Neu-Login
+  - Validierung von Datenbanknamen (nur alphanumerische Zeichen und Unterstriche)
+  - Standard: utf8mb4_unicode_ci Collation
+
+### 🐛 Bug Fixes
+- **MariaDB Client Detection**: Automatische Erkennung von `mariadb` vs `mysql` Client in DB-Containern
+- **SQL Escaping**: Verbesserte Shell-Escaping für Datenbanknamen und Credentials
+- **Separate Commands**: Verwendet 3 separate SQL-Befehle für höhere Zuverlässigkeit
+  - CREATE DATABASE (kritisch)
+  - GRANT PRIVILEGES (graceful fallback)
+  - FLUSH PRIVILEGES (graceful fallback)
+
+### 🔧 Technical Improvements
+- DatabaseQueryService erweitert um `createDatabase()` und `listDatabases()` Methoden
+- Robuste Command-Ausführung mit fehlertoleranten non-critical Operationen
+- Bessere Integration mit Adminer für Multi-Database-Support
+
+### 📝 Documentation
+- README erweitert um Multi-Database Support Sektion
+- Detaillierte Verwendungsanleitung und Anwendungsfälle
+- Release Notes mit allen Bugfixes dokumentiert
+
+---
+
+## Version 1.11.2 (2026-02-09)
+
+### 🐛 Bug Fixes
+- SQL Escaping Fix: Verbesserte Shell-Escaping für Datenbanknamen in CREATE DATABASE Queries
+- Password Handling: Passwort wird in Quotes übergeben für bessere Kompatibilität
+
+---
+
+## Version 1.11.1 (2026-02-09)
+
+### 🐛 Bug Fixes
+- MariaDB Client Detection Fix: Automatische Erkennung von `mariadb` vs `mysql` Client
+- Fix für "mysql: not found" Fehler bei MariaDB 11.x Containern
+
+---
+
+## Version 1.11.0 (2026-02-09)
+
+### ✨ New Features
+- **Create Additional Databases**: Neue Funktion zum Erstellen zusätzlicher Datenbanken
+- Zeigt existierende Datenbanken an
+- Validierung von Datenbanknamen
+- Direkter Adminer-Link nach Erstellung
+
+### 🔧 Improvements
+- DatabaseQueryService um Database-Management erweitert
+- QuickPick-Menü um Database-Creation erweitert
+
+---
+
+## Version 1.10.1 (2026-02-08)
+
+### 📦 Dependency Updates
+- Updated all development dependencies to latest versions
+- @types/node: 22.x → 25.2.2
+- @types/vscode: 1.103.0 → 1.109.0
+- @typescript-eslint/eslint-plugin: 8.39.0 → 8.54.0
+- @typescript-eslint/parser: 8.39.0 → 8.54.0
+- eslint: 9.32.0 → 9.39.2
+- ts-loader: 9.5.2 → 9.5.4
+- typescript: 5.9.2 → 5.9.3
+- webpack: 5.101.0 → 5.105.0
+- mocha: added at 11.7.5
+
+### 🔧 Maintenance
+- Improved build configuration
+- Enhanced compatibility with latest VS Code versions
+
+
+
 ## [1.10.0] - 2025-11-22
 
 ### Changed

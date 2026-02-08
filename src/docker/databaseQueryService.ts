@@ -128,6 +128,118 @@ export class DatabaseQueryService {
     static async describeTable(instanceName: string, tableName: string): Promise<DatabaseQueryResult> { return this.query(instanceName, `DESCRIBE ${tableName}`); }
     
     /**
+     * Create a new database in the instance's MySQL/MariaDB container
+     */
+    static async createDatabase(instanceName: string, databaseName: string, charset: string = 'utf8mb4', collation: string = 'utf8mb4_unicode_ci'): Promise<{ success: boolean; error?: string }> {
+        try {
+            // Validate database name (alphanumeric and underscores only)
+            if (!/^[a-zA-Z0-9_]+$/.test(databaseName)) {
+                return { success: false, error: 'Database name must contain only letters, numbers, and underscores' };
+            }
+
+            // Get database container name
+            const dbContainerName = await this.getDbContainerName(instanceName);
+            if (!dbContainerName) {
+                return { success: false, error: `Database container not found for instance "${instanceName}"` };
+            }
+
+            // Check if container is running
+            const isRunning = await this.isContainerRunning(dbContainerName);
+            if (!isRunning) {
+                return { success: false, error: `Database container ${dbContainerName} is not running` };
+            }
+
+            // Ensure MySQL client is available
+            const hasClient = await this.ensureMysqlClient(dbContainerName);
+            if (!hasClient) {
+                return { success: false, error: `MySQL/MariaDB client not available in ${dbContainerName}` };
+            }
+
+            // Get connection info (root credentials)
+            const dbConnection = await this.getConnectionInfoFromContainer(dbContainerName);
+            
+            // Try to use root password if available
+            let password = dbConnection.password;
+            try {
+                const { stdout } = await execAsync(`docker exec ${dbContainerName} env | grep -E 'MYSQL_ROOT_PASSWORD|MARIADB_ROOT_PASSWORD'`);
+                const rootPassMatch = stdout.match(/MYSQL_ROOT_PASSWORD=(.+)|MARIADB_ROOT_PASSWORD=(.+)/);
+                if (rootPassMatch) {
+                    password = rootPassMatch[1] || rootPassMatch[2] || password;
+                }
+            } catch {}
+
+            // Create database - detect mariadb or mysql client
+            let clientCmd = 'mysql';
+            try {
+                await execAsync(`docker exec ${dbContainerName} which mariadb`);
+                clientCmd = 'mariadb';
+            } catch {
+                try {
+                    await execAsync(`docker exec ${dbContainerName} which mysql`);
+                    clientCmd = 'mysql';
+                } catch {
+                    return { success: false, error: 'Neither mariadb nor mysql client found in container' };
+                }
+            }
+
+            // Execute SQL commands separately for reliability
+            // 1. Create database
+            try {
+                const createCmd = `docker exec ${dbContainerName} ${clientCmd} -h localhost -u root -p'${password}' -e "CREATE DATABASE IF NOT EXISTS \\\`${databaseName}\\\` CHARACTER SET ${charset} COLLATE ${collation}"`;
+                const { stderr: createErr } = await execAsync(createCmd, { timeout: 15000 });
+                if (createErr && createErr.includes('ERROR')) {
+                    return { success: false, error: createErr.trim() };
+                }
+            } catch (error: any) {
+                return { success: false, error: error.stderr?.trim() || error.message };
+            }
+
+            // 2. Grant privileges
+            try {
+                const grantCmd = `docker exec ${dbContainerName} ${clientCmd} -h localhost -u root -p'${password}' -e "GRANT ALL PRIVILEGES ON \\\`${databaseName}\\\`.* TO '${dbConnection.user}'@'%'"`;
+                await execAsync(grantCmd, { timeout: 10000 });
+            } catch (grantError) {
+                console.warn('Could not grant privileges (non-critical):', grantError);
+            }
+
+            // 3. Flush privileges
+            try {
+                const flushCmd = `docker exec ${dbContainerName} ${clientCmd} -h localhost -u root -p'${password}' -e "FLUSH PRIVILEGES"`;
+                await execAsync(flushCmd, { timeout: 10000 });
+            } catch (flushError) {
+                console.warn('Could not flush privileges (non-critical):', flushError);
+            }
+
+            return { success: true };
+        } catch (error: any) {
+            return { success: false, error: error.stderr?.trim() || error.message };
+        }
+    }
+
+    /**
+     * List all databases in the instance's MySQL/MariaDB container
+     */
+    static async listDatabases(instanceName: string): Promise<{ success: boolean; databases?: string[]; error?: string }> {
+        try {
+            const dbContainerName = await this.getDbContainerName(instanceName);
+            if (!dbContainerName) {
+                return { success: false, error: `Database container not found for instance "${instanceName}"` };
+            }
+
+            const result = await this.query(dbContainerName, 'SHOW DATABASES');
+            if (!result.success) {
+                return { success: false, error: result.error };
+            }
+
+            // Extract database names from result
+            const databases = result.rows.map(row => Object.values(row)[0] as string);
+            return { success: true, databases };
+        } catch (error: any) {
+            return { success: false, error: error.message };
+        }
+    }
+    
+    /**
      * Parse tab-separated MySQL output to array of objects
      */
     private static parseQueryOutput(output: string): any[] {

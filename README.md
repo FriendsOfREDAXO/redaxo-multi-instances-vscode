@@ -39,7 +39,8 @@ Eine  TreeView (Seitenleiste)
 - **PHP Support** - PHP 7.4, 8.1, 8.2, 8.3, 8.4, 8.5
 - **MariaDB Support** - Aktuell 11.3
 - **🗄️ Adminer Integration** - Globaler Adminer-Container für Datenbankverwaltung
-- **🚀 Dynamic Path Resolution** - Intelligente Erkennung von Console-Pfaden und REDAXO-Strukturen
+- **� Multi-Database Support** - Erstelle zusätzliche Datenbanken pro Instanz über die UI
+- **�🚀 Dynamic Path Resolution** - Intelligente Erkennung von Console-Pfaden und REDAXO-Strukturen
 - **⚡ Performance Caching** - Path-Detection wird gecacht für schnellere Zugriffe
 - **Port Management** - Automatische Port-Zuweisung und -Verwaltung
 - **SSL Zertifikate** - Lokale Entwicklungszertifikate mit mkcert
@@ -178,18 +179,62 @@ Die Extension erkennt automatisch, ob es sich um einen MariaDB oder MySQL Contai
 - Netzwerk: `redaxo-adminer-network` für Container-Kommunikation
 - Unterstützt Custom und Standard REDAXO Instanzen
 
+### 💾 Multi-Database Support
+
+Erstelle zusätzliche Datenbanken für deine REDAXO-Instanzen - perfekt für Multi-Mandanten-Systeme oder separate Entwicklungs-Datenbanken!
+
+#### Features
+- 🎯 **One-Click Creation**: Rechtsklick auf laufende Instanz → "Create Additional Database"
+- ✅ **Name Validation**: Automatische Prüfung auf gültige Datenbanknamen
+- 📋 **Existing Databases**: Zeigt alle vorhandenen Datenbanken an
+- 🔐 **Auto-Credentials**: Verwendet automatisch Root-Credentials des Containers
+- 🌍 **UTF8MB4**: Standard Charset/Collation (utf8mb4_unicode_ci)
+- ⚡ **Quick Access**: Direkter Link zu Adminer nach Erstellung
+
+#### Verwendung
+1. **Instanz muss laufen** (Database-Creation nur bei aktiven Instanzen)
+2. **Rechtsklick** auf Instanz in TreeView
+3. **"Create Additional Database"** wählen
+4. **Datenbanknamen eingeben** (z.B., `shop_db`, `staging_db`)
+   - Nur Buchstaben, Zahlen und Unterstriche erlaubt
+   - Max. 64 Zeichen
+5. **Bestätigen** - Datenbank wird erstellt!
+6. Optional: **"Open in Adminer"** für sofortige Verwaltung
+
+#### Anwendungsfälle
+- **Multi-Mandanten-Systeme**: Separate Datenbank pro Mandant
+- **Testing**: Test-Datenbank neben Production-DB
+- **Staging**: Staging-Datenbank für sichere Tests
+- **Backup**: Temporäre Backup-Datenbank
+- **Development**: Separate Dev-Datenbank
+
+#### Beispiel
+```
+Instanz: demo-site (läuft)
+Standard DB: redaxo
+
+Neue DBs erstellen:
+- shop_db          → E-Commerce Daten
+- staging_redaxo   → Staging-Umgebung
+- test_db          → Unit Tests
+```
+
+Alle Datenbanken sind direkt über Adminer oder die Console erreichbar!
+
 ### Alle VS Code Kommandos (Auswahl)
 - `REDAXO: Create New Instance` - Neue Instanz erstellen
 - `REDAXO: Show Dashboard` - Dashboard öffnen
 - `REDAXO: Show Login Info` - Login-Daten anzeigen (inkl. DB-Zugang)
 - `REDAXO: Start/Stop Instance` - Instanzen verwalten
 - `REDAXO: Open in Adminer` - Datenbankverwaltung mit Adminer
+- `REDAXO: Create Additional Database` - 💾 Zusätzliche Datenbank erstellen
 - `REDAXO: Setup HTTPS/SSL` - SSL für Instanz einrichten
 - **`REDAXO: Show Help & Documentation`** - 📖 Vollständige Anleitung & Hilfe
 
 ### Kontextmenü (Rechtsklick auf Instanz)
 - **Start/Stop Instance** - Container starten/stoppen
 - **Open in Adminer** - Datenbank verwalten (nur bei laufenden Instanzen)
+- **Create Additional Database** - 💾 Zusätzliche Datenbanken erstellen (nur bei laufenden Instanzen)
 - **Show REDAXO Logs** - redaxo.log und system.log anzeigen
 - **Install CLI Tools** - vim, nano, curl, wget, git, mysql/mariadb installieren
 - **Login Information** - Zugangsdaten anzeigen

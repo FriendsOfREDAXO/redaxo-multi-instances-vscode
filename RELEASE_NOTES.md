@@ -2,6 +2,71 @@
 
 # Release Notes
 
+## Version 1.11.3 (2026-02-09)
+
+### ✨ Improvements
+- **Auto-Privileges**: Neue Datenbanken erhalten automatisch GRANT ALL Rechte für den Standard-User
+- **Adminer Visibility**: Neue Datenbanken sind jetzt sofort in Adminer sichtbar
+- Automatisches FLUSH PRIVILEGES nach Datenbankerstellung
+
+---
+
+## Version 1.11.2 (2026-02-09)
+
+### 🐛 Bug Fixes
+- **SQL Escaping**: Verbesserte Shell-Escaping für Datenbanknamen in CREATE DATABASE Queries
+- **Password Handling**: Passwort wird jetzt in Quotes übergeben für bessere Kompatibilität mit Sonderzeichen
+- Fix für "SQL syntax error" bei Create Database - korrekte Backtick-Escaping
+
+---
+
+## Version 1.11.1 (2026-02-09)
+
+### 🐛 Bug Fixes
+- **MariaDB Client Detection**: Automatische Erkennung von `mariadb` vs `mysql` Client in DB-Containern
+- Fix für "mysql: not found" Fehler bei Create Database in MariaDB 11.x Containern
+- Verbesserte Client-Erkennung: Prüft erst `mariadb`, dann `mysql` Command
+
+---
+
+## Version 1.11.0 (2026-02-09)
+
+### ✨ New Features
+- **Create Additional Databases**: Neue Funktion zum Erstellen zusätzlicher Datenbanken in einer Instanz
+  - Verfügbar über Kontext-Menü bei laufenden Instanzen
+  - Validierung von Datenbanknamen (nur alphanumerische Zeichen und Unterstriche)
+  - Zeigt existierende Datenbanken an
+  - Automatische Root-Credentials-Erkennung
+  - Direkter Adminer-Link nach erfolgreicher Erstellung
+  - Standard: utf8mb4_unicode_ci Collation
+
+### 🔧 Improvements
+- DatabaseQueryService um `createDatabase()` und `listDatabases()` erweitert
+- QuickPick-Menü um Database-Creation erweitert
+- Bessere Integration mit Adminer für Multi-Database-Support
+
+---
+
+## Version 1.10.1 (2026-02-08)
+
+### 📦 Dependency Updates
+- Updated all development dependencies to latest versions
+- @types/node: 22.x → 25.2.2
+- @types/vscode: 1.103.0 → 1.109.0
+- @typescript-eslint/eslint-plugin: 8.39.0 → 8.54.0
+- @typescript-eslint/parser: 8.39.0 → 8.54.0
+- eslint: 9.32.0 → 9.39.2
+- ts-loader: 9.5.2 → 9.5.4
+- typescript: 5.9.2 → 5.9.3
+- webpack: 5.101.0 → 5.105.0
+- mocha: added at 11.7.5
+
+### 🔧 Maintenance
+- Improved build configuration
+- Enhanced compatibility with latest VS Code versions
+
+---
+
 ## Version 1.10.0 (2025-11-22)
 
 ### ⚠️ Change: DB import/export handled via Adminer

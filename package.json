@@ -2,7 +2,7 @@
   "name": "redaxo-multi-instances-manager",
   "displayName": "REDAXO Multi-Instances Manager",
   "description": "Complete REDAXO multi-instance management with Docker containers, SSL support, and automatic port management integrated into VS Code",
-  "version": "1.10.0",
+  "version": "1.11.3",
   "publisher": "skerbis",
   "icon": "resources/icon.png",
   "repository": {
@@ -15,7 +15,7 @@
   },
   "license": "MIT",
   "engines": {
-    "vscode": "^1.103.0"
+    "vscode": "^1.109.0"
   },
   "categories": [
     "Other"
@@ -180,6 +180,11 @@
         "icon": "$(stop)"
       },
       {
+        "command": "redaxo-instances.createDatabase",
+        "title": "Create Additional Database",
+        "icon": "$(add)"
+      },
+      {
         "command": "redaxo-instances.copyCopilotInstructions",
         "title": "Copy Copilot Instructions",
         "icon": "$(clippy)"
@@ -334,6 +339,11 @@
           "group": "3_docker@5"
         },
         {
+          "command": "redaxo-instances.createDatabase",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
+          "group": "3_docker@6"
+        },
+        {
           "command": "redaxo-instances.getLoginInfo",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
           "group": "4_info@1"
@@ -439,16 +449,17 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "22.x",
-    "@types/vscode": "^1.103.0",
-    "@typescript-eslint/eslint-plugin": "^8.39.0",
-    "@typescript-eslint/parser": "^8.39.0",
+    "@types/node": "^25.2.2",
+    "@types/vscode": "^1.109.0",
+    "@typescript-eslint/eslint-plugin": "^8.54.0",
+    "@typescript-eslint/parser": "^8.54.0",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
-    "eslint": "^9.32.0",
-    "ts-loader": "^9.5.2",
-    "typescript": "^5.9.2",
-    "webpack": "^5.101.0",
+    "eslint": "^9.39.2",
+    "mocha": "^11.7.5",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "webpack": "^5.105.0",
     "webpack-cli": "^6.0.1"
   }
 }
