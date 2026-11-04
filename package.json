@@ -2,7 +2,7 @@
   "name": "redaxo-multi-instances-manager",
   "displayName": "%displayName%",
   "description": "%description%",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "publisher": "skerbis",
   "icon": "resources/icon.png",
   "repository": {

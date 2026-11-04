@@ -23,7 +23,7 @@ import {
     renderCompose, renderEnv, renderWelcomePage,
 } from './templates';
 import {
-    DEFAULT_MARIADB_VERSION, DEFAULT_PHP_VERSION, REDAXO6_VERSION, compareVersions, dockerHubTagExists, fetchRedaxoReleases, isPhpCompatibleWithRedaxo,
+    DEFAULT_MARIADB_VERSION, DEFAULT_PHP_VERSION, REDAXO6_VERSION, SHARED_IMAGES, compareVersions, dockerHubTagExists, fetchRedaxoReleases, isPhpCompatibleWithRedaxo,
     isSupportedMariaDbVersion, isSupportedPhpVersion, getRedaxoMinPhp, resolvePhpImageTag,
 } from './versions';
 
@@ -407,7 +407,7 @@ export class InstanceManager {
         if (await findComposeFile(instance.path)) {
             await this.docker.compose(instance.path, ['down', '--remove-orphans', ...(external ? [] : ['-v'])], { allowFailure: true });
         }
-        await fs.rm(instance.path, { recursive: true, force: true });
+        await this.removeDirectory(instance.path);
         try {
             await this.shared.syncProxy(await this.list({ withStatus: false }));
         } catch {
@@ -955,6 +955,9 @@ export class InstanceManager {
             cfg.domains = [];
         }
         await this.writeDockerDir(instance.path, true);
+        // Linux: the 1.x containers created the web files as www-data – hand them to the host user, the new image
+        // maps www-data to the host user anyway (database files stay untouched)
+        await this.takeOwnership(path.join(instance.path, layout.webroot));
         await this.rewriteRedaxoServer(instance.path, cfg);
         await this.writeInstanceFiles(instance.path, cfg);
         this.log.info(`Instance ${name} modernized (backup: ${backup ?? 'none'})`);
@@ -962,6 +965,40 @@ export class InstanceManager {
             await this.start(name, progress);
         }
         return { backup };
+    }
+
+    // ───────────────────────────────────────────── file ownership (Linux)
+
+    /**
+     * Runs a short-lived root container on a host directory – for files created by container users
+     * (www-data, mysql) that the host user may not change on Linux. Uses the proxy image (already present).
+     */
+    private async asRoot(dir: string, script: string): Promise<void> {
+        await this.docker.run(['run', '--rm', '-v', `${dir}:/target`, '--entrypoint', 'sh', SHARED_IMAGES.proxy, '-c', script], { onLine: () => {} });
+    }
+
+    private async takeOwnership(dir: string): Promise<void> {
+        const uid = process.getuid?.();
+        const gid = process.getgid?.();
+        if (process.platform !== 'linux' || uid === undefined || uid === 0 || !(await exists(dir))) {
+            return;
+        }
+        this.log.info(`Handing ${dir} to the host user`);
+        await this.asRoot(dir, `chown -R ${uid}:${gid ?? uid} /target`);
+    }
+
+    /** Deletes a directory, also when it contains files of container users (Linux). */
+    private async removeDirectory(dir: string): Promise<void> {
+        try {
+            await fs.rm(dir, { recursive: true, force: true });
+        } catch (error) {
+            const code = (error as NodeJS.ErrnoException).code;
+            if (code !== 'EACCES' && code !== 'EPERM' && code !== 'ENOTEMPTY') {
+                throw error;
+            }
+            await this.asRoot(dir, 'rm -rf /target/..?* /target/.[!.]* /target/*');
+            await fs.rm(dir, { recursive: true, force: true });
+        }
     }
 
     // ───────────────────────────────────────────── maintenance

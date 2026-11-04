@@ -1,5 +1,16 @@
 # Changelog
 
+## Version 2.0.1 (2026-11-04)
+
+### 🐛 Fehlerbehebungen
+- **Linux:** 1.x-Instanzen ließen sich nicht modernisieren und nicht löschen, weil ihre Dateien den Container-Benutzern (`www-data`, `mysql`) gehören. Beim Modernisieren wird der Webroot jetzt dem eigenen Benutzer übergeben, beim Löschen hilft bei Bedarf ein kurzlebiger Container.
+- **Proxy-Ports:** Die Port-Prüfung erkennt jetzt auch Umleitungen per Firewall-Regel (z. B. yerd) und wertet `EACCES` auf macOS nicht mehr als „belegt“. Sind 80/443 wieder frei, wechselt der Proxy automatisch zurück.
+- **Docker Desktop ohne privilegierten Helfer:** Ports unter 1024 werden dann automatisch auf allen Schnittstellen gebunden.
+- **Mehrere Prozesse:** Extension, MCP-Server und weitere Fenster lesen geänderte Proxy-Ports sofort neu ein.
+
+### 📦 Update
+`redaxo-multi-instances-manager-2.0.1.vsix` herunterladen → VS Code → Erweiterungen → **…** → **Aus VSIX installieren…** → **Developer: Reload Window**.
+
 ## Version 2.0.0 (2026-11-04)
 
 Kompletter Neuaufbau nach den aktuellen VS-Code-Vorgaben – **bestehende 1.x-Instanzen funktionieren weiter.**
