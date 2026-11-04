@@ -148,6 +148,7 @@ describe('templates for 2.1', () => {
         assert.equal(dc.workspaceFolder, '/var/www/html');
         assert.equal(dc.remoteUser, 'www-data');
         assert.equal(dc.customizations.vscode.settings['intelephense.environment.phpVersion'], '8.5.0');
+        assert.equal(dc.customizations.vscode.settings['terminal.integrated.defaultProfile.linux'], 'bash');
         const launch = xdebugLaunchConfig(i, '/x/shop/project');
         assert.deepEqual(launch.pathMappings, { '/var/www/html': '/x/shop/project' });
         assert.equal(launch.port, 9003);

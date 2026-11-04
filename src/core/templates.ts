@@ -472,7 +472,12 @@ export function renderDevcontainer(instance: Instance): string {
         customizations: {
             vscode: {
                 extensions: ['bmewburn.vscode-intelephense-client', 'xdebug.php-debug'],
-                settings: { 'intelephense.environment.phpVersion': `${instance.php}.0` },
+                settings: {
+                    'intelephense.environment.phpVersion': `${instance.php}.0`,
+                    // www-data has no login shell in the php images
+                    'terminal.integrated.defaultProfile.linux': 'bash',
+                    'terminal.integrated.profiles.linux': { bash: { path: '/bin/bash' } },
+                },
             },
         },
     };

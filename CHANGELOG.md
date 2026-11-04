@@ -19,6 +19,7 @@
 ### 🐛 Fehlerbehebungen
 - **Image-Updates erreichen jetzt auch bestehende Instanzen:** Die Build-Dateien in `docker/` werden aktualisiert, solange sie nicht von Hand geändert wurden (Prüfsummen in `docker/.generated.json`); geänderte Dateien bleiben erhalten.
 - **Dev Container:** „Im Dev Container öffnen“ startet die Instanz vorher mit dem aktuellen Image – vorher schlug das Einrichten mit „Permission denied“ auf `/var/www/.vscode-server` fehl.
+- **Dev Container:** Das Terminal startet mit `bash` (vorher: „/usr/sbin/nologin konnte nicht gestartet werden“).
 
 ## Version 2.0.1 (2026-11-04)
 

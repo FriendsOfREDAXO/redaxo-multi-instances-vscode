@@ -50,6 +50,7 @@ RUN set -eux; \
     chmod 0755 /usr/local/bin/redaxo-entrypoint; \
     git config --system --add safe.directory '*'; \
     chown www-data:www-data /var/www; \
+    usermod -s /bin/bash www-data; \
     a2enmod rewrite headers expires deflate remoteip setenvif; \
     a2dissite default-ssl >/dev/null 2>&1 || true
 
