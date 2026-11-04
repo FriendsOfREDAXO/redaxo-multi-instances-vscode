@@ -38,31 +38,44 @@ export class SharedServices {
         return path.join(this.dir, 'state.json');
     }
 
-    private cachedPorts?: { dir: string; ports: SharedPorts };
+    private cachedPorts?: { file: string; mtimeMs: number; ports: SharedPorts };
 
-    /** Host ports of the shared services (allocated on first use and persisted). */
+    /**
+     * Host ports of the shared services (allocated on first use and persisted).
+     * Re-read whenever state.json changes – the extension, the MCP server and other windows share it.
+     */
     async ports(reserved: ReadonlySet<number> = new Set()): Promise<SharedPorts> {
-        if (this.cachedPorts?.dir === this.dir) {
+        const file = this.stateFile;
+        let mtimeMs = -1;
+        try {
+            mtimeMs = (await fs.stat(file)).mtimeMs;
+        } catch {
+            // not allocated yet
+        }
+        if (this.cachedPorts && this.cachedPorts.file === file && this.cachedPorts.mtimeMs === mtimeMs) {
             return this.cachedPorts.ports;
         }
         let ports: SharedPorts | undefined;
-        try {
-            ports = (JSON.parse(await fs.readFile(this.stateFile, 'utf8')) as { ports?: SharedPorts }).ports;
-        } catch {
-            // not allocated yet
+        if (mtimeMs >= 0) {
+            try {
+                ports = (JSON.parse(await fs.readFile(file, 'utf8')) as { ports?: SharedPorts }).ports;
+            } catch {
+                // unreadable – allocate again
+            }
         }
         if (!ports) {
             ports = await this.allocatePorts(reserved);
             await this.savePorts(ports);
+            return ports;
         }
-        this.cachedPorts = { dir: this.dir, ports };
+        this.cachedPorts = { file, mtimeMs, ports };
         return ports;
     }
 
     private async savePorts(ports: SharedPorts): Promise<void> {
         await fs.mkdir(this.dir, { recursive: true });
         await fs.writeFile(this.stateFile, JSON.stringify({ ports }, null, 2) + '\n', 'utf8');
-        this.cachedPorts = { dir: this.dir, ports };
+        this.cachedPorts = { file: this.stateFile, mtimeMs: (await fs.stat(this.stateFile)).mtimeMs, ports };
     }
 
     /** 80/443 when free, otherwise the first free pair of a few well-known alternatives. */
