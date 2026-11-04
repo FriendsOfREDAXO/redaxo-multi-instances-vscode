@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
@@ -122,6 +123,10 @@ async function movePath(from: string, to: string): Promise<void> {
     }
 }
 
+function sha256(text: string): string {
+    return createHash('sha256').update(text.replace(/\r\n/g, '\n')).digest('hex');
+}
+
 function timestamp(): string {
     return new Date().toISOString().replace(/[:T]/g, '-').replace(/\..+$/, '');
 }
@@ -222,15 +227,40 @@ export class InstanceManager {
         return files;
     }
 
+    /**
+     * Writes the image build files. Files the user has not changed are updated to the current version
+     * (so image updates reach existing instances); changed files are kept. `docker/.generated.json`
+     * remembers the hash of each file as last written by the extension.
+     */
     private async writeDockerDir(dir: string, overwrite: boolean): Promise<void> {
         const dockerDir = path.join(dir, 'docker');
         await fs.mkdir(path.join(dockerDir, 'initdb'), { recursive: true });
+        const markerFile = path.join(dockerDir, '.generated.json');
+        let marker: Record<string, string> | undefined;
+        try {
+            marker = JSON.parse(await fs.readFile(markerFile, 'utf8')) as Record<string, string>;
+        } catch {
+            marker = undefined;
+        }
+        const nextMarker: Record<string, string> = {};
         for (const [name, content] of Object.entries(defaultImageFiles())) {
             const target = path.join(dockerDir, name);
-            if (overwrite || !(await exists(target))) {
-                await fs.writeFile(target, content, { encoding: 'utf8', mode: name.endsWith('.sh') ? 0o755 : 0o644 });
+            const current = await fs.readFile(target, 'utf8').catch(() => undefined);
+            // no marker yet (instances of 2.0.x): the files were generated and are meant to be customized via custom-setup.sh
+            const untouched = current === undefined || marker === undefined || marker[name] === sha256(current);
+            if (overwrite || untouched) {
+                if (current !== content) {
+                    await fs.writeFile(target, content, { encoding: 'utf8', mode: name.endsWith('.sh') ? 0o755 : 0o644 });
+                }
+                nextMarker[name] = sha256(content);
+            } else {
+                nextMarker[name] = marker?.[name] ?? '';
+                if (current !== content) {
+                    this.log.warn(`${path.relative(dir, target)} was changed by hand and is kept – it does not get image updates`);
+                }
             }
         }
+        await fs.writeFile(markerFile, JSON.stringify(nextMarker, null, 2) + '\n', 'utf8');
         const hook = path.join(dockerDir, 'custom-setup.sh');
         if (!(await exists(hook))) {
             await fs.writeFile(hook, CUSTOM_SETUP_SCRIPT, { encoding: 'utf8', mode: 0o755 });

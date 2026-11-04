@@ -1001,6 +1001,11 @@ export function registerCommands(ctx: CommandContext): void {
                 }
                 await vscode.commands.executeCommand('workbench.extensions.installExtension', 'ms-vscode-remote.remote-containers');
             }
+            // the container must run the current image (www-data needs a writable home for the VS Code server)
+            const ready = await withProgress(l10n.t('Preparing {0}', i.name), report => manager.start(i.name, report).then(() => true));
+            if (!ready) {
+                return;
+            }
             await fs.mkdir(path.join(i.path, '.devcontainer'), { recursive: true });
             await fs.writeFile(path.join(i.path, '.devcontainer', 'devcontainer.json'), renderDevcontainer(i), 'utf8');
             await vscode.commands.executeCommand('remote-containers.openFolder', vscode.Uri.file(i.path));

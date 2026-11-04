@@ -211,6 +211,7 @@
   "Open which instance in a Dev Container?": "Welche Instanz im Dev Container öffnen?",
   "Install Dev Containers": "Dev Containers installieren",
   "This needs the \"Dev Containers\" extension by Microsoft.": "Dafür wird die Erweiterung „Dev Containers“ von Microsoft benötigt.",
+  "Preparing {0}": "{0} wird vorbereitet",
   "The HTTPS proxy uses the standard ports 80/443 – addresses need no port.": "Der HTTPS-Proxy nutzt die Standard-Ports 80/443 – die Adressen brauchen keinen Port.",
   "Ports 80/443 are free – the proxy moves there when the next instance starts.": "Die Ports 80/443 sind frei – der Proxy wechselt beim nächsten Instanz-Start dorthin.",
   "Copy command": "Befehl kopieren",
