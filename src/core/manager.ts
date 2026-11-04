@@ -332,7 +332,9 @@ export class InstanceManager {
             const { portsChanged } = await this.shared.ensureUp(['proxy', 'mailpit'], await this.instancePorts());
             if (portsChanged) {
                 const p = await this.shared.ports();
-                warnings.push(`The previous HTTPS proxy ports were taken by another program – the proxy now uses ${p.proxyHttp}/${p.proxyHttps}.`);
+                warnings.push(p.proxyHttps === 443
+                    ? 'The HTTPS proxy now uses the standard ports 80/443 – addresses no longer need a port.'
+                    : `The previous HTTPS proxy ports were taken by another program – the proxy now uses ${p.proxyHttp}/${p.proxyHttps}.`);
             }
         } catch (error) {
             warnings.push(`Shared services: ${error instanceof Error ? error.message : String(error)}`);

@@ -1,4 +1,6 @@
 import * as assert from 'node:assert/strict';
+import * as net from 'node:net';
+import { isPortFree } from '../../src/core/ports';
 import { instanceHosts, validateDomain, validateInstanceName } from '../../src/core/model';
 import { proxyUrl, redaxoLangFromLocale } from '../../src/core/settings';
 
@@ -38,5 +40,16 @@ describe('model', () => {
         assert.equal(redaxoLangFromLocale('pt-br'), 'pt_br');
         assert.equal(redaxoLangFromLocale('en-US'), 'en_gb');
         assert.equal(redaxoLangFromLocale('ja'), 'en_gb');
+    });
+});
+
+describe('ports', () => {
+    it('detects ports in use', async () => {
+        const server = net.createServer();
+        await new Promise<void>(r => server.listen(0, '127.0.0.1', () => r()));
+        const port = (server.address() as net.AddressInfo).port;
+        assert.equal(await isPortFree(port), false);
+        await new Promise<void>(r => server.close(() => r()));
+        assert.equal(await isPortFree(port), true);
     });
 });

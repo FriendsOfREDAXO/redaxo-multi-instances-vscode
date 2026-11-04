@@ -1,14 +1,34 @@
 import * as net from 'node:net';
 import { randomBytes } from 'node:crypto';
 
-/** Checks whether a TCP port can be bound on the loopback interface(s). */
+/** True when something accepts connections on the port (also catches firewall redirects, e.g. pf rules of local dev servers). */
+function isAnswering(port: number, host: string, timeoutMs = 500): Promise<boolean> {
+    return new Promise(resolve => {
+        const socket = net.connect({ port, host });
+        const done = (answer: boolean) => {
+            socket.destroy();
+            resolve(answer);
+        };
+        socket.setTimeout(timeoutMs, () => done(false));
+        socket.once('connect', () => done(true));
+        socket.once('error', () => done(false));
+    });
+}
+
+/**
+ * Checks whether a TCP port is free on the loopback interface(s).
+ * Busy = something answers on it, or binding fails with EADDRINUSE. EACCES is no conflict: on macOS
+ * unprivileged processes may not bind ports < 1024 to 127.0.0.1 – Docker can.
+ */
 export async function isPortFree(port: number): Promise<boolean> {
+    if (await isAnswering(port, '127.0.0.1') || await isAnswering(port, '::1')) {
+        return false;
+    }
     const tryListen = (host: string) => new Promise<boolean>(resolve => {
         const server = net.createServer();
         server.unref();
         server.once('error', (err: NodeJS.ErrnoException) => {
-            // EADDRNOTAVAIL: IPv6 disabled – not a conflict
-            resolve(err.code === 'EADDRNOTAVAIL' || err.code === 'EAFNOSUPPORT');
+            resolve(err.code !== 'EADDRINUSE');
         });
         server.listen({ port, host, exclusive: true }, () => server.close(() => resolve(true)));
     });

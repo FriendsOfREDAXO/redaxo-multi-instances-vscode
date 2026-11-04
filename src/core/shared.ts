@@ -167,6 +167,21 @@ export class SharedServices {
                 await this.savePorts(next);
             }
         }
+        // back to the standard ports as soon as they are free again (e.g. another local web server was stopped)
+        if (services.includes('proxy')) {
+            const current = await this.ports(reserved);
+            const std = { http: PREFERRED_PORTS.proxyHttp, https: PREFERRED_PORTS.proxyHttps };
+            if ((current.proxyHttp !== std.http || current.proxyHttps !== std.https)
+                && !reserved.has(std.http) && !reserved.has(std.https)
+                && await isPortFree(std.http) && await isPortFree(std.https)) {
+                this.log.info(`Standard ports ${std.http}/${std.https} are free again – moving the HTTPS proxy there`);
+                await this.savePorts({ ...current, proxyHttp: std.http, proxyHttps: std.https });
+                if (status.proxy && !missing.includes('proxy')) {
+                    missing.push('proxy');
+                }
+                portsChanged = true;
+            }
+        }
         await this.writeCompose();
         if (missing.length === 0) {
             return { portsChanged };
