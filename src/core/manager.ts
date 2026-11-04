@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
@@ -8,9 +9,11 @@ import { QUERY_SCRIPT, QueryResult, isReadOnlyStatement, isValidIdentifier, syst
 import { Docker, Logger, ProgressReporter } from './docker';
 import { run } from './exec';
 import {
-    COMPOSER_CACHE_VOLUME, INSTANCE_CONFIG_FILE, Instance, InstanceConfig, InstanceKind, SHARED_DIR,
+    COMPOSER_CACHE_VOLUME, INSTANCE_CONFIG_FILE, Instance, InstanceConfig, InstanceKind, SHARED_DIR, SHARED_NETWORK,
     defaultLayout, validateDomain, validateInstanceName,
 } from './model';
+import { describeOccupant } from './diagnose';
+import { DetectedProject, GitStatus, detectProject, gitClone, gitInit, prepareClonedRedaxo5, repoName } from './git';
 import { findFreePort, generatePassword } from './ports';
 import { CoreSettings } from './settings';
 import { SharedServices } from './shared';
@@ -47,6 +50,43 @@ export interface CreateOptions {
     xdebug?: boolean;
     /** Start (and install) right away. Default: true. */
     start?: boolean;
+    /**
+     * Existing project files (e.g. a cloned repository) that become the web root. The directory is moved,
+     * not copied. REDAXO is then not downloaded; REDAXO 6 projects get `composer install` + setup.
+     */
+    sourceDir?: string;
+    /** Document root inside the container when it differs from the default (detected for existing projects). */
+    docroot?: string;
+}
+
+export interface Snapshot {
+    id: string;
+    path: string;
+    label: string;
+    createdAt: string;
+    databases: string[];
+    sizeBytes: number;
+    php: string;
+    mariadb: string;
+}
+
+export interface InstanceResources {
+    cpuPercent?: number;
+    memoryBytes?: number;
+    diskBytes?: number;
+}
+
+/** `512.3MiB`, `1.2GiB`, `800kB` → bytes. */
+export function parseByteSize(value: string): number {
+    const m = /([\d.]+)\s*([kKMGT]?i?B)/.exec(value.trim());
+    if (!m) {
+        return 0;
+    }
+    const n = parseFloat(m[1]);
+    const unit = m[2].toLowerCase();
+    const base = unit.includes('i') ? 1024 : 1000;
+    const exp = { b: 0, kb: 1, kib: 1, mb: 2, mib: 2, gb: 3, gib: 3, tb: 4, tib: 4 }[unit] ?? 0;
+    return Math.round(n * base ** exp);
 }
 
 export interface StartResult {
@@ -68,6 +108,23 @@ async function exists(p: string): Promise<boolean> {
     } catch {
         return false;
     }
+}
+
+/** Moves a directory, also across file systems (rename falls back to copy + delete). */
+async function movePath(from: string, to: string): Promise<void> {
+    try {
+        await fs.rename(from, to);
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EXDEV') {
+            throw error;
+        }
+        await fs.cp(from, to, { recursive: true, verbatimSymlinks: true });
+        await fs.rm(from, { recursive: true, force: true });
+    }
+}
+
+function sha256(text: string): string {
+    return createHash('sha256').update(text.replace(/\r\n/g, '\n')).digest('hex');
 }
 
 function timestamp(): string {
@@ -170,15 +227,40 @@ export class InstanceManager {
         return files;
     }
 
+    /**
+     * Writes the image build files. Files the user has not changed are updated to the current version
+     * (so image updates reach existing instances); changed files are kept. `docker/.generated.json`
+     * remembers the hash of each file as last written by the extension.
+     */
     private async writeDockerDir(dir: string, overwrite: boolean): Promise<void> {
         const dockerDir = path.join(dir, 'docker');
         await fs.mkdir(path.join(dockerDir, 'initdb'), { recursive: true });
+        const markerFile = path.join(dockerDir, '.generated.json');
+        let marker: Record<string, string> | undefined;
+        try {
+            marker = JSON.parse(await fs.readFile(markerFile, 'utf8')) as Record<string, string>;
+        } catch {
+            marker = undefined;
+        }
+        const nextMarker: Record<string, string> = {};
         for (const [name, content] of Object.entries(defaultImageFiles())) {
             const target = path.join(dockerDir, name);
-            if (overwrite || !(await exists(target))) {
-                await fs.writeFile(target, content, { encoding: 'utf8', mode: name.endsWith('.sh') ? 0o755 : 0o644 });
+            const current = await fs.readFile(target, 'utf8').catch(() => undefined);
+            // no marker yet (instances of 2.0.x): the files were generated and are meant to be customized via custom-setup.sh
+            const untouched = current === undefined || marker === undefined || marker[name] === sha256(current);
+            if (overwrite || untouched) {
+                if (current !== content) {
+                    await fs.writeFile(target, content, { encoding: 'utf8', mode: name.endsWith('.sh') ? 0o755 : 0o644 });
+                }
+                nextMarker[name] = sha256(content);
+            } else {
+                nextMarker[name] = marker?.[name] ?? '';
+                if (current !== content) {
+                    this.log.warn(`${path.relative(dir, target)} was changed by hand and is kept – it does not get image updates`);
+                }
             }
         }
+        await fs.writeFile(markerFile, JSON.stringify(nextMarker, null, 2) + '\n', 'utf8');
         const hook = path.join(dockerDir, 'custom-setup.sh');
         if (!(await exists(hook))) {
             await fs.writeFile(hook, CUSTOM_SETUP_SCRIPT, { encoding: 'utf8', mode: 0o755 });
@@ -295,17 +377,28 @@ export class InstanceManager {
         if (cfg.redaxo6 === 'core') {
             cfg.layout.docroot = '/var/www/html/project/public';
         }
+        if (options.docroot) {
+            cfg.layout.docroot = options.docroot;
+        }
 
         progress('Writing configuration…');
         try {
-            await fs.mkdir(path.join(dir, cfg.layout.webroot, cfg.redaxo6 ? '' : 'public'), { recursive: true });
+            if (options.sourceDir) {
+                await fs.mkdir(dir, { recursive: true });
+                await movePath(options.sourceDir, path.join(dir, cfg.layout.webroot));
+                if (options.kind === 'redaxo' && !options.redaxo6) {
+                    await prepareClonedRedaxo5(path.join(dir, cfg.layout.webroot, path.posix.relative('/var/www/html', cfg.layout.docroot)));
+                }
+            } else {
+                await fs.mkdir(path.join(dir, cfg.layout.webroot, cfg.redaxo6 ? '' : 'public'), { recursive: true });
+            }
             await this.writeDockerDir(dir, true);
-            if (options.kind === 'custom') {
+            if (options.kind === 'custom' && !options.sourceDir) {
                 await fs.writeFile(path.join(dir, cfg.layout.webroot, 'public', 'index.php'), renderWelcomePage(cfg), 'utf8');
             }
             await fs.writeFile(path.join(dir, '.gitignore'), [
                 '# REDAXO Multi-Instances',
-                'redaxo-instance.json', '.env', 'docker-compose.yml', '.legacy/', 'docker/initdb/*.sql', '',
+                'redaxo-instance.json', '.env', 'docker-compose.yml', '.legacy/', 'docker/initdb/*.sql', '.snapshots/', '',
             ].join('\n'), 'utf8');
             await this.writeInstanceFiles(dir, cfg);
         } catch (error) {
@@ -332,9 +425,12 @@ export class InstanceManager {
             const { portsChanged } = await this.shared.ensureUp(['proxy', 'mailpit'], await this.instancePorts());
             if (portsChanged) {
                 const p = await this.shared.ports();
-                warnings.push(p.proxyHttps === 443
-                    ? 'The HTTPS proxy now uses the standard ports 80/443 – addresses no longer need a port.'
-                    : `The previous HTTPS proxy ports were taken by another program – the proxy now uses ${p.proxyHttp}/${p.proxyHttps}.`);
+                if (p.proxyHttps === 443) {
+                    warnings.push('The HTTPS proxy now uses the standard ports 80/443 – addresses no longer need a port.');
+                } else {
+                    const occupants = await this.shared.standardPortOccupants();
+                    warnings.push(`Ports 80/443 are in use (${occupants.map(describeOccupant).join('; ') || 'unknown program'}) – the HTTPS proxy uses ${p.proxyHttp}/${p.proxyHttps}.`);
+                }
             }
         } catch (error) {
             warnings.push(`Shared services: ${error instanceof Error ? error.message : String(error)}`);
@@ -965,6 +1061,221 @@ export class InstanceManager {
             await this.start(name, progress);
         }
         return { backup };
+    }
+
+    // ───────────────────────────────────────────── git
+
+    /** Clones a repository into a temporary folder and detects what it is (REDAXO 5/6 or PHP project). */
+    async cloneProject(url: string, branch?: string): Promise<{ dir: string; project: DetectedProject; suggestedName: string }> {
+        const tmpRoot = path.join(this.settings.instancesDir, SHARED_DIR, 'tmp');
+        await fs.mkdir(tmpRoot, { recursive: true });
+        const dir = await fs.mkdtemp(path.join(tmpRoot, 'clone-'));
+        await fs.rmdir(dir);
+        await gitClone(url, dir, branch);
+        const suggestedName = repoName(url).toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'projekt';
+        return { dir, project: await detectProject(dir), suggestedName };
+    }
+
+    /** Clones a repository and creates (and starts) an instance from it. */
+    async createFromGit(url: string, options: Omit<CreateOptions, 'kind' | 'redaxo6' | 'sourceDir' | 'docroot'> & { branch?: string }, progress: ProgressReporter = () => {}): Promise<Instance> {
+        progress('Cloning repository…');
+        const { dir, project } = await this.cloneProject(url, options.branch);
+        try {
+            this.log.info(`Detected ${project.description}`);
+            return await this.create({
+                ...options,
+                kind: project.kind,
+                redaxo6: project.redaxo6,
+                docroot: project.docroot,
+                sourceDir: dir,
+            }, progress);
+        } finally {
+            await fs.rm(dir, { recursive: true, force: true });
+        }
+    }
+
+    /** Puts the web root of an instance under git (init, .gitignore, optional remote, initial commit). */
+    async setupGit(name: string, options: { remote?: string; commit?: boolean } = {}): Promise<GitStatus & { dir: string }> {
+        const instance = await this.get(name, false);
+        const dir = instance.webrootPath;
+        const status = await gitInit(dir, {
+            kind: instance.kind,
+            redaxo6: instance.redaxo6,
+            docroot: instance.layout.docroot,
+        }, options);
+        return { ...status, dir };
+    }
+
+    // ───────────────────────────────────────────── snapshots
+
+    private snapshotsDir(instance: Instance): string {
+        return path.join(instance.path, '.snapshots');
+    }
+
+    /** Cache contents are never part of a snapshot – they are rebuilt anyway. */
+    private snapshotExcludes(instance: Instance): string[] {
+        const docrootRel = path.posix.relative('/var/www/html', instance.layout.docroot);
+        const prefix = docrootRel ? `./${docrootRel}` : '.';
+        return [...new Set([
+            `${prefix}/redaxo/cache/*`, './var/cache/*', './project/var/cache/*', './node_modules', './.git',
+        ])];
+    }
+
+    async listSnapshots(name: string): Promise<Snapshot[]> {
+        const instance = await this.get(name, false);
+        const dir = this.snapshotsDir(instance);
+        const out: Snapshot[] = [];
+        for (const id of await fs.readdir(dir).catch(() => [] as string[])) {
+            try {
+                const meta = JSON.parse(await fs.readFile(path.join(dir, id, 'snapshot.json'), 'utf8')) as Omit<Snapshot, 'id' | 'path'>;
+                out.push({ ...meta, id, path: path.join(dir, id) });
+            } catch {
+                // incomplete snapshot
+            }
+        }
+        return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    }
+
+    /** Saves the database(s) and the files of the web root (without caches). */
+    async createSnapshot(name: string, label = '', progress: ProgressReporter = () => {}): Promise<Snapshot> {
+        const instance = await this.get(name, false);
+        const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+        const id = `${timestamp()}${slug ? `-${slug}` : ''}`;
+        const dir = path.join(this.snapshotsDir(instance), id);
+        await fs.mkdir(dir, { recursive: true });
+        await this.ensureGitignoreEntry(instance.path, '.snapshots/');
+        const startedDb = await this.ensureDbRunning(instance, progress);
+        try {
+            progress('Saving database…');
+            const databases = await this.dumpDatabase(name, path.join(dir, 'database.sql'));
+            progress('Saving files…');
+            await run('tar', ['-czf', path.join(dir, 'files.tar.gz'),
+                ...this.snapshotExcludes(instance).flatMap(e => ['--exclude', e]), '-C', instance.webrootPath, '.'], { timeout: 3_600_000 });
+            const sizeBytes = (await fs.stat(path.join(dir, 'database.sql'))).size + (await fs.stat(path.join(dir, 'files.tar.gz'))).size;
+            const meta = { label, createdAt: new Date().toISOString(), databases, sizeBytes, php: instance.php, mariadb: instance.mariadb };
+            await fs.writeFile(path.join(dir, 'snapshot.json'), JSON.stringify(meta, null, 2), 'utf8');
+            this.log.info(`Snapshot ${id} of ${name} created`);
+            return { ...meta, id, path: dir };
+        } catch (error) {
+            await fs.rm(dir, { recursive: true, force: true });
+            throw error;
+        } finally {
+            if (startedDb) {
+                await this.docker.compose(instance.path, ['stop', instance.layout.dbService], { allowFailure: true });
+            }
+        }
+    }
+
+    /** Restores database(s) and files of a snapshot. Files and tables created afterwards are removed. */
+    async restoreSnapshot(name: string, id: string, progress: ProgressReporter = () => {}): Promise<void> {
+        const instance = await this.get(name, false);
+        const snapshot = (await this.listSnapshots(name)).find(s => s.id === id);
+        if (!snapshot) {
+            throw new InstanceError(`Snapshot ${id} not found`, 'not-found');
+        }
+        const startedDb = await this.ensureDbRunning(instance, progress);
+        try {
+            progress('Restoring database…');
+            const drop = snapshot.databases.filter(isValidIdentifier).map(db => `DROP DATABASE IF EXISTS \`${db}\`;`).join(' ');
+            if (drop) {
+                await this.dbRoot(instance, drop);
+            }
+            const tmp = `/tmp/redaxo-mi-restore-${Date.now()}.sql`;
+            await this.docker.run(['cp', path.join(snapshot.path, 'database.sql'), `${instance.layout.dbContainer}:${tmp}`], { onLine: () => {} });
+            await this.docker.exec(instance.layout.dbContainer, ['sh', '-c',
+                `BIN=$(command -v mariadb || command -v mysql); "$BIN" -uroot < ${tmp}; rc=$?; rm -f ${tmp}; exit $rc`], {
+                execEnv: { MYSQL_PWD: instance.db.rootPassword }, timeout: 3_600_000,
+            });
+            progress('Restoring files…');
+            await this.clearDirectory(instance.webrootPath, ['.git', 'node_modules']);
+            await run('tar', ['-xzf', path.join(snapshot.path, 'files.tar.gz'), '-C', instance.webrootPath], { timeout: 3_600_000 });
+            this.log.info(`Snapshot ${id} of ${name} restored`);
+        } finally {
+            if (startedDb) {
+                await this.docker.compose(instance.path, ['stop', instance.layout.dbService], { allowFailure: true });
+            }
+        }
+    }
+
+    async deleteSnapshot(name: string, id: string): Promise<void> {
+        const snapshot = (await this.listSnapshots(name)).find(s => s.id === id);
+        if (snapshot) {
+            await fs.rm(snapshot.path, { recursive: true, force: true });
+        }
+    }
+
+    private async ensureDbRunning(instance: Instance, progress: ProgressReporter): Promise<boolean> {
+        if (await this.docker.isRunning(instance.layout.dbContainer)) {
+            return false;
+        }
+        progress('Starting database…');
+        await this.docker.ensureNetwork(SHARED_NETWORK);
+        await this.docker.compose(instance.path, ['up', '-d', '--wait', instance.layout.dbService]);
+        return true;
+    }
+
+    private async ensureGitignoreEntry(dir: string, entry: string): Promise<void> {
+        const file = path.join(dir, '.gitignore');
+        const current = await fs.readFile(file, 'utf8').catch(() => undefined);
+        if (current !== undefined && !current.split(/\r?\n/).includes(entry)) {
+            await fs.writeFile(file, `${current.trimEnd()}\n${entry}\n`, 'utf8');
+        }
+    }
+
+    /** Removes everything in a directory except `keep` (falls back to a root container on Linux). */
+    private async clearDirectory(dir: string, keep: readonly string[]): Promise<void> {
+        for (const entry of await fs.readdir(dir)) {
+            if (!keep.includes(entry)) {
+                await this.removeDirectory(path.join(dir, entry));
+            }
+        }
+    }
+
+    // ───────────────────────────────────────────── duplicate / resources
+
+    /** Copies an instance (files + database) under a new name – via export and import. */
+    async duplicate(name: string, newName: string, progress: ProgressReporter = () => {}): Promise<Instance> {
+        const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'redaxo-mi-dup-'));
+        try {
+            const { archive } = await this.exportInstance(name, tmp, progress, { requireDatabase: true });
+            return await this.importInstance(archive, newName, progress);
+        } finally {
+            await fs.rm(tmp, { recursive: true, force: true });
+        }
+    }
+
+    /** CPU / memory of the containers (when running) and disk usage of the instance. */
+    async resources(name: string): Promise<InstanceResources> {
+        const instance = await this.get(name);
+        const result: InstanceResources = {};
+        if (instance.status !== 'stopped') {
+            const res = await this.docker.run(['stats', '--no-stream', '--format', '{{json .}}', instance.layout.webContainer, instance.layout.dbContainer],
+                { allowFailure: true, timeout: 20_000, onLine: () => {} });
+            let cpu = 0;
+            let mem = 0;
+            for (const line of res.stdout.split(/\r?\n/).filter(Boolean)) {
+                try {
+                    const s = JSON.parse(line) as { CPUPerc: string; MemUsage: string };
+                    cpu += parseFloat(s.CPUPerc) || 0;
+                    mem += parseByteSize(s.MemUsage.split('/')[0]);
+                } catch {
+                    // ignore
+                }
+            }
+            result.cpuPercent = Math.round(cpu * 10) / 10;
+            result.memoryBytes = mem;
+        }
+        if (process.platform !== 'win32') {
+            const du = await run('du', ['-sk', instance.path], { allowFailure: true, timeout: 60_000 });
+            const files = parseInt(du.stdout, 10) * 1024 || 0;
+            let database = 0;
+            if (instance.layout.dbStorage.type === 'volume' && await this.docker.isRunning(instance.layout.dbContainer)) {
+                const dbDu = await this.docker.exec(instance.layout.dbContainer, ['du', '-sk', '/var/lib/mysql'], { allowFailure: true, timeout: 60_000 });
+                database = parseInt(dbDu.stdout, 10) * 1024 || 0;
+            }
+            result.diskBytes = files + database;
+        }
+        return result;
     }
 
     // ───────────────────────────────────────────── file ownership (Linux)

@@ -9,6 +9,10 @@ Diese Hilfe öffnest du jederzeit mit **REDAXO: Hilfe** (Befehlspalette `⇧⌘P
 - [REDAXO 6](#redaxo-6)
 - [KI: Copilot und Claude (MCP)](#ki-copilot-und-claude-mcp)
 - [Xdebug](#xdebug)
+- [Fehler im Problems-Panel](#fehler-im-problems-panel)
+- [Sicherungspunkte](#sicherungspunkte)
+- [Git](#git)
+- [Weitere Werkzeuge](#weitere-werkzeuge)
 - [Export, Import und Instanzen aus 1.x](#export-import-und-instanzen-aus-1x)
 - [Installation und Updates](#installation-und-updates)
 - [Problemlösung](#problemlösung)
@@ -130,28 +134,43 @@ Instanz-Ordner geöffnet ist. Aktualisieren: Rechtsklick → **KI-Anweisungen ak
 
 ## Xdebug
 
-1. Rechtsklick → **Xdebug ein-/ausschalten** (die Instanz startet kurz neu).
-2. Die PHP-Debug-Erweiterung in VS Code installieren und diese Konfiguration in `.vscode/launch.json` des
-   Instanz-Ordners anlegen:
+Rechtsklick → **Debugging starten (Xdebug)**. Das erledigt alles in einem Schritt:
 
-```json
-{
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Xdebug (REDAXO)",
-      "type": "php",
-      "request": "launch",
-      "port": 9003,
-      "pathMappings": { "/var/www/html": "${workspaceFolder}/project" }
-    }
-  ]
-}
-```
+- schaltet Xdebug in der Instanz ein (sie startet dafür kurz neu),
+- bietet bei Bedarf die Installation der Erweiterung „PHP Debug“ an,
+- startet den Debugger mit dem richtigen Pfad-Mapping und legt `.vscode/launch.json` im Instanz-Ordner an.
 
-3. Xdebug startet nur auf Anfrage (Trigger): Browser-Erweiterung „Xdebug helper“ verwenden oder `?XDEBUG_TRIGGER=1` an die URL hängen.
+Danach einen Breakpoint setzen und die Seite mit `?XDEBUG_TRIGGER=1` aufrufen (oder die Browser-Erweiterung
+„Xdebug helper“ nutzen). **Xdebug ein-/ausschalten** schaltet nur um, ohne den Debugger zu starten.
 
-Bei Instanzen aus Version 1.x (REDAXO-Standard) liegt der Webroot in `data/redaxo` statt in `project`.
+## Fehler im Problems-Panel
+
+PHP- und REDAXO-Fehler laufender Instanzen erscheinen automatisch im Bereich **Probleme** von VS Code – mit Datei und
+Zeile, ein Klick springt an die Stelle. Gelesen werden REDAXOs `system.log` und die PHP-Fehlerausgabe des Containers;
+angezeigt werden nur Fehler, die nach dem Start von VS Code auftreten. Leeren: **REDAXO-Probleme leeren**.
+
+## Sicherungspunkte
+
+Rechtsklick → **Sicherungspunkt anlegen…** sichert Datenbank und Dateien der Instanz (ohne Cache) – ideal vor einem
+AddOn-Update, einer Migration oder einem Experiment. Unter **Sicherungspunkte…** lassen sie sich wiederherstellen
+oder löschen. Beim Wiederherstellen werden Datenbank und Dateien exakt auf den gesicherten Stand zurückgesetzt; ein
+eventuelles Git-Repository (`.git`) bleibt unberührt. Die Sicherungen liegen im Instanz-Ordner unter `.snapshots/`.
+
+## Git
+
+- **Neue Instanz aus Git-Repository…** (auch im Assistenten unter „Aus Git-Repository…“): klont ein Projekt mit deinen
+  Git-Zugangsdaten, erkennt REDAXO 5, REDAXO 6 oder ein PHP-Projekt samt Document Root und richtet alles ein.
+  REDAXO 6 bekommt `composer install` und das Setup, REDAXO 5 eine frische Installation mit leerer Datenbank.
+- **Git einrichten…** (Rechtsklick): stellt den Projektordner (`project/`) unter Git – mit passender `.gitignore` für
+  REDAXO (Cache, `config.yml`, Logs, Medien), optionalem Remote und erstem Commit. Danach in der Quellcodeverwaltung
+  von VS Code nutzbar.
+
+## Weitere Werkzeuge
+
+- **Duplizieren…** kopiert eine Instanz samt Datenbank unter neuem Namen – z. B. um ein Update gefahrlos zu testen.
+- **Im Dev Container öffnen** öffnet VS Code direkt im Web-Container (Erweiterung „Dev Containers“). PHP-Werkzeuge wie
+  Intelephense arbeiten dann mit genau der PHP-Version der Instanz.
+- **Ressourcen:** Fährst du mit der Maus über eine Instanz, zeigt der Tooltip CPU, RAM und Speicherbedarf.
 
 ## Export, Import und Instanzen aus 1.x
 
@@ -185,7 +204,8 @@ modernisieren kannst du sie einzeln, wann du willst (siehe oben). Die von 1.x an
 | Instanz startet nicht / Warnsymbol | Rechtsklick → **Container neu aufbauen**. Dateien und Datenbank bleiben erhalten. |
 | Port-Konflikte | **Wartung… → Port-Konflikte beheben** |
 | Speicherplatz | **Wartung… → Docker aufräumen** entfernt Container und Images gelöschter Instanzen. |
-| Adressen brauchen einen Port (`:8443`) | Ein anderer lokaler Server belegt 80/443 (z. B. Atelier, yerd, Herd, Valet, MAMP). Beenden – beim nächsten Start einer Instanz wechselt der Proxy automatisch zurück. Bei yerd zusätzlich `sudo pfctl -a dev.yerd -F nat`. |
+| Unbekannte Domain zeigt eine Liste der Instanzen | Die Domain gehört zu keiner Instanz – bei der gewünschten Instanz unter **Domains…** eintragen. |
+| Adressen brauchen einen Port (`:8443`) | Ein anderer lokaler Server belegt 80/443 (z. B. Atelier, yerd, Herd, Valet, MAMP). Beenden – beim nächsten Start einer Instanz wechselt der Proxy automatisch zurück. Bei yerd zusätzlich `sudo pfctl -a dev.yerd -F nat`. **Wartung… → Warum brauchen die Adressen einen Port?** zeigt, wer die Ports belegt. |
 | Instanzen liegen woanders | **Wartung… → Instanzen-Ordner ändern…** oder Einstellung `redaxo-instances.instancesPath` |
 
 Ausführliche Protokolle aller Aktionen: **REDAXO: Log anzeigen**.

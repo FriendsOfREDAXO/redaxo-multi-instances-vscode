@@ -105,7 +105,7 @@ export async function askDomains(current: readonly string[], name: string): Prom
 /**
  * Two steps for the common case (name → "REDAXO"), versions only when asked for.
  */
-export async function createInstanceWizard(manager: InstanceManager, state: vscode.Memento): Promise<CreateOptions | undefined> {
+export async function createInstanceWizard(manager: InstanceManager, state: vscode.Memento): Promise<CreateOptions | { fromGit: true; name: string } | undefined> {
     const title = l10n.t('New instance');
     const name = await askInstanceName(manager, `${title} (1/2)`);
     if (!name) {
@@ -117,11 +117,12 @@ export async function createInstanceWizard(manager: InstanceManager, state: vsco
     const mariadb = isSupportedMariaDbVersion(last.mariadb ?? '') ? last.mariadb! : DEFAULT_MARIADB_VERSION;
     const versions = `PHP ${php} · MariaDB ${mariadb}`;
 
-    type Choice = { kind: InstanceKind; custom: boolean; redaxo6?: 'project' | 'core' };
+    type Choice = { kind: InstanceKind; custom: boolean; redaxo6?: 'project' | 'core'; git?: boolean };
     const choice = await vscode.window.showQuickPick<Pick<Choice>>([
         { label: '$(rocket) REDAXO', description: l10n.t('latest version, installed automatically'), detail: versions, value: { kind: 'redaxo', custom: false } },
         { label: '$(settings) REDAXO', description: l10n.t('choose versions…'), detail: l10n.t('REDAXO, PHP and MariaDB version'), value: { kind: 'redaxo', custom: true } },
         { label: l10n.t('Other'), kind: vscode.QuickPickItemKind.Separator, value: { kind: 'custom', custom: false } },
+        { label: '$(repo) ' + l10n.t('From a Git repository…'), description: l10n.t('clone an existing project'), detail: l10n.t('REDAXO 5, REDAXO 6 or PHP project – detected automatically'), value: { kind: 'custom', custom: false, git: true } },
         { label: '$(file-code) ' + l10n.t('Empty PHP project'), description: l10n.t('for your own REDAXO setup, Composer projects, …'), detail: `${versions} · ${l10n.t('document root: project/public')}`, value: { kind: 'custom', custom: false } },
         { label: '$(settings) ' + l10n.t('Empty PHP project'), description: l10n.t('choose versions…'), value: { kind: 'custom', custom: true } },
         { label: 'REDAXO 6', kind: vscode.QuickPickItemKind.Separator, value: { kind: 'redaxo', custom: false } },
@@ -130,6 +131,9 @@ export async function createInstanceWizard(manager: InstanceManager, state: vsco
     ], { title: `${title} (2/2): ${name}`, placeHolder: l10n.t('What should be installed?') });
     if (!choice) {
         return undefined;
+    }
+    if (choice.value.git) {
+        return { fromGit: true, name };
     }
 
     const options: CreateOptions = { name, kind: choice.value.kind, php, mariadb, redaxoVersion: 'latest', redaxo6: choice.value.redaxo6, domains: [] };

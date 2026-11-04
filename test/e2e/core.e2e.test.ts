@@ -11,6 +11,7 @@ import * as path from 'node:path';
 import { detectMkcert } from '../../src/core/certs';
 import { run } from '../../src/core/exec';
 import { InstanceError, InstanceManager } from '../../src/core/manager';
+import { parsePhpErrorLine, toProblem } from '../../src/core/problems';
 import { withDefaults } from '../../src/core/settings';
 import { DockerComposeGenerator } from './legacy/dockerCompose';
 import { legacyCustomCompose, legacyCustomEnv } from './legacy/emptyInstance';
@@ -217,6 +218,99 @@ describe('core e2e (Docker)', function () {
             assert.match(page.body, /8\.6\.\d/);
             assert.match(page.body, /11\.8\.\d+-MariaDB/);
             await assert.rejects(manager.console('e2e-custom', ['list']), /No REDAXO console/);
+        });
+    });
+
+    describe('2.1 features', () => {
+        it('creates and restores snapshots (database + files)', async () => {
+            const name = 'e2e-rx';
+            const i = await manager.get(name);
+            const file = path.join(i.docrootPath, 'snapshot-test.txt');
+            await manager.query(name, "UPDATE rex_user SET name = 'SNAP' WHERE login = 'admin'");
+            await fs.writeFile(file, 'v1');
+            const snap = await manager.createSnapshot(name, 'e2e test');
+            assert.ok(snap.sizeBytes > 100_000);
+            assert.deepEqual((await manager.listSnapshots(name)).map(s => s.id), [snap.id]);
+
+            await manager.query(name, "UPDATE rex_user SET name = 'CHANGED' WHERE login = 'admin'");
+            await fs.writeFile(file, 'v2');
+            await fs.writeFile(path.join(i.docrootPath, 'later.txt'), 'x');
+
+            await manager.restoreSnapshot(name, snap.id);
+            const user = await manager.query(name, "SELECT name FROM rex_user WHERE login = 'admin'", { readOnly: true });
+            assert.equal(user.rows[0][0], 'SNAP');
+            assert.equal(await fs.readFile(file, 'utf8'), 'v1');
+            await assert.rejects(fs.access(path.join(i.docrootPath, 'later.txt')));
+            assert.equal((await curl(`${await proxyBase(`${name}.localhost`)}/redaxo/`)).status, 200);
+
+            await manager.deleteSnapshot(name, snap.id);
+            assert.deepEqual(await manager.listSnapshots(name), []);
+        });
+
+        it('duplicates an instance', async () => {
+            const copy = await manager.duplicate('e2e-rx', 'e2e-dup');
+            assert.equal(copy.status, 'running');
+            const user = await manager.query('e2e-dup', "SELECT name FROM rex_user WHERE login = 'admin'", { readOnly: true });
+            assert.equal(user.rows[0][0], 'SNAP');
+            assert.equal((await curl(`${await proxyBase('e2e-dup.localhost')}/redaxo/`)).status, 200);
+            await manager.remove('e2e-dup');
+        });
+
+        it('creates an instance from a git repository and sets up git', async () => {
+            const repo = path.join(dir, '_repo');
+            await fs.mkdir(path.join(repo, 'public'), { recursive: true });
+            await fs.writeFile(path.join(repo, 'public', 'index.php'), '<?php echo "from-git " . PHP_VERSION;');
+            const git = (...args: string[]) => run('git', ['-C', repo, '-c', 'user.name=t', '-c', 'user.email=t@t', ...args]);
+            await run('git', ['init', '-b', 'main', repo]);
+            await git('add', '-A');
+            await git('commit', '-m', 'init');
+
+            const i = await manager.createFromGit(repo, { name: 'e2e-git', php: '8.4', mariadb: '11.8' });
+            assert.equal(i.kind, 'custom');
+            assert.equal(i.layout.docroot, '/var/www/html/public');
+            const page = await curl(`${await proxyBase('e2e-git.localhost')}/`);
+            assert.match(page.body, /from-git 8\.4/);
+
+            const status = await manager.setupGit('e2e-git');
+            assert.equal(status.isRepo, true);
+            assert.equal(status.remote, repo);
+            assert.match(await fs.readFile(path.join(i.webrootPath, '.gitignore'), 'utf8'), /\/vendor\//);
+            const log = await run('git', ['-C', i.webrootPath, 'log', '--oneline']);
+            assert.match(log.stdout, /gitignore/);
+        });
+
+        it('shows a help page for unknown host names', async () => {
+            const ports = await manager.shared.ports();
+            const httpBase = ports.proxyHttp === 80 ? '' : `:${ports.proxyHttp}`;
+            const page = await curl(`http://does-not-exist.localhost${httpBase}/`);
+            assert.equal(page.status, 404);
+            assert.match(page.body, /e2e-rx/);
+            const secure = await curl(`${await proxyBase('nope.localhost')}/`, ['-k']);
+            assert.equal(secure.status, 404);
+        });
+
+        it('reports resources', async () => {
+            const r = await manager.resources('e2e-rx');
+            assert.ok((r.memoryBytes ?? 0) > 1_000_000, 'memory');
+            assert.ok(r.cpuPercent !== undefined, 'cpu');
+            if (process.platform !== 'win32') {
+                assert.ok((r.diskBytes ?? 0) > 1_000_000, 'disk');
+            }
+        });
+
+        it('maps PHP errors from the container log to project files', async () => {
+            const i = await manager.get('e2e-git');
+            await fs.writeFile(path.join(i.docrootPath, 'broken.php'), '<?php\nnot_a_function();\n');
+            await curl(`${i.urls.direct}broken.php`);
+            await new Promise(r => setTimeout(r, 1000));
+            const logs = await run('docker', ['logs', '--tail', '50', i.layout.webContainer], { allowFailure: true });
+            const raw = (logs.stdout + logs.stderr).split(/\r?\n/).map(parsePhpErrorLine).find(p => p?.file?.endsWith('broken.php'));
+            assert.ok(raw, 'PHP error in container log');
+            const problem = await toProblem(i, raw);
+            assert.equal(problem.file, path.join(i.docrootPath, 'broken.php'));
+            assert.equal(problem.line, 2);
+            assert.equal(problem.severity, 'error');
+            await manager.remove('e2e-git');
         });
     });
 

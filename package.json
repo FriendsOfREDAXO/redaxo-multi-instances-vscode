@@ -2,7 +2,7 @@
   "name": "redaxo-multi-instances-manager",
   "displayName": "%displayName%",
   "description": "%description%",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "publisher": "skerbis",
   "icon": "resources/icon.png",
   "repository": {
@@ -382,6 +382,60 @@
         "title": "%command.copyValue%",
         "category": "%category%",
         "icon": "$(copy)"
+      },
+      {
+        "command": "redaxo-instances.createSnapshot",
+        "title": "%command.createSnapshot%",
+        "category": "%category%",
+        "icon": "$(save)"
+      },
+      {
+        "command": "redaxo-instances.manageSnapshots",
+        "title": "%command.manageSnapshots%",
+        "category": "%category%",
+        "icon": "$(history)"
+      },
+      {
+        "command": "redaxo-instances.duplicateInstance",
+        "title": "%command.duplicateInstance%",
+        "category": "%category%",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "redaxo-instances.createInstanceFromGit",
+        "title": "%command.createInstanceFromGit%",
+        "category": "%category%",
+        "icon": "$(repo-clone)"
+      },
+      {
+        "command": "redaxo-instances.setupGit",
+        "title": "%command.setupGit%",
+        "category": "%category%",
+        "icon": "$(source-control)"
+      },
+      {
+        "command": "redaxo-instances.startDebugging",
+        "title": "%command.startDebugging%",
+        "category": "%category%",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "command": "redaxo-instances.openInDevContainer",
+        "title": "%command.openInDevContainer%",
+        "category": "%category%",
+        "icon": "$(remote-explorer)"
+      },
+      {
+        "command": "redaxo-instances.clearProblems",
+        "title": "%command.clearProblems%",
+        "category": "%category%",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "redaxo-instances.showPortDiagnosis",
+        "title": "%command.showPortDiagnosis%",
+        "category": "%category%",
+        "icon": "$(question)"
       }
     ],
     "menus": {
@@ -440,6 +494,21 @@
           "command": "redaxo-instances.openWalkthrough",
           "when": "view == redaxo-instances.instancesView",
           "group": "4_help@0"
+        },
+        {
+          "command": "redaxo-instances.createInstanceFromGit",
+          "when": "view == redaxo-instances.instancesView",
+          "group": "1_instances@0"
+        },
+        {
+          "command": "redaxo-instances.clearProblems",
+          "when": "view == redaxo-instances.instancesView",
+          "group": "3_settings@3"
+        },
+        {
+          "command": "redaxo-instances.showPortDiagnosis",
+          "when": "view == redaxo-instances.servicesView",
+          "group": "1_https@2"
         }
       ],
       "view/item/context": [
@@ -597,6 +666,36 @@
           "command": "redaxo-instances.stopService",
           "when": "view == redaxo-instances.servicesView && viewItem =~ /^service .* running$/",
           "group": "inline@1"
+        },
+        {
+          "command": "redaxo-instances.startDebugging",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/ && viewItem =~ / v2 /",
+          "group": "4_tools@0"
+        },
+        {
+          "command": "redaxo-instances.openInDevContainer",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / v2 /",
+          "group": "4_tools@5"
+        },
+        {
+          "command": "redaxo-instances.setupGit",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "4_tools@6"
+        },
+        {
+          "command": "redaxo-instances.createSnapshot",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "6_backup@1"
+        },
+        {
+          "command": "redaxo-instances.manageSnapshots",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "6_backup@2"
+        },
+        {
+          "command": "redaxo-instances.duplicateInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "7_transfer@3"
         }
       ],
       "commandPalette": [
@@ -936,6 +1035,10 @@
                 "type": "string"
               },
               "description": "Additional host names, e.g. [\"shop.localhost\"]"
+            },
+            "gitUrl": {
+              "type": "string",
+              "description": "Clone this repository instead of a fresh installation (type and document root are detected; kind is ignored)"
             }
           },
           "required": [
@@ -1141,6 +1244,64 @@
           ],
           "additionalProperties": false
         }
+      },
+      {
+        "name": "redaxo_create_snapshot",
+        "displayName": "%tool.create_snapshot.name%",
+        "toolReferenceName": "redaxo-create-snapshot",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server-environment)",
+        "userDescription": "%tool.create_snapshot.description%",
+        "modelDescription": "Saves the database(s) and files of an instance as a restore point – recommended before AddOn updates, migrations or larger changes. Restoring is done by the user in VS Code.",
+        "tags": [
+          "redaxo",
+          "docker",
+          "php"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Instance name (see list_instances)"
+            },
+            "label": {
+              "type": "string",
+              "description": "Short description, e.g. \"before yform update\""
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "redaxo_list_snapshots",
+        "displayName": "%tool.list_snapshots.name%",
+        "toolReferenceName": "redaxo-list-snapshots",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server-environment)",
+        "userDescription": "%tool.list_snapshots.description%",
+        "modelDescription": "Lists the restore points (snapshots) of an instance.",
+        "tags": [
+          "redaxo",
+          "docker",
+          "php"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Instance name (see list_instances)"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        }
       }
     ]
   },
@@ -1157,7 +1318,8 @@
     "test:e2e": "npm run generate-assets && mocha --config .mocharc.e2e.json",
     "test": "npm run lint && npm run test:unit && npm run test:integration",
     "l10n:export": "npx @vscode/l10n-dev export --outDir ./l10n ./src",
-    "vsix": "vsce package"
+    "vsix": "vsce package",
+    "sync-tools": "tsx scripts/sync-lm-tools.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

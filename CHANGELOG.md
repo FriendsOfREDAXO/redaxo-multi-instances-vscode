@@ -1,5 +1,26 @@
 # Changelog
 
+## Version 2.1.0 (2026-11-04)
+
+### ✨ Neu
+- **Sicherungspunkte:** Datenbank und Dateien einer Instanz sichern und wiederherstellen („Sicherungspunkt anlegen…“, „Sicherungspunkte…“) – auch als Tool für Copilot/Claude (anlegen und auflisten).
+- **Debugging mit einem Klick:** „Debugging starten (Xdebug)“ schaltet Xdebug ein, installiert bei Bedarf „PHP Debug“, startet den Debugger mit Pfad-Mapping und legt `.vscode/launch.json` an.
+- **Fehler im Problems-Panel:** PHP- und REDAXO-Fehler laufender Instanzen erscheinen mit Datei und Zeile unter „Probleme“.
+- **Git:** neue Instanz aus einem Git-Repository (REDAXO 5, REDAXO 6 oder PHP-Projekt wird erkannt) und „Git einrichten…“ mit REDAXO-`.gitignore`, Remote und erstem Commit. `create_instance` kann für KI-Tools ein Repository klonen.
+- **Duplizieren** einer Instanz samt Datenbank.
+- **Dev Container:** Instanz direkt im Web-Container öffnen (Intelephense mit der PHP-Version der Instanz).
+- **Ressourcen** (CPU, RAM, Speicher) im Tooltip einer Instanz.
+- **Übersichtsseite für unbekannte Domains** statt eines Fehlers, mit Links zu allen Instanzen; „Warum brauchen die Adressen einen Port?“ zeigt, wer 80/443 belegt (Programme, Firewall-Umleitungen wie yerd) und wie man es behebt.
+
+### 🔧 Technik
+- Image: `www-data` hat ein beschreibbares Home (für Dev Container) – die Images werden beim nächsten Start einmal neu gebaut.
+- `npm run sync-tools` übernimmt die KI-Tool-Definitionen ins Manifest.
+
+### 🐛 Fehlerbehebungen
+- **Image-Updates erreichen jetzt auch bestehende Instanzen:** Die Build-Dateien in `docker/` werden aktualisiert, solange sie nicht von Hand geändert wurden (Prüfsummen in `docker/.generated.json`); geänderte Dateien bleiben erhalten.
+- **Dev Container:** „Im Dev Container öffnen“ startet die Instanz vorher mit dem aktuellen Image – vorher schlug das Einrichten mit „Permission denied“ auf `/var/www/.vscode-server` fehl.
+- **Dev Container:** Das Terminal startet mit `bash` (vorher: „/usr/sbin/nologin konnte nicht gestartet werden“).
+
 ## Version 2.0.1 (2026-11-04)
 
 ### 🐛 Fehlerbehebungen

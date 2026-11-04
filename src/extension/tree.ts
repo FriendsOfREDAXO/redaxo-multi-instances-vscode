@@ -48,6 +48,17 @@ function statusIcon(i: Instance): vscode.ThemeIcon {
     }
 }
 
+export function formatBytes(bytes: number): string {
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let v = bytes;
+    let u = 0;
+    while (v >= 1024 && u < units.length - 1) {
+        v /= 1024;
+        u++;
+    }
+    return `${v.toLocaleString(vscode.env.language, { maximumFractionDigits: v < 10 && u > 0 ? 1 : 0 })} ${units[u]}`;
+}
+
 function instanceTooltip(i: Instance): vscode.MarkdownString {
     const md = new vscode.MarkdownString(undefined, true);
     md.appendMarkdown(`**${i.name}** — ${statusLabel(i)}\n\n`);
@@ -173,6 +184,37 @@ export class InstancesTreeProvider implements vscode.TreeDataProvider<InstancesT
             return details(element.instance);
         }
         return [];
+    }
+
+    /** Resources are measured only when the tooltip is shown (docker stats takes a moment). */
+    async resolveTreeItem(item: vscode.TreeItem, element: InstancesTreeElement, token: vscode.CancellationToken): Promise<vscode.TreeItem> {
+        if (!(element instanceof InstanceItem)) {
+            return item;
+        }
+        try {
+            const r = await this.manager.resources(element.instance.name);
+            if (token.isCancellationRequested) {
+                return item;
+            }
+            const md = instanceTooltip(element.instance);
+            const parts: string[] = [];
+            if (r.cpuPercent !== undefined) {
+                parts.push(`CPU ${r.cpuPercent.toLocaleString(vscode.env.language)} %`);
+            }
+            if (r.memoryBytes !== undefined) {
+                parts.push(`RAM ${formatBytes(r.memoryBytes)}`);
+            }
+            if (r.diskBytes !== undefined) {
+                parts.push(`${l10n.t('Disk')} ${formatBytes(r.diskBytes)}`);
+            }
+            if (parts.length) {
+                md.appendMarkdown(`\n\n$(pulse) ${parts.join(' · ')}`);
+            }
+            item.tooltip = md;
+        } catch {
+            // keep the static tooltip
+        }
+        return item;
     }
 
     getParent(element: InstancesTreeElement): InstancesTreeElement | undefined {

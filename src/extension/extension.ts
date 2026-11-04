@@ -9,6 +9,7 @@ import { CommandContext, registerCommands } from './commands';
 import { SECTION, readCoreSettings } from './config';
 import { DockerWatcher } from './dockerWatcher';
 import { registerLanguageModelTools } from './lmTools';
+import { ProblemsWatcher } from './problems';
 import { InstancesTreeProvider, ServicesTreeProvider } from './tree';
 
 const l10n = vscode.l10n;
@@ -63,11 +64,15 @@ export function activate(context: vscode.ExtensionContext): ExtensionApi {
         services.refresh();
     };
 
+    const problems = new ProblemsWatcher(manager);
+    context.subscriptions.push(problems);
+    tree.onDidLoad(list => void problems.update(list), undefined, context.subscriptions);
+
     const watcher = new DockerWatcher(() => manager.docker);
     context.subscriptions.push(watcher, watcher.onDidChange(refresh), watcher.onDidChangeAvailability(refresh));
 
     const ctx: CommandContext = {
-        context, manager, tree, services, log,
+        context, manager, tree, services, log, problems,
         setTrusted: value => {
             trusted = value;
             services.refresh();

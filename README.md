@@ -65,7 +65,20 @@ Jede Instanz zeigt ihren Status (grün = läuft) und lässt sich aufklappen:
 ![Zugangsdaten](docs/images/access-data.png)
 
 Über das Kontextmenü (Rechtsklick) erreichst du: Cache löschen, REDAXO-Konsole, Shell, SQL-Konsole, Logs,
-Adminer, PHP-/MariaDB-Version, Xdebug, Export, Container neu aufbauen und Löschen.
+Adminer, PHP-/MariaDB-Version, Debugging, Sicherungspunkte, Git, Dev Container, Duplizieren, Export,
+Container neu aufbauen und Löschen. Der Tooltip einer Instanz zeigt CPU, RAM und Speicherbedarf.
+
+## Entwickeln mit einer Instanz
+
+- **Debugging starten (Xdebug):** ein Klick – Xdebug wird eingeschaltet, der Debugger startet mit dem richtigen
+  Pfad-Mapping, `.vscode/launch.json` wird angelegt. Dann Breakpoint setzen und die Seite mit `?XDEBUG_TRIGGER=1` öffnen.
+- **Fehler im Problems-Panel:** PHP- und REDAXO-Fehler laufender Instanzen erscheinen automatisch unter **Probleme** –
+  mit Datei und Zeile, ein Klick springt an die Stelle.
+- **Sicherungspunkte:** Datenbank und Dateien in Sekunden sichern und wiederherstellen – vor AddOn-Updates oder Experimenten.
+- **Git:** neue Instanz direkt aus einem Git-Repository anlegen (REDAXO 5/6 oder PHP-Projekt wird erkannt) oder eine
+  bestehende Instanz per Klick unter Git stellen – mit passender `.gitignore` für REDAXO.
+- **Duplizieren:** eine Instanz samt Datenbank unter neuem Namen kopieren.
+- **Dev Container:** VS Code direkt im Web-Container öffnen – PHP-Werkzeuge arbeiten mit der PHP-Version der Instanz.
 
 ## Domains und HTTPS
 
@@ -76,6 +89,10 @@ Ein gemeinsamer Reverse-Proxy (Caddy) liefert alle Instanzen per HTTPS aus:
   ideal, um YRewrite-Multidomain-Setups lokal zu testen.
 - `*.localhost` zeigt immer auf den eigenen Rechner – es sind keine Einträge in der Hosts-Datei nötig.
 - Sind Port 80/443 belegt, sucht sich der Proxy automatisch freie Ports (z. B. `https://kunde.localhost:8443`).
+
+Ruft man eine `*.localhost`-Adresse auf, die zu keiner Instanz gehört, erscheint eine Übersicht aller Instanzen statt
+eines Fehlers. Brauchen die Adressen einen Port, zeigt **Wartung… → Warum brauchen die Adressen einen Port?**, welches
+Programm 80/443 belegt.
 
 Mailpit und Adminer sind unter `https://mail.localhost` bzw. `https://adminer.localhost` erreichbar.
 
