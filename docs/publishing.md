@@ -1,38 +1,25 @@
-# Veröffentlichen
+# Release erstellen
 
-## GitHub-Release (VSIX)
+Die Extension wird ausschließlich über die
+[GitHub-Releases](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/releases) als VSIX verteilt
+(nicht über den VS Code Marketplace).
 
-Tag setzen und pushen – der Workflow `.github/workflows/release.yml` testet, baut das VSIX und erstellt das Release
-mit den Notes der Version aus `CHANGELOG.md`:
+## Ablauf
 
-```bash
-git tag v2.0.0
-git push origin v2.0.0
-```
+1. Version in `package.json` erhöhen und in `CHANGELOG.md` einen Abschnitt `## Version x.y.z (Datum)` anlegen –
+   sein Inhalt wird zum Text des Releases.
+2. Prüfen:
+   - `npm run lint`, `npm run test:unit`, `npm run test:integration`
+   - bei Änderungen an `assets/docker/` oder `src/core/`: `npm run test:e2e` (Docker) bzw. den Workflow „E2E (Docker)“
+   - neue UI-Texte übersetzt (`npm run l10n:export`, dann `l10n/bundle.l10n.de.json` ergänzen)
+3. Nach `main` mergen, dann Tag setzen und pushen:
+
+   ```bash
+   git tag v2.0.0
+   git push origin v2.0.0
+   ```
+
+Der Workflow `.github/workflows/release.yml` testet, baut das VSIX und erstellt das GitHub-Release mit den
+Release-Notes aus `CHANGELOG.md`.
 
 Alternativ lokal: `./release.sh` (benötigt die GitHub CLI `gh`).
-
-## VS Code Marketplace
-
-Einmalig: Personal Access Token in Azure DevOps anlegen (Scope **Marketplace → Manage**) und anmelden:
-
-```bash
-npx @vscode/vsce login skerbis
-```
-
-Veröffentlichen (baut automatisch über `vscode:prepublish`):
-
-```bash
-npx @vscode/vsce publish          # Version aus package.json
-npx @vscode/vsce publish patch    # oder mit Versionssprung
-```
-
-Die Extension ist nach einigen Minuten unter
-`https://marketplace.visualstudio.com/items?itemName=skerbis.redaxo-multi-instances-manager` verfügbar.
-
-## Checkliste
-
-- `CHANGELOG.md` ergänzt, Version in `package.json` erhöht
-- `npm run lint`, `npm run test:unit`, `npm run test:integration` grün
-- bei Änderungen an `assets/docker/` oder `src/core/`: `npm run test:e2e` (Docker)
-- neue UI-Texte übersetzt (`npm run l10n:export`, dann `l10n/bundle.l10n.de.json` ergänzen)

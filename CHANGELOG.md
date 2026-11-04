@@ -2,31 +2,40 @@
 
 ## Version 2.0.0 (2026-11-04)
 
-Complete rebuild following the current VS Code extension guidelines – existing 1.x instances keep working.
+Kompletter Neuaufbau nach den aktuellen VS-Code-Vorgaben – **bestehende 1.x-Instanzen funktionieren weiter.**
 
-### ✨ New
-- **One image for every instance:** own Apache + mod_php image per PHP version (8.1–8.6, incl. 8.6 RC) – the selected PHP version is now really used for REDAXO instances. ImageMagick, libvips (PHP FFI), Poppler, Ghostscript, ffmpeg, Composer and Xdebug are included.
-- **HTTPS on `*.localhost`** via a shared Caddy proxy: `https://<name>.localhost`, wildcard sub domains and any number of extra domains (multi-domain / YRewrite) – no hosts file, trusted certificates with mkcert.
-- **REDAXO 6:** Composer project (`redaxo/project:6.x-dev`) or clone of `redaxo/core` 6.x for core development, fully automatic setup.
-- **Mailpit** catches all mails, **Adminer 6.3** for the database (shared services).
-- **MariaDB 12.3 LTS (default) and 13.0**, safe upgrades (no downgrades), automatic system table upgrade.
-- **Copilot:** 10 language model tools for agent mode, `@redaxo` with tool calling.
-- **Claude:** MCP server for Claude Code / Claude Desktop (`Connect Claude (MCP)`), `AGENTS.md`, `CLAUDE.md` and `.mcp.json` per instance.
-- **Modernize 1.x instances** in place (backup first, data/ports/containers kept), import of 1.x exports.
-- Xdebug toggle, extra databases, REDAXO console with argument support, live status via Docker events.
-- **Built-in help** (German/English) via `REDAXO: Help`, `@redaxo /help`, README with full MCP documentation.
+### 📦 Installation / Update von 1.x
+1. `redaxo-multi-instances-manager-2.0.0.vsix` unten bei diesem Release herunterladen.
+2. VS Code → Erweiterungen → **…** → **Aus VSIX installieren…** – einfach über die alte Version, nichts deinstallieren.
+3. **Developer: Reload Window**. Alle Instanzen erscheinen wieder und laufen unverändert (gleiche Container, Ports, Zugangsdaten).
+4. Einmalig **„REDAXO: HTTPS-Zertifikaten vertrauen (mkcert)“** ausführen.
+5. Optional pro Instanz **„Instanz modernisieren…“** – mit automatischem Backup – für `https://<name>.localhost`, PHP-Wechsel, Xdebug und Mailpit.
 
-### 🎨 UI
-- Native VS Code UI only: instance tree with details, services view, two-step wizard, quick picks, walkthrough, welcome views, status bar.
-- English and German (follows the VS Code display language).
+Hinweise: Belegt ein anderer lokaler Server Port 80/443 (Atelier, yerd, Herd, Valet, MAMP …), weicht der Proxy automatisch auf z. B. `:8443` aus. Die von 1.x angelegten `<name>.local`-Einträge in `/etc/hosts` werden für modernisierte Instanzen nicht mehr gebraucht. Ausführlich: [Update von Version 1.x](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode#update-von-version-1x).
 
-### 🧹 Simplified
-- Ports, versions, language and time zone are determined automatically. Remaining settings: `instancesPath`, `dockerPath`.
-- Removed: PHP 7.4, MariaDB 10.6 (EOL), `.local` domains, webviews, hosts file handling.
+### ✨ Neu
+- **Ein Image für alle Instanzen:** Apache + mod_php für PHP 8.1–8.6 (8.6 als RC) – die gewählte PHP-Version gilt jetzt auch für REDAXO-Instanzen. Enthalten: ImageMagick, libvips (PHP FFI), Poppler, Ghostscript, ffmpeg, Composer, Xdebug.
+- **HTTPS auf `*.localhost`** über einen gemeinsamen Proxy: `https://<name>.localhost`, Wildcard-Subdomains und beliebige Zusatzdomains (Multidomain/YRewrite) – ohne Hosts-Datei, mit mkcert-Zertifikaten. Ports werden automatisch gewählt.
+- **REDAXO 6:** Composer-Projekt (`redaxo/project:6.x-dev`) oder Klon von `redaxo/core` 6.x zum Mitentwickeln, vollautomatisches Setup.
+- **Mailpit** fängt alle Mails ab, **Adminer 6.3** als gemeinsamer Dienst.
+- **MariaDB 12.3 LTS** (Standard) und 13.0, sichere Upgrades (keine Downgrades).
+- **Copilot:** 10 Language-Model-Tools für den Agent-Modus, `@redaxo` mit Tool-Calling und `/help`.
+- **Claude:** MCP-Server für Claude Code / Claude Desktop (`REDAXO: Claude verbinden (MCP)`), `AGENTS.md`, `CLAUDE.md` und `.mcp.json` pro Instanz.
+- **1.x-Instanzen modernisieren** (Backup vorab, Daten/Ports/Container bleiben), Import von 1.x-Exporten.
+- Xdebug umschaltbar, weitere Datenbanken, REDAXO-Konsole, Live-Status über Docker-Events.
+- **Mitgelieferte Hilfe** (Deutsch/Englisch): `REDAXO: Hilfe`.
 
-### 🔧 Technical
-- esbuild, TypeScript 6, ESLint 10 flat config, `vscode.l10n`, `LogOutputChannel`.
-- Unit, integration (VS Code) and Docker end-to-end tests; 0 npm audit findings.
+### 🎨 Oberfläche
+- Nur noch native VS-Code-Oberfläche: Instanz-Liste mit Details, Dienste-Ansicht, Assistent in zwei Schritten, Walkthrough, Statusleiste.
+- Deutsch und Englisch (folgt der Sprache von VS Code).
+
+### 🧹 Vereinfacht
+- Ports, Versionen, Sprache und Zeitzone werden automatisch ermittelt. Verbleibende Einstellungen: `instancesPath`, `dockerPath`.
+- Entfernt: PHP 7.4, MariaDB 10.6 (EOL), `.local`-Domains, Webviews, Hosts-Datei-Verwaltung.
+
+### 🔧 Technik
+- esbuild, TypeScript 6, ESLint 10, `vscode.l10n`, `LogOutputChannel`.
+- Unit-, Integrations- (VS Code) und End-to-End-Tests mit Docker; 0 npm-audit-Findings.
 
 ## Version 1.21.0 (2026-04-30)
 

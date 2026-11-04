@@ -10,6 +10,7 @@ Open this help at any time with **REDAXO: Help** (Command Palette `⇧⌘P` / `C
 - [AI: Copilot and Claude (MCP)](#ai-copilot-and-claude-mcp)
 - [Xdebug](#xdebug)
 - [Export, import and 1.x instances](#export-import-and-1x-instances)
+- [Installation and updates](#installation-and-updates)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -160,6 +161,16 @@ For instances created with version 1.x (REDAXO standard) the web root is `data/r
   a full backup is created first (`.redaxo-mi/backups/`), files, database, ports, credentials and container names are
   kept, the old configuration is moved to `.legacy/`.
 
+## Installation and updates
+
+The extension is distributed via the [GitHub releases](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/releases).
+To install a new version: download the `.vsix` → Extensions view → **…** → **Install from VSIX…** →
+**Developer: Reload Window**. VS Code does not update such extensions automatically; settings and instances are kept.
+
+**From version 1.x:** simply install over the old version. All instances keep working unchanged; modernize them one by
+one whenever you like (see above). The `<name>.local` entries 1.x added to `/etc/hosts` are only needed for instances
+with HTTPS that have not been modernized.
+
 ## Troubleshooting
 
 | Problem | Solution |
@@ -172,6 +183,7 @@ For instances created with version 1.x (REDAXO standard) the web root is `data/r
 | Instance does not start / warning icon | Right click → **Rebuild Containers**. Files and database are kept. |
 | Port conflicts | **Maintenance… → Fix port conflicts** |
 | Disk space | **Maintenance… → Clean up Docker** removes containers and images of deleted instances. |
+| Addresses need a port (`:8443`) | Another local server uses 80/443 (e.g. Atelier, yerd, Herd, Valet, MAMP). Stop it – the proxy moves back automatically on the next instance start. For yerd also run `sudo pfctl -a dev.yerd -F nat`. |
 | Instances are somewhere else | **Maintenance… → Change instances folder…** or setting `redaxo-instances.instancesPath` |
 
 Detailed logs of all actions: **REDAXO: Show Log**.

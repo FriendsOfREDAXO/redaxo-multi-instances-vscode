@@ -24,6 +24,19 @@ Instanz-Liste (Deutsch und Englisch). Für den Einstieg gibt es zusätzlich **�
 
 macOS, Linux und Windows (Docker Desktop) werden unterstützt.
 
+## Installation
+
+Die Extension wird über die [GitHub-Releases](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/releases)
+verteilt (nicht über den VS Code Marketplace):
+
+1. Beim neuesten Release die Datei `redaxo-multi-instances-manager-<version>.vsix` herunterladen.
+2. In VS Code: Erweiterungen-Ansicht → **…** (oben rechts) → **Aus VSIX installieren…** → Datei wählen.
+   Alternativ im Terminal: `code --install-extension redaxo-multi-instances-manager-<version>.vsix`
+3. **Developer: Reload Window** ausführen.
+
+Updates installierst du genauso – VS Code aktualisiert per VSIX installierte Erweiterungen nicht automatisch.
+Einstellungen und Instanzen bleiben dabei erhalten.
+
 ## Schnellstart
 
 1. Links in der Aktivitätsleiste **REDAXO** öffnen.
@@ -171,17 +184,46 @@ Ordner geöffnet ist.
 
 `docker/custom-setup.sh` läuft bei jedem Start im Container – z. B. für zusätzliche Pakete oder PHP-Einstellungen.
 
-## Instanzen aus Version 1.x
+## Update von Version 1.x
 
-Bestehende Instanzen werden weiter erkannt und lassen sich wie gewohnt starten, stoppen, öffnen, exportieren und
-löschen. Mit **„Instanz modernisieren“** werden sie auf das neue Format umgestellt:
+Version 2 ist ein kompletter Neuaufbau, bestehende Instanzen funktionieren aber weiter. So gehst du vor:
 
-- vorher wird automatisch ein vollständiges Backup erstellt (`.redaxo-mi/backups/`),
-- Dateien, Datenbank, Ports, Zugangsdaten und Container-Namen bleiben erhalten,
-- die alte Konfiguration landet in `.legacy/`,
-- danach: HTTPS auf `*.localhost`, PHP-Wechsel, Xdebug, Mailpit und aktuelles PHP/Apache.
+1. **Optional, aber empfohlen:** wichtige Instanzen vorher sichern – mit 1.21 per Rechtsklick → *Export Instance*,
+   bei älteren Versionen Instanz stoppen und den Instanz-Ordner kopieren. (Beim späteren Modernisieren legt Version 2
+   zusätzlich selbst ein Backup an.)
+2. **Neue Version installieren** wie unter [Installation](#installation) beschrieben – einfach über die alte
+   Version drüber, vorher nichts deinstallieren. Danach **Developer: Reload Window**.
+3. **Instanzen prüfen:** Alle Instanzen erscheinen wieder in der Liste. 1.x-Instanzen laufen unverändert weiter –
+   gleiche Container, Ports, Zugangsdaten und Adressen (`http://localhost:<port>`, bisheriges `https://<name>.local:<port>`).
+4. **Einmalig HTTPS einrichten:** Befehl **„REDAXO: HTTPS-Zertifikaten vertrauen (mkcert)“**.
+5. **Instanzen modernisieren – wann du willst:** Rechtsklick → **„Instanz modernisieren…“**. Vorher wird automatisch ein
+   vollständiges Backup erstellt (`.redaxo-mi/backups/` im Instanzen-Ordner). Dateien, Datenbank, Ports, Zugangsdaten
+   und Container-Namen bleiben erhalten, die alte Konfiguration landet in `.legacy/`. Danach ist die Instanz unter
+   `https://<name>.localhost` erreichbar und bekommt PHP-Wechsel, Xdebug, Mailpit und das aktuelle Image.
+   Nicht modernisierte Instanzen funktionieren weiterhin wie bisher.
 
-Exporte aus Version 1.x können importiert werden.
+**Was sich ändert:**
+
+| | Version 1.x | Version 2 |
+|---|---|---|
+| Adressen | `http://localhost:<port>`, `https://<name>.local:<port>` | `https://<name>.localhost` (+ Wildcard, Zusatzdomains) |
+| Hosts-Datei | Einträge `<name>.local` | nicht mehr nötig |
+| PHP | 7.4–8.5, bei REDAXO-Instanzen nicht wirklich wählbar | 8.1–8.6, jederzeit wechselbar |
+| Adminer | eigener Container `redaxo-adminer` | gemeinsamer Dienst (alter Container wird automatisch ersetzt) |
+| Oberfläche | Webviews | native VS-Code-Oberfläche, Hilfe unter „REDAXO: Hilfe“ |
+| Einstellungen | Standard-Versionen, Auto-Refresh, … | nur noch `instancesPath` und `dockerPath` |
+
+**Gut zu wissen:**
+
+- **Port 80/443 belegt?** Andere lokale Server (z. B. Atelier, yerd, Laravel Herd, Valet, MAMP) belegen oft 80/443.
+  Dann weicht der Proxy automatisch aus (`https://<name>.localhost:8443`) und wechselt zurück, sobald die Ports frei
+  sind. Werkzeuge, die die Ports per Firewall-Regel umleiten (z. B. yerd), müssen gestoppt und ihre Regel entfernt werden.
+- **Hosts-Datei aufräumen (optional):** Die von 1.x angelegten Zeilen `127.0.0.1 <name>.local` in `/etc/hosts` werden
+  nur noch für nicht modernisierte Instanzen mit HTTPS gebraucht und können danach entfernt werden.
+- **Zurück zu 1.x:** Das VSIX von [v1.21.0](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/releases/tag/v1.21.0)
+  installieren. Nicht modernisierte Instanzen funktionieren dort unverändert. Eine modernisierte Instanz stellst du
+  zurück, indem du sie stoppst, die Dateien aus `.legacy/` zurück in den Instanz-Ordner kopierst und
+  `redaxo-instance.json` löschst.
 
 ## Einstellungen
 

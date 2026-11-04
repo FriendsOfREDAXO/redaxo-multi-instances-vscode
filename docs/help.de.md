@@ -10,6 +10,7 @@ Diese Hilfe öffnest du jederzeit mit **REDAXO: Hilfe** (Befehlspalette `⇧⌘P
 - [KI: Copilot und Claude (MCP)](#ki-copilot-und-claude-mcp)
 - [Xdebug](#xdebug)
 - [Export, Import und Instanzen aus 1.x](#export-import-und-instanzen-aus-1x)
+- [Installation und Updates](#installation-und-updates)
 - [Problemlösung](#problemlösung)
 
 ---
@@ -161,6 +162,17 @@ Bei Instanzen aus Version 1.x (REDAXO-Standard) liegt der Webroot in `data/redax
   stellt sie auf das neue Format um: Vorher entsteht ein vollständiges Backup (`.redaxo-mi/backups/`), Dateien,
   Datenbank, Ports, Zugangsdaten und Container-Namen bleiben erhalten, die alte Konfiguration landet in `.legacy/`.
 
+## Installation und Updates
+
+Die Extension wird über die [GitHub-Releases](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/releases)
+verteilt. Neue Version installieren: `.vsix` herunterladen → Erweiterungen-Ansicht → **…** → **Aus VSIX installieren…**
+→ **Developer: Reload Window**. VS Code aktualisiert solche Erweiterungen nicht automatisch; Einstellungen und
+Instanzen bleiben bei einem Update erhalten.
+
+**Von Version 1.x:** einfach über die alte Version installieren. Alle Instanzen funktionieren unverändert weiter;
+modernisieren kannst du sie einzeln, wann du willst (siehe oben). Die von 1.x angelegten Einträge `<name>.local` in
+`/etc/hosts` werden nur noch für nicht modernisierte Instanzen mit HTTPS gebraucht.
+
 ## Problemlösung
 
 | Problem | Lösung |
@@ -173,6 +185,7 @@ Bei Instanzen aus Version 1.x (REDAXO-Standard) liegt der Webroot in `data/redax
 | Instanz startet nicht / Warnsymbol | Rechtsklick → **Container neu aufbauen**. Dateien und Datenbank bleiben erhalten. |
 | Port-Konflikte | **Wartung… → Port-Konflikte beheben** |
 | Speicherplatz | **Wartung… → Docker aufräumen** entfernt Container und Images gelöschter Instanzen. |
+| Adressen brauchen einen Port (`:8443`) | Ein anderer lokaler Server belegt 80/443 (z. B. Atelier, yerd, Herd, Valet, MAMP). Beenden – beim nächsten Start einer Instanz wechselt der Proxy automatisch zurück. Bei yerd zusätzlich `sudo pfctl -a dev.yerd -F nat`. |
 | Instanzen liegen woanders | **Wartung… → Instanzen-Ordner ändern…** oder Einstellung `redaxo-instances.instancesPath` |
 
 Ausführliche Protokolle aller Aktionen: **REDAXO: Log anzeigen**.
