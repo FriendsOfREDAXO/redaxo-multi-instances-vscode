@@ -7,6 +7,8 @@
 - **Proxy-Ports:** Die Port-Prüfung erkennt jetzt auch Umleitungen per Firewall-Regel (z. B. yerd) und wertet `EACCES` auf macOS nicht mehr als „belegt“. Sind 80/443 wieder frei, wechselt der Proxy automatisch zurück.
 - **Docker Desktop ohne privilegierten Helfer:** Ports unter 1024 werden dann automatisch auf allen Schnittstellen gebunden.
 - **Mehrere Prozesse:** Extension, MCP-Server und weitere Fenster lesen geänderte Proxy-Ports sofort neu ein.
+- **Icon:** Das „R“ in der Aktivitätsleiste sitzt jetzt oben links und wird nicht mehr vom Badge mit den laufenden Instanzen verdeckt.
+- README-Screenshots zeigen die Standard-Adressen ohne Port.
 
 ### 📦 Update
 `redaxo-multi-instances-manager-2.0.1.vsix` herunterladen → VS Code → Erweiterungen → **…** → **Aus VSIX installieren…** → **Developer: Reload Window**.
