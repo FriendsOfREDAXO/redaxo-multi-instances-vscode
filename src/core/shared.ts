@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import { ensureCertificate, removeCertificate } from './certs';
 import { Docker, Logger } from './docker';
 import { Instance, SHARED_DIR, SHARED_NETWORK } from './model';
+import { PortOccupant, diagnosePort } from './diagnose';
 import { findFreePort, isPortFree } from './ports';
 import { CoreSettings, PREFERRED_PORTS, SharedPorts, proxyUrl } from './settings';
 import { canonicalPath } from './store';
@@ -106,6 +107,23 @@ export class SharedServices {
     async directUrl(service: 'adminer' | 'mailpit'): Promise<string> {
         const ports = await this.ports();
         return `http://localhost:${service === 'adminer' ? ports.adminer : ports.mailpit}/`;
+    }
+
+    /**
+     * Why the proxy is not on 80/443: who occupies those ports (empty when the standard ports are in use).
+     */
+    async standardPortOccupants(): Promise<PortOccupant[]> {
+        const ports = await this.ports();
+        if (ports.proxyHttp === PREFERRED_PORTS.proxyHttp && ports.proxyHttps === PREFERRED_PORTS.proxyHttps) {
+            return [];
+        }
+        const out: PortOccupant[] = [];
+        for (const port of [PREFERRED_PORTS.proxyHttp, PREFERRED_PORTS.proxyHttps]) {
+            if (!(await isPortFree(port))) {
+                out.push(await diagnosePort(port));
+            }
+        }
+        return out;
     }
 
     /** Running state of the shared services that belong to the current instances folder. */
@@ -267,7 +285,10 @@ export class SharedServices {
             // no certs dir yet
         }
 
-        const caddyfile = renderCaddyfile(sites);
+        const directory = instances
+            .filter(i => i.format === 'v2')
+            .map(i => ({ name: i.name, url: i.urls.frontend }));
+        const caddyfile = renderCaddyfile(sites, { lang: this.settings().lang, directory });
         const file = path.join(this.dir, 'caddy', 'Caddyfile');
         let current = '';
         try {

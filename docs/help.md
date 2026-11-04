@@ -9,6 +9,10 @@ Open this help at any time with **REDAXO: Help** (Command Palette `⇧⌘P` / `C
 - [REDAXO 6](#redaxo-6)
 - [AI: Copilot and Claude (MCP)](#ai-copilot-and-claude-mcp)
 - [Xdebug](#xdebug)
+- [Errors in the Problems panel](#errors-in-the-problems-panel)
+- [Snapshots](#snapshots)
+- [Git](#git)
+- [More tools](#more-tools)
 - [Export, import and 1.x instances](#export-import-and-1x-instances)
 - [Installation and updates](#installation-and-updates)
 - [Troubleshooting](#troubleshooting)
@@ -130,27 +134,42 @@ is open. Refresh it with right click → **Update AI Instructions (AGENTS.md)**.
 
 ## Xdebug
 
-1. Right click → **Toggle Xdebug** (the instance restarts briefly).
-2. Install the PHP Debug extension and add this configuration to `.vscode/launch.json` in the instance folder:
+Right click → **Start Debugging (Xdebug)** does everything in one step:
 
-```json
-{
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Xdebug (REDAXO)",
-      "type": "php",
-      "request": "launch",
-      "port": 9003,
-      "pathMappings": { "/var/www/html": "${workspaceFolder}/project" }
-    }
-  ]
-}
-```
+- enables Xdebug in the instance (it restarts briefly),
+- offers to install the “PHP Debug” extension if needed,
+- starts the debugger with the correct path mapping and writes `.vscode/launch.json` into the instance folder.
 
-3. Xdebug only starts on request (trigger): use the “Xdebug helper” browser extension or append `?XDEBUG_TRIGGER=1`.
+Then set a breakpoint and open the page with `?XDEBUG_TRIGGER=1` (or use the “Xdebug helper” browser extension).
+**Toggle Xdebug** only switches it on or off without starting the debugger.
 
-For instances created with version 1.x (REDAXO standard) the web root is `data/redaxo` instead of `project`.
+## Errors in the Problems panel
+
+PHP and REDAXO errors of running instances appear in VS Code's **Problems** panel automatically – with file and line,
+one click jumps there. REDAXO's `system.log` and the PHP error output of the container are read; only errors that
+occur after VS Code started are shown. Clear them with **Clear REDAXO Problems**.
+
+## Snapshots
+
+Right click → **Create Snapshot…** saves the database and files of the instance (without caches) – ideal before an
+AddOn update, a migration or an experiment. **Snapshots…** restores or deletes them. Restoring resets database and
+files exactly to the saved state; a git repository (`.git`) is left untouched. Snapshots live in `.snapshots/` in the
+instance folder.
+
+## Git
+
+- **New Instance from Git Repository…** (also in the wizard under “From a Git repository…”): clones a project with your
+  git credentials, detects REDAXO 5, REDAXO 6 or a PHP project including the document root and sets everything up.
+  REDAXO 6 gets `composer install` and the setup, REDAXO 5 a fresh installation with an empty database.
+- **Set Up Git…** (right click): puts the project folder (`project/`) under git – with a `.gitignore` for REDAXO
+  (cache, `config.yml`, logs, media), an optional remote and a first commit. Then use VS Code's Source Control view.
+
+## More tools
+
+- **Duplicate…** copies an instance including its database under a new name – e.g. to test an update safely.
+- **Open in Dev Container** opens VS Code inside the web container (“Dev Containers” extension). PHP tools such as
+  Intelephense then use exactly the PHP version of the instance.
+- **Resources:** hovering an instance shows CPU, RAM and disk usage in the tooltip.
 
 ## Export, import and 1.x instances
 
@@ -183,7 +202,8 @@ with HTTPS that have not been modernized.
 | Instance does not start / warning icon | Right click → **Rebuild Containers**. Files and database are kept. |
 | Port conflicts | **Maintenance… → Fix port conflicts** |
 | Disk space | **Maintenance… → Clean up Docker** removes containers and images of deleted instances. |
-| Addresses need a port (`:8443`) | Another local server uses 80/443 (e.g. Atelier, yerd, Herd, Valet, MAMP). Stop it – the proxy moves back automatically on the next instance start. For yerd also run `sudo pfctl -a dev.yerd -F nat`. |
+| An unknown domain shows a list of instances | The domain belongs to no instance – add it to the instance via **Domains…**. |
+| Addresses need a port (`:8443`) | Another local server uses 80/443 (e.g. Atelier, yerd, Herd, Valet, MAMP). Stop it – the proxy moves back automatically on the next instance start. For yerd also run `sudo pfctl -a dev.yerd -F nat`. **Maintenance… → Why do the addresses need a port?** shows who uses the ports. |
 | Instances are somewhere else | **Maintenance… → Change instances folder…** or setting `redaxo-instances.instancesPath` |
 
 Detailed logs of all actions: **REDAXO: Show Log**.

@@ -25,6 +25,6 @@ describe('tools', () => {
 
     it('marks read-only tools correctly', () => {
         const readOnly = TOOL_DEFINITIONS.filter(t => !t.mutating).map(t => t.name).sort();
-        assert.deepEqual(readOnly, ['get_instance', 'get_logs', 'list_instances', 'list_versions']);
+        assert.deepEqual(readOnly, ['get_instance', 'get_logs', 'list_instances', 'list_snapshots', 'list_versions']);
     });
 });

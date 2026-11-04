@@ -285,7 +285,46 @@ export interface ProxySite {
 }
 
 /** Caddyfile for the shared reverse proxy. */
-export function renderCaddyfile(sites: readonly ProxySite[]): string {
+export interface ProxyDirectoryEntry {
+    name: string;
+    url: string;
+}
+
+export interface CaddyfileOptions {
+    /** REDAXO backend language of the user – the pages are German for de_*, English otherwise. */
+    lang?: string;
+    /** All instances, listed on the "not assigned" and "not running" pages. */
+    directory?: readonly ProxyDirectoryEntry[];
+}
+
+const htmlEscape = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] ?? c));
+
+/** A static page for Caddy's `respond` – no CSS braces (Caddy would read them as placeholders). */
+function proxyPage(title: string, text: string, directory: readonly ProxyDirectoryEntry[], listTitle: string): string {
+    const list = directory.length
+        ? `<h2 style="font-size:1rem;margin-top:2rem">${htmlEscape(listTitle)}</h2><ul>${directory.map(d => `<li style="margin:.3rem 0"><a href="${htmlEscape(d.url)}">${htmlEscape(d.name)}</a> <span style="color:#6b7280">${htmlEscape(d.url)}</span></li>`).join('')}</ul>`
+        : '';
+    return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${htmlEscape(title)}</title></head>`
+        + `<body style="font:16px/1.5 system-ui,sans-serif;margin:3rem auto;max-width:42rem;padding:0 1rem;color:#1f2937">`
+        + `<h1 style="font-size:1.4rem">${title}</h1><p>${text}</p>${list}</body></html>`;
+}
+
+/** Caddyfile for the shared reverse proxy. */
+export function renderCaddyfile(sites: readonly ProxySite[], options: CaddyfileOptions = {}): string {
+    const de = (options.lang ?? '').startsWith('de');
+    const directory = options.directory ?? [];
+    const listTitle = de ? 'Deine Instanzen' : 'Your instances';
+    const notAssigned = proxyPage(
+        de ? '{host} ist keiner Instanz zugeordnet' : '{host} is not assigned to an instance',
+        de ? 'Lege eine Instanz mit diesem Namen an oder trage die Domain bei einer Instanz unter <b>Domains…</b> ein.'
+            : 'Create an instance with this name or add the domain to an instance via <b>Domains…</b>.',
+        directory, listTitle);
+    const notRunning = proxyPage(
+        de ? '{host} läuft gerade nicht' : '{host} is not running',
+        de ? 'Starte die Instanz in VS Code (REDAXO → Instanzen) und lade die Seite neu.'
+            : 'Start the instance in VS Code (REDAXO → Instances) and reload this page.',
+        directory, listTitle);
+
     const blocks = sites.map(site => {
         const tls = site.cert ? `tls /certs/${site.cert.cert} /certs/${site.cert.key}` : 'tls internal';
         return `# ${site.name}
@@ -305,6 +344,16 @@ ${site.hosts.map(h => `http://${h}`).join(', ')} {
 \tauto_https disable_redirects
 \tskip_install_trust
 \tlocal_certs
+\ton_demand_tls {
+\t\task http://127.0.0.1:5555/
+\t}
+}
+
+# permission endpoint for on-demand certificates of unknown *.localhost hosts (internal only)
+http://127.0.0.1:5555 {
+\t@local expression {query.domain}.endsWith('.localhost')
+\trespond @local 200
+\trespond 403
 }
 
 (upstream) {
@@ -312,15 +361,31 @@ ${site.hosts.map(h => `http://${h}`).join(', ')} {
 \thandle_errors 502 503 504 {
 \t\theader Content-Type "text/html; charset=utf-8"
 \t\trespond <<HTML
-\t\t\t<!doctype html><meta charset="utf-8"><title>Not running</title>
-\t\t\t<body style="font:16px system-ui;margin:4rem auto;max-width:40rem">
-\t\t\t<h1>{host} is not running</h1>
-\t\t\t<p>Start the instance in VS Code (REDAXO Instances view) and reload this page.</p></body>
+\t\t\t${notRunning}
 \t\t\tHTML 502
 \t}
 }
 
-${blocks.join('\n')}`;
+(directory) {
+\theader Content-Type "text/html; charset=utf-8"
+\trespond <<HTML
+\t\t${notAssigned}
+\t\tHTML 404
+}
+
+${blocks.join('\n')}
+# every other host: help page with all instances
+:443 {
+\ttls internal {
+\t\ton_demand
+\t}
+\timport directory
+}
+
+:80 {
+\timport directory
+}
+`;
 }
 
 /** Facts about an instance for AI assistants (AGENTS.md, used by Copilot, Claude Code and others). */
@@ -393,4 +458,34 @@ ${instance.redaxo6 === 'core' ? '- This is a clone of `redaxo/core` – read its
 export function renderClaudeMd(): string {
     return `@AGENTS.md
 `;
+}
+
+/** `.devcontainer/devcontainer.json` – VS Code works inside the web container with the PHP version of the instance. */
+export function renderDevcontainer(instance: Instance): string {
+    const config = {
+        name: `REDAXO – ${instance.name}`,
+        dockerComposeFile: ['../docker-compose.yml'],
+        service: instance.layout.webService,
+        workspaceFolder: '/var/www/html',
+        shutdownAction: 'none',
+        remoteUser: 'www-data',
+        customizations: {
+            vscode: {
+                extensions: ['bmewburn.vscode-intelephense-client', 'xdebug.php-debug'],
+                settings: { 'intelephense.environment.phpVersion': `${instance.php}.0` },
+            },
+        },
+    };
+    return JSON.stringify(config, null, 2) + '\n';
+}
+
+/** Xdebug launch configuration (PHP Debug extension). `webroot` is the host path of /var/www/html. */
+export function xdebugLaunchConfig(instance: Pick<Instance, 'name'>, webroot: string): Record<string, unknown> {
+    return {
+        name: `Xdebug: ${instance.name}`,
+        type: 'php',
+        request: 'launch',
+        port: 9003,
+        pathMappings: { '/var/www/html': webroot },
+    };
 }

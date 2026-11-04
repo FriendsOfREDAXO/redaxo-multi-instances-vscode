@@ -7,11 +7,17 @@ import { InstanceManager } from '../core/manager';
 import { Instance } from '../core/model';
 import { SharedService } from '../core/shared';
 import { splitArgs } from '../core/tools';
-import { compareVersions } from '../core/versions';
+import { describeOccupant, pfFlushCommand } from '../core/diagnose';
+import { commandExists } from '../core/exec';
+import { gitStatus } from '../core/git';
+import { renderDevcontainer, xdebugLaunchConfig } from '../core/templates';
+import { DEFAULT_MARIADB_VERSION, compareVersions, isPhpCompatibleWithRedaxo } from '../core/versions';
+import type { ProblemsWatcher } from './problems';
 import { setupClaude, writeAiFiles } from './claude';
 import { setInstancesPath } from './config';
 import { DetailItem, InstanceItem, InstancesTreeProvider, ServiceItem, ServicesTreeProvider } from './tree';
 import { askDomains, askInstanceName, createInstanceWizard, pickMariaDbVersion, pickPhpVersion } from './wizard';
+import { formatBytes } from './tree';
 
 const l10n = vscode.l10n;
 
@@ -21,6 +27,7 @@ export interface CommandContext {
     tree: InstancesTreeProvider;
     services: ServicesTreeProvider;
     log: vscode.LogOutputChannel;
+    problems: ProblemsWatcher;
     setTrusted(value: boolean): void;
     refresh(): void;
 }
@@ -180,6 +187,23 @@ export function registerCommands(ctx: CommandContext): void {
         }
     }
 
+    /** .vscode/launch.json in the instance folder (kept when it exists but is not plain JSON, e.g. with comments). */
+    async function writeLaunchJson(i: Instance): Promise<void> {
+        const file = path.join(i.path, '.vscode', 'launch.json');
+        const config = xdebugLaunchConfig(i, `\${workspaceFolder}/${i.layout.webroot}`);
+        let data: { version?: string; configurations?: Array<Record<string, unknown>> } = { version: '0.2.0', configurations: [] };
+        try {
+            data = JSON.parse(await fs.readFile(file, 'utf8'));
+        } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+                return;
+            }
+        }
+        data.configurations = [...(data.configurations ?? []).filter(c => c.name !== config.name), config];
+        await fs.mkdir(path.dirname(file), { recursive: true });
+        await fs.writeFile(file, JSON.stringify(data, null, 2) + '\n', 'utf8');
+    }
+
     const commands: Record<string, (...args: never[]) => unknown> = {
         // ───────────────────────── general
         'redaxo-instances.refresh': () => ctx.refresh(),
@@ -213,6 +237,10 @@ export function registerCommands(ctx: CommandContext): void {
         'redaxo-instances.createInstance': async () => {
             const options = await createInstanceWizard(manager, context.globalState);
             if (!options) {
+                return;
+            }
+            if ('fromGit' in options) {
+                await vscode.commands.executeCommand('redaxo-instances.createInstanceFromGit', options.name);
                 return;
             }
             const created = await withProgress(l10n.t('Creating {0}', options.name), async report => {
@@ -587,7 +615,10 @@ export function registerCommands(ctx: CommandContext): void {
             const enable = !i.xdebug;
             const done = await withProgress(enable ? l10n.t('Enabling Xdebug') : l10n.t('Disabling Xdebug'), report => manager.setXdebug(i.name, enable, report).then(() => true));
             if (done && enable) {
-                void vscode.window.showInformationMessage(l10n.t('Xdebug is on (port 9003, trigger mode: XDEBUG_TRIGGER / browser extension). Path mapping: /var/www/html → {0}', i.webrootPath));
+                const start = l10n.t('Start debugging');
+                if (await vscode.window.showInformationMessage(l10n.t('Xdebug is on (port 9003, trigger mode: XDEBUG_TRIGGER / browser extension). Path mapping: /var/www/html → {0}', i.webrootPath), start) === start) {
+                    await vscode.commands.executeCommand('redaxo-instances.startDebugging', i.name);
+                }
             }
         },
         'redaxo-instances.manageDomains': async (arg: InstanceArg) => {
@@ -742,6 +773,264 @@ export function registerCommands(ctx: CommandContext): void {
             void vscode.window.showInformationMessage(l10n.t('AGENTS.md, CLAUDE.md and .mcp.json are up to date – Copilot and Claude Code read them automatically when the folder is opened.'));
         },
 
+        // ───────────────────────── snapshots
+        'redaxo-instances.createSnapshot': async (arg: InstanceArg) => {
+            const i = await resolve(arg, l10n.t('Create a snapshot of which instance?'));
+            if (!i) {
+                return;
+            }
+            const label = await vscode.window.showInputBox({
+                title: l10n.t('Snapshot of {0}', i.name),
+                prompt: l10n.t('Optional description, e.g. "before YForm update"'),
+            });
+            if (label === undefined) {
+                return;
+            }
+            const snap = await withProgress(l10n.t('Creating snapshot of {0}', i.name), report => manager.createSnapshot(i.name, label, report));
+            if (snap) {
+                void vscode.window.showInformationMessage(l10n.t('Snapshot created ({0}). Restore it via "Snapshots…".', formatBytes(snap.sizeBytes)));
+            }
+        },
+        'redaxo-instances.manageSnapshots': async (arg: InstanceArg) => {
+            const i = await resolve(arg, l10n.t('Snapshots of which instance?'));
+            if (!i) {
+                return;
+            }
+            const restoreBtn: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('history'), tooltip: l10n.t('Restore') };
+            const deleteBtn: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('trash'), tooltip: l10n.t('Delete') };
+            type Item = vscode.QuickPickItem & { id?: string; create?: boolean };
+            const qp = vscode.window.createQuickPick<Item>();
+            qp.title = l10n.t('Snapshots of {0}', i.name);
+            const load = async () => {
+                const list = await manager.listSnapshots(i.name);
+                qp.items = [
+                    { label: '$(add) ' + l10n.t('Create snapshot…'), create: true },
+                    ...list.map(sn => ({
+                        id: sn.id,
+                        label: sn.label || l10n.t('Snapshot'),
+                        description: new Date(sn.createdAt).toLocaleString(vscode.env.language),
+                        detail: `${formatBytes(sn.sizeBytes)} · PHP ${sn.php} · MariaDB ${sn.mariadb}`,
+                        buttons: [restoreBtn, deleteBtn],
+                    })),
+                ];
+            };
+            await load();
+            const restore = async (id: string) => {
+                qp.hide();
+                const ok = l10n.t('Restore');
+                const answer = await vscode.window.showWarningMessage(l10n.t('Restore this snapshot of "{0}"?', i.name), {
+                    modal: true,
+                    detail: l10n.t('Database and files are reset to the state of the snapshot. Changes made since then are lost – create a new snapshot first if unsure.'),
+                }, ok);
+                if (answer === ok) {
+                    const done = await withProgress(l10n.t('Restoring snapshot of {0}', i.name), report => manager.restoreSnapshot(i.name, id, report).then(() => true));
+                    if (done) {
+                        void vscode.window.showInformationMessage(l10n.t('Snapshot restored.'));
+                    }
+                }
+            };
+            qp.onDidTriggerItemButton(async e => {
+                if (!e.item.id) {
+                    return;
+                }
+                if (e.button === deleteBtn) {
+                    await manager.deleteSnapshot(i.name, e.item.id);
+                    await load();
+                } else {
+                    await restore(e.item.id);
+                }
+            });
+            qp.onDidAccept(async () => {
+                const item = qp.selectedItems[0];
+                if (item?.create) {
+                    qp.hide();
+                    await vscode.commands.executeCommand('redaxo-instances.createSnapshot', i.name);
+                } else if (item?.id) {
+                    await restore(item.id);
+                }
+            });
+            qp.onDidHide(() => qp.dispose());
+            qp.show();
+        },
+
+        // ───────────────────────── duplicate / git
+        'redaxo-instances.duplicateInstance': async (arg: InstanceArg) => {
+            const i = await resolve(arg, l10n.t('Duplicate which instance?'));
+            if (!i) {
+                return;
+            }
+            const name = await askInstanceName(manager, l10n.t('Name of the copy of {0}', i.name), `${i.name}-copy`.slice(0, 40));
+            if (!name) {
+                return;
+            }
+            const copy = await withProgress(l10n.t('Duplicating {0}', i.name), report => manager.duplicate(i.name, name, report));
+            if (copy) {
+                await writeAiFiles(manager, copy.path);
+                await afterStart(copy, []);
+            }
+        },
+        'redaxo-instances.createInstanceFromGit': async (presetName?: string) => {
+            if (!(await commandExists('git'))) {
+                void vscode.window.showErrorMessage(l10n.t('git is not installed.'));
+                return;
+            }
+            const url = await vscode.window.showInputBox({
+                title: l10n.t('New instance from a Git repository'),
+                prompt: l10n.t('Repository URL (your SSH key / Git credentials are used)'),
+                placeHolder: 'git@github.com:kunde/shop.git',
+                ignoreFocusOut: true,
+            });
+            if (!url?.trim()) {
+                return;
+            }
+            const cloned = await withProgress(l10n.t('Cloning {0}', url), () => manager.cloneProject(url.trim()));
+            if (!cloned) {
+                return;
+            }
+            let keep = false;
+            try {
+                const name = typeof presetName === 'string' && presetName ? presetName
+                    : await askInstanceName(manager, l10n.t('Name of the instance ({0})', cloned.project.description), cloned.suggestedName);
+                if (!name) {
+                    return;
+                }
+                const minRedaxo = cloned.project.kind === 'redaxo' ? (cloned.project.redaxo6 ? '6.x-dev' : undefined) : undefined;
+                const php = await pickPhpVersion(undefined, minRedaxo, l10n.t('PHP version for {0}', name));
+                if (!php || (minRedaxo && !isPhpCompatibleWithRedaxo(php, minRedaxo))) {
+                    return;
+                }
+                keep = true;
+                const created = await withProgress(l10n.t('Creating {0}', name), async report => {
+                    const instance = await manager.create({
+                        name, php, mariadb: DEFAULT_MARIADB_VERSION, kind: cloned.project.kind, redaxo6: cloned.project.redaxo6,
+                        docroot: cloned.project.docroot, sourceDir: cloned.dir, start: false,
+                    }, report);
+                    await writeAiFiles(manager, instance.path);
+                    tree.refresh();
+                    return { instance, result: await manager.start(instance.name, report) };
+                });
+                if (created) {
+                    await afterStart(created.instance, created.result.warnings);
+                }
+            } finally {
+                if (!keep) {
+                    await fs.rm(cloned.dir, { recursive: true, force: true });
+                }
+            }
+        },
+        'redaxo-instances.setupGit': async (arg: InstanceArg) => {
+            const i = await resolve(arg, l10n.t('Set up Git for which instance?'));
+            if (!i) {
+                return;
+            }
+            if (!(await commandExists('git'))) {
+                void vscode.window.showErrorMessage(l10n.t('git is not installed.'));
+                return;
+            }
+            const status = await gitStatus(i.webrootPath);
+            let remote: string | undefined;
+            if (!status.remote) {
+                remote = await vscode.window.showInputBox({
+                    title: l10n.t('Git for {0}', i.name),
+                    prompt: l10n.t('Remote repository (optional, leave empty for a local repository)'),
+                    placeHolder: 'git@github.com:kunde/shop.git',
+                    ignoreFocusOut: true,
+                });
+                if (remote === undefined) {
+                    return;
+                }
+            }
+            const result = await withProgress(l10n.t('Setting up Git for {0}', i.name), () => manager.setupGit(i.name, { remote: remote?.trim() || undefined }));
+            if (!result) {
+                return;
+            }
+            const open = l10n.t('Open in VS Code…');
+            const answer = await vscode.window.showInformationMessage(
+                l10n.t('Git repository ready in {0} (branch {1}{2}).', result.dir.replace(os.homedir(), '~'), result.branch ?? 'main', result.remote ? `, origin ${result.remote}` : ''),
+                open);
+            if (answer === open) {
+                await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(result.dir), { forceNewWindow: true });
+            }
+        },
+
+        // ───────────────────────── debugging / dev container / problems
+        'redaxo-instances.startDebugging': async (arg: InstanceArg) => {
+            const i = await resolve(arg, l10n.t('Debug which instance?'), isRunning);
+            if (!i) {
+                return;
+            }
+            if (i.format !== 'v2') {
+                await offerModernize(i);
+                return;
+            }
+            if (!vscode.extensions.getExtension('xdebug.php-debug')) {
+                const install = l10n.t('Install PHP Debug');
+                if (await vscode.window.showInformationMessage(l10n.t('Debugging needs the "PHP Debug" extension.'), install) !== install) {
+                    return;
+                }
+                await vscode.commands.executeCommand('workbench.extensions.installExtension', 'xdebug.php-debug');
+            }
+            if (!i.xdebug) {
+                const ok = await withProgress(l10n.t('Enabling Xdebug'), report => manager.setXdebug(i.name, true, report).then(() => true));
+                if (!ok) {
+                    return;
+                }
+            }
+            await writeLaunchJson(i);
+            const started = await vscode.debug.startDebugging(undefined, xdebugLaunchConfig(i, i.webrootPath) as vscode.DebugConfiguration);
+            if (started) {
+                const openTrigger = l10n.t('Open page with trigger');
+                if (await vscode.window.showInformationMessage(l10n.t('Xdebug is listening. Set a breakpoint and open a page with ?XDEBUG_TRIGGER=1 (or the Xdebug browser extension).'), openTrigger) === openTrigger) {
+                    openUrl(`${i.urls.frontend}?XDEBUG_TRIGGER=1`);
+                }
+            }
+        },
+        'redaxo-instances.openInDevContainer': async (arg: InstanceArg) => {
+            const i = await resolve(arg, l10n.t('Open which instance in a Dev Container?'));
+            if (!i) {
+                return;
+            }
+            if (i.format !== 'v2') {
+                await offerModernize(i);
+                return;
+            }
+            if (!vscode.extensions.getExtension('ms-vscode-remote.remote-containers')) {
+                const install = l10n.t('Install Dev Containers');
+                if (await vscode.window.showInformationMessage(l10n.t('This needs the "Dev Containers" extension by Microsoft.'), install) !== install) {
+                    return;
+                }
+                await vscode.commands.executeCommand('workbench.extensions.installExtension', 'ms-vscode-remote.remote-containers');
+            }
+            await fs.mkdir(path.join(i.path, '.devcontainer'), { recursive: true });
+            await fs.writeFile(path.join(i.path, '.devcontainer', 'devcontainer.json'), renderDevcontainer(i), 'utf8');
+            await vscode.commands.executeCommand('remote-containers.openFolder', vscode.Uri.file(i.path));
+        },
+        'redaxo-instances.clearProblems': () => ctx.problems.clear(),
+        'redaxo-instances.showPortDiagnosis': async () => {
+            const occupants = await manager.shared.standardPortOccupants();
+            const ports = await manager.shared.ports();
+            if (occupants.length === 0) {
+                void vscode.window.showInformationMessage(ports.proxyHttps === 443
+                    ? l10n.t('The HTTPS proxy uses the standard ports 80/443 – addresses need no port.')
+                    : l10n.t('Ports 80/443 are free – the proxy moves there when the next instance starts.'));
+                return;
+            }
+            const fix = occupants.map(pfFlushCommand).find(Boolean);
+            const copy = l10n.t('Copy command');
+            const answer = await vscode.window.showWarningMessage(
+                l10n.t('Addresses need port {0} because 80/443 are in use.', String(ports.proxyHttps)),
+                {
+                    modal: true,
+                    detail: occupants.map(describeOccupant).join('\n') + '\n\n' + (fix
+                        ? l10n.t('A firewall redirect of another local dev tool is active. Stop that tool and remove its redirect in a terminal:\n{0}', fix)
+                        : l10n.t('Stop the program (or move it to other ports) – the proxy moves to 80/443 automatically on the next instance start.')),
+                },
+                ...(fix ? [copy] : []));
+            if (answer === copy && fix) {
+                await vscode.env.clipboard.writeText(fix);
+            }
+        },
+
         // ───────────────────────── maintenance
         'redaxo-instances.maintenanceMenu': async () => {
             type Item = vscode.QuickPickItem & { id: string };
@@ -749,6 +1038,7 @@ export function registerCommands(ctx: CommandContext): void {
                 { id: 'ports', label: '$(ports) ' + l10n.t('Fix port conflicts'), detail: l10n.t('Assigns free ports to instances that share a port') },
                 { id: 'restart', label: '$(sync) ' + l10n.t('Restart all running instances') },
                 { id: 'stop', label: '$(debug-stop) ' + l10n.t('Stop all instances') },
+                { id: 'portinfo', label: '$(question) ' + l10n.t('Why do the addresses need a port?'), detail: l10n.t('Shows which program uses ports 80/443') },
                 { id: 'orphans', label: '$(trash) ' + l10n.t('Clean up Docker'), detail: l10n.t('Removes containers and images of deleted instances') },
                 { id: 'update', label: '$(cloud-download) ' + l10n.t('Update shared services'), detail: l10n.t('Pulls the latest images of the HTTPS proxy, Mailpit and Adminer') },
                 { id: 'folder', label: '$(folder) ' + l10n.t('Change instances folder…'), detail: manager.settings.instancesDir },
@@ -771,6 +1061,9 @@ export function registerCommands(ctx: CommandContext): void {
                 }
                 case 'stop':
                     await vscode.commands.executeCommand('redaxo-instances.stopAllInstances');
+                    break;
+                case 'portinfo':
+                    await vscode.commands.executeCommand('redaxo-instances.showPortDiagnosis');
                     break;
                 case 'orphans': {
                     const orphans = await withProgress(l10n.t('Searching'), () => manager.findOrphans());

@@ -175,12 +175,22 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
                 mariadb: { type: 'string', enum: MARIADB_VERSIONS.map(v => v.version) },
                 redaxoVersion: { type: 'string', description: '"latest" (default) or a release such as 5.21.6' },
                 domains: { type: 'array', items: { type: 'string' }, description: 'Additional host names, e.g. ["shop.localhost"]' },
+                gitUrl: { type: 'string', description: 'Clone this repository instead of a fresh installation (type and document root are detected; kind is ignored)' },
             },
             required: ['name'],
             additionalProperties: false,
         },
         mutating: true,
         async run(manager, input) {
+            if (typeof input.gitUrl === 'string' && input.gitUrl.trim()) {
+                const fromGit = await manager.createFromGit(input.gitUrl.trim(), {
+                    name: str(input, 'name'),
+                    php: typeof input.php === 'string' ? input.php : DEFAULT_PHP_VERSION,
+                    mariadb: typeof input.mariadb === 'string' ? input.mariadb : DEFAULT_MARIADB_VERSION,
+                    domains: Array.isArray(input.domains) ? input.domains.map(String) : [],
+                });
+                return `Instance created from ${input.gitUrl} and started.\n\n${describeInstance(fromGit)}`;
+            }
             const instance = await manager.create({
                 name: str(input, 'name'),
                 kind: input.kind === 'custom' ? 'custom' : 'redaxo',
@@ -296,6 +306,37 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
             await manager.setDomains(name, Array.isArray(input.domains) ? input.domains.map(String) : []);
             const i = await manager.get(name);
             return `Host names of ${name}: ${i.urls.hosts.join(', ')}`;
+        },
+    },
+    {
+        name: 'create_snapshot',
+        title: 'Create snapshot',
+        description: 'Saves the database(s) and files of an instance as a restore point – recommended before AddOn updates, migrations or larger changes. Restoring is done by the user in VS Code.',
+        inputSchema: {
+            type: 'object',
+            properties: { name: nameProp, label: { type: 'string', description: 'Short description, e.g. "before yform update"' } },
+            required: ['name'],
+            additionalProperties: false,
+        },
+        mutating: true,
+        async run(manager, input) {
+            const snap = await manager.createSnapshot(str(input, 'name'), typeof input.label === 'string' ? input.label : '');
+            return `Snapshot ${snap.id} created (${Math.round(snap.sizeBytes / 1024 / 1024 * 10) / 10} MB, databases: ${snap.databases.join(', ')}).`;
+        },
+    },
+    {
+        name: 'list_snapshots',
+        title: 'List snapshots',
+        description: 'Lists the restore points (snapshots) of an instance.',
+        inputSchema: { type: 'object', properties: { name: nameProp }, required: ['name'], additionalProperties: false },
+        mutating: false,
+        async run(manager, input) {
+            const list = await manager.listSnapshots(str(input, 'name'));
+            if (!list.length) {
+                return 'No snapshots yet.';
+            }
+            return ['| Snapshot | Label | Created | Size |', '| --- | --- | --- | --- |',
+                ...list.map(s => `| ${s.id} | ${s.label || '-'} | ${s.createdAt} | ${Math.round(s.sizeBytes / 1024 / 1024 * 10) / 10} MB |`)].join('\n');
         },
     },
 ];

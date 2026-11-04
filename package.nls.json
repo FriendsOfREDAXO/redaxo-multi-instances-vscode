@@ -107,5 +107,18 @@
   "chat.command.logs": "Container logs: /logs <name>",
   "chat.command.install-tools": "Which CLI tools are included?",
   "command.openWalkthrough": "Getting Started",
-  "chat.command.help": "What can @redaxo do?"
+  "chat.command.help": "What can @redaxo do?",
+  "tool.create_snapshot.name": "Create snapshot",
+  "tool.create_snapshot.description": "Saves database and files of an instance as a restore point.",
+  "tool.list_snapshots.name": "List snapshots",
+  "tool.list_snapshots.description": "Lists the restore points of an instance.",
+  "command.createSnapshot": "Create Snapshot…",
+  "command.manageSnapshots": "Snapshots…",
+  "command.duplicateInstance": "Duplicate…",
+  "command.createInstanceFromGit": "New Instance from Git Repository…",
+  "command.setupGit": "Set Up Git…",
+  "command.startDebugging": "Start Debugging (Xdebug)",
+  "command.openInDevContainer": "Open in Dev Container",
+  "command.clearProblems": "Clear REDAXO Problems",
+  "command.showPortDiagnosis": "Why Do the Addresses Need a Port?"
 }
