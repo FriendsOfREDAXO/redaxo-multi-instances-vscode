@@ -1,8 +1,8 @@
 {
   "name": "redaxo-multi-instances-manager",
-  "displayName": "REDAXO Multi-Instances Manager",
-  "description": "Complete REDAXO multi-instance management with Docker containers, SSL support, and automatic port management integrated into VS Code",
-  "version": "1.21.0",
+  "displayName": "%displayName%",
+  "description": "%description%",
+  "version": "2.0.0",
   "publisher": "skerbis",
   "icon": "resources/icon.png",
   "repository": {
@@ -14,502 +14,1175 @@
     "url": "https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/issues"
   },
   "license": "MIT",
+  "l10n": "./l10n",
   "engines": {
     "vscode": "^1.118.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "AI",
+    "Chat"
+  ],
+  "keywords": [
+    "redaxo",
+    "cms",
+    "docker",
+    "php",
+    "mariadb",
+    "apache",
+    "localhost",
+    "https",
+    "mkcert",
+    "mailpit",
+    "adminer",
+    "mcp",
+    "claude",
+    "copilot"
   ],
   "activationEvents": [
     "onStartupFinished"
   ],
   "main": "./dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": false
+  },
   "contributes": {
-    "chatParticipants": [
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "redaxo-instances",
+          "title": "%viewContainer.title%",
+          "icon": "resources/activity-bar-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "redaxo-instances": [
+        {
+          "id": "redaxo-instances.instancesView",
+          "name": "%view.instances%",
+          "icon": "$(server-environment)",
+          "contextualTitle": "REDAXO"
+        },
+        {
+          "id": "redaxo-instances.servicesView",
+          "name": "%view.services%",
+          "icon": "$(globe)",
+          "contextualTitle": "REDAXO",
+          "visibility": "collapsed"
+        }
+      ]
+    },
+    "viewsWelcome": [
       {
-        "id": "redaxo-instances.chat",
-        "name": "redaxo",
-        "fullName": "REDAXO Multi-Instances",
-        "description": "Manage REDAXO Docker instances, execute console commands, query databases",
-        "isSticky": true,
-        "commands": [
-          {
-            "name": "create",
-            "description": "Create a new REDAXO instance"
-          },
-          {
-            "name": "start",
-            "description": "Start a REDAXO instance"
-          },
-          {
-            "name": "stop",
-            "description": "Stop a REDAXO instance"
-          },
-          {
-            "name": "console",
-            "description": "Execute REDAXO console command"
-          },
-          {
-            "name": "query",
-            "description": "Execute database query"
-          },
-          {
-            "name": "articles",
-            "description": "Show REDAXO articles"
-          },
-          {
-            "name": "addons",
-            "description": "List or manage REDAXO addons"
-          },
-          {
-            "name": "config",
-            "description": "Show REDAXO configuration"
-          },
-          {
-            "name": "logs",
-            "description": "Show instance logs"
-          },
-          {
-            "name": "install-tools",
-            "description": "Install CLI tools in containers (vim, nano, curl, mysql, etc.)"
-          }
-        ],
-        "disambiguation": [
-          {
-            "category": "redaxo_instance_management",
-            "description": "The user wants to create, start, stop, or manage REDAXO instances",
-            "examples": [
-              "Create a new REDAXO instance with PHP 8.4",
-              "Start my demo-site instance",
-              "Stop all running instances",
-              "Show me all REDAXO instances"
-            ]
-          },
-          {
-            "category": "redaxo_console",
-            "description": "The user wants to execute REDAXO console commands or clear cache",
-            "examples": [
-              "Clear cache for demo-site",
-              "Execute console command on my instance",
-              "Install yform addon",
-              "List all packages"
-            ]
-          },
-          {
-            "category": "redaxo_database",
-            "description": "The user wants to query the REDAXO database or view content",
-            "examples": [
-              "Show me all articles in demo-site",
-              "How many users does my instance have?",
-              "Query the database",
-              "Show templates"
-            ]
-          }
-        ]
+        "view": "redaxo-instances.instancesView",
+        "when": "redaxo-instances.dockerAvailable == false",
+        "contents": "%welcome.noDocker%"
+      },
+      {
+        "view": "redaxo-instances.instancesView",
+        "when": "redaxo-instances.dockerAvailable && !redaxo-instances.hasInstances",
+        "contents": "%welcome.empty%"
       }
     ],
     "commands": [
       {
         "command": "redaxo-instances.createInstance",
-        "title": "Create REDAXO Instance",
+        "title": "%command.createInstance%",
+        "category": "%category%",
         "icon": "$(add)"
       },
       {
-        "command": "redaxo-instances.changeInstancesPath",
-        "title": "Change Instances Folder",
-        "icon": "$(folder)"
+        "command": "redaxo-instances.importInstance",
+        "title": "%command.importInstance%",
+        "category": "%category%",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "redaxo-instances.refresh",
+        "title": "%command.refresh%",
+        "category": "%category%",
+        "icon": "$(refresh)"
       },
       {
         "command": "redaxo-instances.startInstance",
-        "title": "Start Instance",
+        "title": "%command.startInstance%",
+        "category": "%category%",
         "icon": "$(play)"
       },
       {
         "command": "redaxo-instances.stopInstance",
-        "title": "Stop Instance",
-        "icon": "$(stop)"
+        "title": "%command.stopInstance%",
+        "category": "%category%",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "redaxo-instances.restartInstance",
+        "title": "%command.restartInstance%",
+        "category": "%category%",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "redaxo-instances.stopAllInstances",
+        "title": "%command.stopAllInstances%",
+        "category": "%category%",
+        "icon": "$(debug-stop)"
       },
       {
         "command": "redaxo-instances.deleteInstance",
-        "title": "Delete Instance",
+        "title": "%command.deleteInstance%",
+        "category": "%category%",
         "icon": "$(trash)"
       },
       {
         "command": "redaxo-instances.openInBrowser",
-        "title": "Open Frontend",
-        "icon": "$(link-external)"
+        "title": "%command.openInBrowser%",
+        "category": "%category%",
+        "icon": "$(globe)"
       },
       {
         "command": "redaxo-instances.openBackend",
-        "title": "Open Backend",
-        "icon": "$(gear)"
-      },
-      {
-        "command": "redaxo-instances.openTerminal",
-        "title": "Open Container Terminal",
-        "icon": "$(terminal)"
-      },
-      {
-        "command": "redaxo-instances.showLogs",
-        "title": "Show Container Logs",
-        "icon": "$(output)"
-      },
-      {
-        "command": "redaxo-instances.showRedaxoLogs",
-        "title": "Show REDAXO Logs",
-        "icon": "$(file-text)"
-      },
-      {
-        "command": "redaxo-instances.installCLITools",
-        "title": "Install CLI Tools",
-        "icon": "$(tools)"
-      },
-      {
-        "command": "redaxo-instances.openInAdminer",
-        "title": "Open in Adminer",
-        "icon": "$(database)"
-      },
-      {
-        "command": "redaxo-instances.startAdminer",
-        "title": "Start Adminer",
-        "icon": "$(play)"
-      },
-      {
-        "command": "redaxo-instances.stopAdminer",
-        "title": "Stop Adminer",
-        "icon": "$(stop)"
-      },
-      {
-        "command": "redaxo-instances.createDatabase",
-        "title": "Create Additional Database",
-        "icon": "$(add)"
-      },
-      {
-        "command": "redaxo-instances.copyCopilotInstructions",
-        "title": "Copy Copilot Instructions",
-        "icon": "$(clippy)"
+        "title": "%command.openBackend%",
+        "category": "%category%",
+        "icon": "$(home)"
       },
       {
         "command": "redaxo-instances.getLoginInfo",
-        "title": "Login Information",
+        "title": "%command.getLoginInfo%",
+        "category": "%category%",
         "icon": "$(key)"
       },
       {
         "command": "redaxo-instances.showModernLoginInfo",
-        "title": "🎨 Modern Login Info (Preview)",
-        "icon": "$(preview)"
+        "title": "%command.showModernLoginInfo%",
+        "category": "%category%",
+        "icon": "$(key)"
       },
       {
-        "command": "redaxo-instances.setupSSL",
-        "title": "Setup HTTPS/SSL",
-        "icon": "$(shield)"
+        "command": "redaxo-instances.clearCache",
+        "title": "%command.clearCache%",
+        "category": "%category%",
+        "icon": "$(clear-all)"
       },
       {
-        "command": "redaxo-instances.repairInstance",
-        "title": "Repair Instance",
-        "icon": "$(tools)"
+        "command": "redaxo-instances.runConsoleCommand",
+        "title": "%command.runConsoleCommand%",
+        "category": "%category%",
+        "icon": "$(terminal-cmd)"
       },
       {
-        "command": "redaxo-instances.changePhpVersion",
-        "title": "Change PHP Version",
-        "icon": "$(symbol-key)"
+        "command": "redaxo-instances.showRedaxoLogs",
+        "title": "%command.showRedaxoLogs%",
+        "category": "%category%",
+        "icon": "$(file-text)"
       },
       {
-        "command": "redaxo-instances.changeMariaDbVersion",
-        "title": "Change MariaDB Version",
+        "command": "redaxo-instances.openInAdminer",
+        "title": "%command.openInAdminer%",
+        "category": "%category%",
         "icon": "$(database)"
       },
       {
-        "command": "redaxo-instances.updateHosts",
-        "title": "Add to Hosts File",
-        "icon": "$(globe)"
+        "command": "redaxo-instances.openTerminal",
+        "title": "%command.openTerminal%",
+        "category": "%category%",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "redaxo-instances.openDbShell",
+        "title": "%command.openDbShell%",
+        "category": "%category%",
+        "icon": "$(database)"
+      },
+      {
+        "command": "redaxo-instances.showLogs",
+        "title": "%command.showLogs%",
+        "category": "%category%",
+        "icon": "$(output)"
       },
       {
         "command": "redaxo-instances.openWorkspace",
-        "title": "Open Workspace in VS Code",
-        "icon": "$(folder)"
-      },
-      {
-        "command": "redaxo-instances.openInFinder",
-        "title": "Open in Finder",
+        "title": "%command.openWorkspace%",
+        "category": "%category%",
         "icon": "$(folder-opened)"
       },
       {
-        "command": "redaxo-instances.refresh",
-        "title": "Refresh Instances",
-        "icon": "$(refresh)"
+        "command": "redaxo-instances.openInFinder",
+        "title": "%command.openInFinder%",
+        "category": "%category%",
+        "icon": "$(folder)"
       },
       {
-        "command": "redaxo-instances.showInstanceContextMenu",
-        "title": "Show Instance Actions"
+        "command": "redaxo-instances.changePhpVersion",
+        "title": "%command.changePhpVersion%",
+        "category": "%category%",
+        "icon": "$(symbol-number)"
       },
       {
-        "command": "redaxo-instances.showHelp",
-        "title": "Show Help & Documentation",
-        "icon": "$(question)"
+        "command": "redaxo-instances.changeMariaDbVersion",
+        "title": "%command.changeMariaDbVersion%",
+        "category": "%category%",
+        "icon": "$(database)"
       },
       {
-        "command": "redaxo-instances.openReadme",
-        "title": "Open README"
+        "command": "redaxo-instances.toggleXdebug",
+        "title": "%command.toggleXdebug%",
+        "category": "%category%",
+        "icon": "$(debug)"
+      },
+      {
+        "command": "redaxo-instances.manageDomains",
+        "title": "%command.manageDomains%",
+        "category": "%category%",
+        "icon": "$(link)"
+      },
+      {
+        "command": "redaxo-instances.setupSSL",
+        "title": "%command.setupSSL%",
+        "category": "%category%",
+        "icon": "$(lock)"
+      },
+      {
+        "command": "redaxo-instances.createDatabase",
+        "title": "%command.createDatabase%",
+        "category": "%category%",
+        "icon": "$(add)"
       },
       {
         "command": "redaxo-instances.exportInstance",
-        "title": "Export Instance",
-        "icon": "$(cloud-download)"
+        "title": "%command.exportInstance%",
+        "category": "%category%",
+        "icon": "$(export)"
       },
       {
-        "command": "redaxo-instances.importInstance",
-        "title": "Import Instance from Archive",
-        "icon": "$(cloud-upload)"
+        "command": "redaxo-instances.repairInstance",
+        "title": "%command.repairInstance%",
+        "category": "%category%",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "redaxo-instances.modernizeInstance",
+        "title": "%command.modernizeInstance%",
+        "category": "%category%",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "redaxo-instances.copyCopilotInstructions",
+        "title": "%command.copyCopilotInstructions%",
+        "category": "%category%",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "redaxo-instances.setupClaude",
+        "title": "%command.setupClaude%",
+        "category": "%category%",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "redaxo-instances.trustCertificates",
+        "title": "%command.trustCertificates%",
+        "category": "%category%",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "redaxo-instances.startAdminer",
+        "title": "%command.startAdminer%",
+        "category": "%category%",
+        "icon": "$(database)"
+      },
+      {
+        "command": "redaxo-instances.stopAdminer",
+        "title": "%command.stopAdminer%",
+        "category": "%category%",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "redaxo-instances.openMailpit",
+        "title": "%command.openMailpit%",
+        "category": "%category%",
+        "icon": "$(mail)"
+      },
+      {
+        "command": "redaxo-instances.startService",
+        "title": "%command.startService%",
+        "category": "%category%",
+        "icon": "$(play)"
+      },
+      {
+        "command": "redaxo-instances.stopService",
+        "title": "%command.stopService%",
+        "category": "%category%",
+        "icon": "$(debug-stop)"
       },
       {
         "command": "redaxo-instances.maintenanceMenu",
-        "title": "Maintenance & Housekeeping",
+        "title": "%command.maintenanceMenu%",
+        "category": "%category%",
         "icon": "$(tools)"
+      },
+      {
+        "command": "redaxo-instances.changeInstancesPath",
+        "title": "%command.changeInstancesPath%",
+        "category": "%category%",
+        "icon": "$(folder)"
+      },
+      {
+        "command": "redaxo-instances.showHelp",
+        "title": "%command.showHelp%",
+        "category": "%category%",
+        "icon": "$(question)"
+      },
+      {
+        "command": "redaxo-instances.openWalkthrough",
+        "title": "%command.openWalkthrough%",
+        "category": "%category%",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "redaxo-instances.openReadme",
+        "title": "%command.openReadme%",
+        "category": "%category%",
+        "icon": "$(book)"
+      },
+      {
+        "command": "redaxo-instances.showOutput",
+        "title": "%command.showOutput%",
+        "category": "%category%",
+        "icon": "$(output)"
+      },
+      {
+        "command": "redaxo-instances.showInstanceContextMenu",
+        "title": "%command.showInstanceContextMenu%",
+        "category": "%category%",
+        "icon": "$(list-flat)"
+      },
+      {
+        "command": "redaxo-instances.updateHosts",
+        "title": "%command.updateHosts%",
+        "category": "%category%",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "redaxo-instances.installCLITools",
+        "title": "%command.installCLITools%",
+        "category": "%category%",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "redaxo-instances.openUrl",
+        "title": "%command.openUrl%",
+        "category": "%category%",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "redaxo-instances.copyValue",
+        "title": "%command.copyValue%",
+        "category": "%category%",
+        "icon": "$(copy)"
       }
     ],
-    "views": {
-      "redaxo-instances": [
-        {
-          "id": "redaxo-instances.instancesView",
-          "name": "REDAXO Instances",
-          "when": "true",
-          "icon": "$(server)"
-        },
-        {
-          "id": "redaxoEmptyInstance",
-          "name": "Empty Instance",
-          "type": "webview",
-          "when": "true",
-          "icon": "$(package)"
-        }
-      ]
-    },
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "redaxo-instances",
-          "title": "REDAXO Multi-Instances",
-          "icon": "resources/activity-bar-icon.svg"
-        }
-      ]
-    },
     "menus": {
       "view/title": [
         {
           "command": "redaxo-instances.createInstance",
           "when": "view == redaxo-instances.instancesView",
-          "group": "navigation"
-        },
-        {
-          "command": "redaxo-instances.changeInstancesPath",
-          "when": "view == redaxo-instances.instancesView",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "redaxo-instances.refresh",
           "when": "view == redaxo-instances.instancesView",
-          "group": "navigation"
-        },
-        {
-          "command": "redaxo-instances.showHelp",
-          "when": "view == redaxo-instances.instancesView",
-          "group": "navigation"
-        },
-        {
-          "command": "redaxo-instances.maintenanceMenu",
-          "when": "view == redaxo-instances.instancesView",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
           "command": "redaxo-instances.importInstance",
           "when": "view == redaxo-instances.instancesView",
-          "group": "navigation"
+          "group": "1_instances@1"
+        },
+        {
+          "command": "redaxo-instances.stopAllInstances",
+          "when": "view == redaxo-instances.instancesView",
+          "group": "1_instances@2"
+        },
+        {
+          "command": "redaxo-instances.setupClaude",
+          "when": "view == redaxo-instances.instancesView",
+          "group": "2_ai@1"
+        },
+        {
+          "command": "redaxo-instances.maintenanceMenu",
+          "when": "view == redaxo-instances.instancesView",
+          "group": "3_settings@1"
+        },
+        {
+          "command": "redaxo-instances.changeInstancesPath",
+          "when": "view == redaxo-instances.instancesView",
+          "group": "3_settings@2"
+        },
+        {
+          "command": "redaxo-instances.showHelp",
+          "when": "view == redaxo-instances.instancesView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "redaxo-instances.showOutput",
+          "when": "view == redaxo-instances.instancesView",
+          "group": "4_help@2"
+        },
+        {
+          "command": "redaxo-instances.trustCertificates",
+          "when": "view == redaxo-instances.servicesView",
+          "group": "1_https@1"
+        },
+        {
+          "command": "redaxo-instances.openWalkthrough",
+          "when": "view == redaxo-instances.instancesView",
+          "group": "4_help@0"
         }
       ],
       "view/item/context": [
         {
           "command": "redaxo-instances.startInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-stopped|stopped-instance/",
-          "group": "1_control@1"
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance stopped/",
+          "group": "inline@1"
         },
         {
           "command": "redaxo-instances.stopInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
-          "group": "1_control@1"
-        },
-        {
-          "command": "redaxo-instances.openInBrowser",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
-          "group": "2_browser@1"
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
+          "group": "inline@1"
         },
         {
           "command": "redaxo-instances.openBackend",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
-          "group": "2_browser@2"
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/ && viewItem =~ / redaxo$/",
+          "group": "inline@2"
         },
         {
-          "command": "redaxo-instances.openTerminal",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "3_docker@1"
+          "command": "redaxo-instances.openInBrowser",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/ && viewItem =~ / custom$/",
+          "group": "inline@2"
         },
         {
-          "command": "redaxo-instances.showLogs",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "3_docker@2"
+          "command": "redaxo-instances.startInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance stopped/",
+          "group": "1_lifecycle@1"
         },
         {
-          "command": "redaxo-instances.showRedaxoLogs",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
-          "group": "3_docker@3"
+          "command": "redaxo-instances.stopInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
+          "group": "1_lifecycle@1"
         },
         {
-          "command": "redaxo-instances.installCLITools",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "3_docker@4"
+          "command": "redaxo-instances.restartInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
+          "group": "1_lifecycle@2"
         },
         {
-          "command": "redaxo-instances.openInAdminer",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
-          "group": "3_docker@5"
+          "command": "redaxo-instances.openBackend",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / redaxo$/",
+          "group": "2_open@1"
         },
         {
-          "command": "redaxo-instances.createDatabase",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance-running|running-instance/",
-          "group": "3_docker@6"
+          "command": "redaxo-instances.openInBrowser",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "2_open@2"
         },
         {
           "command": "redaxo-instances.getLoginInfo",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "4_info@1"
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "2_open@3"
         },
         {
-          "command": "redaxo-instances.copyCopilotInstructions",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "4_info@2"
+          "command": "redaxo-instances.openInAdminer",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
+          "group": "2_open@4"
         },
         {
-          "command": "redaxo-instances.setupSSL",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "4_info@4"
+          "command": "redaxo-instances.clearCache",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/ && viewItem =~ / redaxo$/",
+          "group": "3_redaxo@1"
         },
         {
-          "command": "redaxo-instances.repairInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "4_info@4"
+          "command": "redaxo-instances.runConsoleCommand",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/ && viewItem =~ / redaxo$/",
+          "group": "3_redaxo@2"
         },
         {
-          "command": "redaxo-instances.changePhpVersion",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "4_info@5"
+          "command": "redaxo-instances.showRedaxoLogs",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / redaxo$/",
+          "group": "3_redaxo@3"
         },
         {
-          "command": "redaxo-instances.changeMariaDbVersion",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "4_info@6"
+          "command": "redaxo-instances.openTerminal",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
+          "group": "4_tools@1"
         },
         {
-          "command": "redaxo-instances.updateHosts",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "4_info@7"
+          "command": "redaxo-instances.openDbShell",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
+          "group": "4_tools@2"
+        },
+        {
+          "command": "redaxo-instances.showLogs",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "4_tools@3"
         },
         {
           "command": "redaxo-instances.openWorkspace",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "4_workspace@1"
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "4_tools@4"
         },
         {
-          "command": "redaxo-instances.openInFinder",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "4_workspace@2"
+          "command": "redaxo-instances.changePhpVersion",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / v2 /",
+          "group": "5_config@1"
         },
         {
-          "command": "redaxo-instances.deleteInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "5_danger@1"
+          "command": "redaxo-instances.changeMariaDbVersion",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "5_config@2"
+        },
+        {
+          "command": "redaxo-instances.toggleXdebug",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / v2 /",
+          "group": "5_config@3"
+        },
+        {
+          "command": "redaxo-instances.manageDomains",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / v2 /",
+          "group": "5_config@4"
+        },
+        {
+          "command": "redaxo-instances.createDatabase",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
+          "group": "5_config@5"
+        },
+        {
+          "command": "redaxo-instances.modernizeInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / legacy /",
+          "group": "5_config@0"
+        },
+        {
+          "command": "redaxo-instances.copyCopilotInstructions",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "6_ai@1"
         },
         {
           "command": "redaxo-instances.exportInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /instance/",
-          "group": "5_danger@2"
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "7_transfer@1"
+        },
+        {
+          "command": "redaxo-instances.repairInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "7_transfer@2"
+        },
+        {
+          "command": "redaxo-instances.deleteInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "9_danger@1"
+        },
+        {
+          "command": "redaxo-instances.copyValue",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^detail (url|secret)/",
+          "group": "inline@1"
+        },
+        {
+          "command": "redaxo-instances.startService",
+          "when": "view == redaxo-instances.servicesView && viewItem =~ /^service .* stopped$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "redaxo-instances.stopService",
+          "when": "view == redaxo-instances.servicesView && viewItem =~ /^service .* running$/",
+          "group": "inline@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "redaxo-instances.showModernLoginInfo",
+          "when": "false"
+        },
+        {
+          "command": "redaxo-instances.startService",
+          "when": "false"
+        },
+        {
+          "command": "redaxo-instances.stopService",
+          "when": "false"
+        },
+        {
+          "command": "redaxo-instances.updateHosts",
+          "when": "false"
+        },
+        {
+          "command": "redaxo-instances.installCLITools",
+          "when": "false"
+        },
+        {
+          "command": "redaxo-instances.openUrl",
+          "when": "false"
+        },
+        {
+          "command": "redaxo-instances.copyValue",
+          "when": "false"
         }
       ]
     },
     "configuration": {
       "title": "REDAXO Multi-Instances",
       "properties": {
+        "redaxo-instances.instancesPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%config.instancesPath%",
+          "order": 1
+        },
         "redaxo-instances.dockerPath": {
           "type": "string",
           "default": "docker",
-          "description": "Path to Docker executable"
-        },
-        "redaxo-instances.instancesPath": {
-          "type": "string",
-          "description": "Directory where REDAXO instances are stored"
+          "markdownDescription": "%config.dockerPath%",
+          "order": 2
         },
         "redaxo-instances.instancesDirectory": {
           "type": "string",
-          "default": "./instances",
-          "description": "Directory where REDAXO instances are stored"
+          "markdownDeprecationMessage": "%config.instancesDirectory.deprecated%"
         },
         "redaxo-instances.defaultPhpVersion": {
           "type": "string",
-          "default": "8.5",
-          "enum": [
-            "7.4",
-            "8.0",
-            "8.1",
-            "8.2",
-            "8.3",
-            "8.4",
-            "8.5"
-          ],
-          "description": "Default PHP version for new instances"
+          "markdownDeprecationMessage": "%config.defaultPhpVersion.deprecated%"
         },
         "redaxo-instances.defaultMariaDbVersion": {
           "type": "string",
-          "default": "11.8",
-          "enum": [
-            "10.6",
-            "10.11",
-            "11.4",
-            "11.8",
-            "12.2"
-          ],
-          "description": "Default MariaDB version for new instances"
+          "markdownDeprecationMessage": "%config.defaultMariaDbVersion.deprecated%"
         },
         "redaxo-instances.autoRefresh": {
           "type": "boolean",
-          "default": true,
-          "description": "Automatically refresh instance status"
+          "markdownDeprecationMessage": "%config.autoRefresh.deprecated%"
         }
       }
-    }
+    },
+    "walkthroughs": [
+      {
+        "id": "redaxo-instances.gettingStarted",
+        "title": "%walkthrough.title%",
+        "description": "%walkthrough.description%",
+        "steps": [
+          {
+            "id": "docker",
+            "title": "%walkthrough.docker.title%",
+            "description": "%walkthrough.docker.description%",
+            "media": {
+              "image": "resources/walkthrough.svg",
+              "altText": "REDAXO"
+            },
+            "completionEvents": [
+              "onContext:redaxo-instances.dockerAvailable"
+            ]
+          },
+          {
+            "id": "create",
+            "title": "%walkthrough.create.title%",
+            "description": "%walkthrough.create.description%",
+            "media": {
+              "image": "resources/walkthrough.svg",
+              "altText": "REDAXO"
+            },
+            "completionEvents": [
+              "onCommand:redaxo-instances.createInstance"
+            ]
+          },
+          {
+            "id": "https",
+            "title": "%walkthrough.https.title%",
+            "description": "%walkthrough.https.description%",
+            "media": {
+              "image": "resources/walkthrough.svg",
+              "altText": "REDAXO"
+            },
+            "completionEvents": [
+              "onCommand:redaxo-instances.trustCertificates"
+            ]
+          },
+          {
+            "id": "ai",
+            "title": "%walkthrough.ai.title%",
+            "description": "%walkthrough.ai.description%",
+            "media": {
+              "image": "resources/walkthrough.svg",
+              "altText": "REDAXO"
+            },
+            "completionEvents": [
+              "onCommand:redaxo-instances.setupClaude"
+            ]
+          },
+          {
+            "id": "redaxo6",
+            "title": "%walkthrough.redaxo6.title%",
+            "description": "%walkthrough.redaxo6.description%",
+            "media": {
+              "image": "resources/walkthrough.svg",
+              "altText": "REDAXO"
+            },
+            "completionEvents": []
+          }
+        ]
+      }
+    ],
+    "chatParticipants": [
+      {
+        "id": "redaxo-instances.chat",
+        "name": "redaxo",
+        "fullName": "REDAXO",
+        "description": "%chat.description%",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "help",
+            "description": "%chat.command.help%"
+          },
+          {
+            "name": "list",
+            "description": "%chat.command.list%"
+          },
+          {
+            "name": "info",
+            "description": "%chat.command.info%"
+          },
+          {
+            "name": "create",
+            "description": "%chat.command.create%"
+          },
+          {
+            "name": "start",
+            "description": "%chat.command.start%"
+          },
+          {
+            "name": "stop",
+            "description": "%chat.command.stop%"
+          },
+          {
+            "name": "console",
+            "description": "%chat.command.console%"
+          },
+          {
+            "name": "query",
+            "description": "%chat.command.query%"
+          },
+          {
+            "name": "articles",
+            "description": "%chat.command.articles%"
+          },
+          {
+            "name": "addons",
+            "description": "%chat.command.addons%"
+          },
+          {
+            "name": "config",
+            "description": "%chat.command.config%"
+          },
+          {
+            "name": "logs",
+            "description": "%chat.command.logs%"
+          },
+          {
+            "name": "install-tools",
+            "description": "%chat.command.install-tools%"
+          }
+        ],
+        "disambiguation": [
+          {
+            "category": "redaxo_instances",
+            "description": "The user wants to create, start, stop or inspect local REDAXO / PHP Docker instances, run REDAXO console commands or query a REDAXO database.",
+            "examples": [
+              "Start my demo instance",
+              "Clear the REDAXO cache of shop",
+              "Which AddOns are installed in kunde-a?",
+              "Create a REDAXO instance with PHP 8.5"
+            ]
+          }
+        ]
+      }
+    ],
+    "languageModelTools": [
+      {
+        "name": "redaxo_list_instances",
+        "displayName": "%tool.list_instances.name%",
+        "toolReferenceName": "redaxo-list-instances",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server-environment)",
+        "userDescription": "%tool.list_instances.description%",
+        "modelDescription": "Lists all local REDAXO/PHP Docker instances with status, PHP/MariaDB versions and URLs.",
+        "tags": [
+          "redaxo",
+          "docker",
+          "php"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "redaxo_get_instance",
+        "displayName": "%tool.get_instance.name%",
+        "toolReferenceName": "redaxo-get-instance",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server-environment)",
+        "userDescription": "%tool.get_instance.description%",
+        "modelDescription": "Returns URLs, paths, containers, versions and database connection data of an instance. Secrets are only included when includeSecrets is true.",
+        "tags": [
+          "redaxo",
+          "docker",
+          "php"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Instance name (see list_instances)"
+            },
+            "includeSecrets": {
+              "type": "boolean",
+              "description": "Include passwords (default false)"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "redaxo_list_versions",
+        "displayName": "%tool.list_versions.name%",
+        "toolReferenceName": "redaxo-list-versions",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server-environment)",
+        "userDescription": "%tool.list_versions.description%",
+        "modelDescription": "Lists the PHP, MariaDB and REDAXO versions that can be used for new instances.",
+        "tags": [
+          "redaxo",
+          "docker",
+          "php"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "redaxo_create_instance",
+        "displayName": "%tool.create_instance.name%",
+        "toolReferenceName": "redaxo-create-instance",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server-environment)",
+        "userDescription": "%tool.create_instance.description%",
+        "modelDescription": "Creates and starts a new local instance. kind \"redaxo\" installs REDAXO automatically (admin login is generated), kind \"custom\" creates an empty PHP/Apache project. The first start of a PHP version builds a Docker image (several minutes).",
+        "tags": [
+          "redaxo",
+          "docker",
+          "php"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Lowercase letters, digits and hyphens; becomes <name>.localhost"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "redaxo",
+                "redaxo6",
+                "redaxo6-core",
+                "custom"
+              ],
+              "description": "redaxo = REDAXO 5 (stable), redaxo6 = REDAXO 6 development version (Composer project), redaxo6-core = clone of redaxo/core 6.x for core development, custom = empty PHP project"
+            },
+            "php": {
+              "type": "string",
+              "enum": [
+                "8.6",
+                "8.5",
+                "8.4",
+                "8.3",
+                "8.2",
+                "8.1"
+              ]
+            },
+            "mariadb": {
+              "type": "string",
+              "enum": [
+                "13.0",
+                "12.3",
+                "11.8",
+                "11.4",
+                "10.11"
+              ]
+            },
+            "redaxoVersion": {
+              "type": "string",
+              "description": "\"latest\" (default) or a release such as 5.21.6"
+            },
+            "domains": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Additional host names, e.g. [\"shop.localhost\"]"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "redaxo_start_instance",
+        "displayName": "%tool.start_instance.name%",
+        "toolReferenceName": "redaxo-start-instance",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server-environment)",
+        "userDescription": "%tool.start_instance.description%",
+        "modelDescription": "Starts an instance (and the shared HTTPS proxy / Mailpit) and waits until the web server answers.",
+        "tags": [
+          "redaxo",
+          "docker",
+          "php"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Instance name (see list_instances)"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "redaxo_stop_instance",
+        "displayName": "%tool.stop_instance.name%",
+        "toolReferenceName": "redaxo-stop-instance",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server-environment)",
+        "userDescription": "%tool.stop_instance.description%",
+        "modelDescription": "Stops the containers of an instance (data is kept).",
+        "tags": [
+          "redaxo",
+          "docker",
+          "php"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Instance name (see list_instances)"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "redaxo_redaxo_console",
+        "displayName": "%tool.redaxo_console.name%",
+        "toolReferenceName": "redaxo-redaxo-console",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server-environment)",
+        "userDescription": "%tool.redaxo_console.description%",
+        "modelDescription": "Runs bin/console in a running REDAXO instance as www-data, e.g. \"cache:clear\", \"package:list\", \"package:install yform\", \"config:get --package=core server\". Arguments are not passed through a shell.",
+        "tags": [
+          "redaxo",
+          "docker",
+          "php"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Instance name (see list_instances)"
+            },
+            "command": {
+              "type": "string",
+              "description": "Console command and arguments, without \"php bin/console\""
+            }
+          },
+          "required": [
+            "name",
+            "command"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "redaxo_query_database",
+        "displayName": "%tool.query_database.name%",
+        "toolReferenceName": "redaxo-query-database",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server-environment)",
+        "userDescription": "%tool.query_database.description%",
+        "modelDescription": "Executes one SQL statement in the instance database and returns the result as table. Read-only (SELECT/SHOW/DESCRIBE/EXPLAIN) unless allowWrite is true. REDAXO tables use the prefix rex_.",
+        "tags": [
+          "redaxo",
+          "docker",
+          "php"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Instance name (see list_instances)"
+            },
+            "sql": {
+              "type": "string"
+            },
+            "allowWrite": {
+              "type": "boolean",
+              "description": "Allow INSERT/UPDATE/DELETE/DDL (default false)"
+            },
+            "maxRows": {
+              "type": "number",
+              "description": "Maximum rows (default 100)"
+            }
+          },
+          "required": [
+            "name",
+            "sql"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "redaxo_get_logs",
+        "displayName": "%tool.get_logs.name%",
+        "toolReferenceName": "redaxo-get-logs",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server-environment)",
+        "userDescription": "%tool.get_logs.description%",
+        "modelDescription": "Returns the latest log lines of the web (Apache/PHP errors) and/or database container.",
+        "tags": [
+          "redaxo",
+          "docker",
+          "php"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Instance name (see list_instances)"
+            },
+            "service": {
+              "type": "string",
+              "enum": [
+                "web",
+                "db",
+                "all"
+              ]
+            },
+            "tail": {
+              "type": "number",
+              "description": "Number of lines (default 100)"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "redaxo_set_domains",
+        "displayName": "%tool.set_domains.name%",
+        "toolReferenceName": "redaxo-set-domains",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server-environment)",
+        "userDescription": "%tool.set_domains.description%",
+        "modelDescription": "Sets the additional host names of an instance (besides <name>.localhost and *.<name>.localhost) for multi-domain setups such as YRewrite. Updates HTTPS certificates and proxy routing.",
+        "tags": [
+          "redaxo",
+          "docker",
+          "php"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Instance name (see list_instances)"
+            },
+            "domains": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "name",
+            "domains"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
-    "compile": "webpack",
-    "watch": "webpack --watch",
-    "package": "webpack --mode production --devtool hidden-source-map",
-    "compile-tests": "tsc -p . --outDir out",
-    "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "npm run compile-tests && npm run compile && npm run lint",
-    "lint": "eslint src",
-    "test": "vscode-test"
+    "generate-assets": "node scripts/generate-assets.mjs",
+    "compile": "npm run generate-assets && npm run check-types && node esbuild.mjs",
+    "watch": "npm run generate-assets && node esbuild.mjs --watch",
+    "package": "npm run generate-assets && npm run check-types && node esbuild.mjs --production",
+    "check-types": "tsc -p .",
+    "lint": "eslint src test scripts",
+    "test:unit": "npm run generate-assets && mocha",
+    "test:integration": "npm run compile && tsc -p tsconfig.integration.json && vscode-test",
+    "test:e2e": "npm run generate-assets && mocha --config .mocharc.e2e.json",
+    "test": "npm run lint && npm run test:unit && npm run test:integration",
+    "l10n:export": "npx @vscode/l10n-dev export --outDir ./l10n ./src",
+    "vsix": "vsce package"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^25.6.0",
+    "@types/node": "^22.20.5",
     "@types/vscode": "^1.118.0",
-    "@typescript-eslint/eslint-plugin": "^8.59.1",
-    "@typescript-eslint/parser": "^8.59.1",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2",
-    "eslint": "^9.39.4",
-    "mocha": "^11.7.5",
-    "ts-loader": "^9.5.7",
-    "typescript": "^5.9.3",
-    "webpack": "^5.106.2",
-    "webpack-cli": "^6.0.1"
+    "@vscode/l10n-dev": "^0.0.35",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.1.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.14.0",
+    "mocha": "^12.0.3",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
+  },
+  "overrides": {
+    "minimatch": "^11.0.4",
+    "serialize-javascript": "^7.1.4",
+    "glob": "^14.0.3",
+    "diff": "^9.0.0"
   }
 }

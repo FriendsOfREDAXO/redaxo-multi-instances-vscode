@@ -1,5 +1,8 @@
-out
-dist
-node_modules
+node_modules/
+dist/
+out/
 .vscode-test/
 *.vsix
+# generated from assets/docker by scripts/generate-assets.mjs
+src/core/assets.generated.ts
+.DS_Store

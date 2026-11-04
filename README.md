@@ -1,343 +1,251 @@
-# 🚀 REDAXO Multi-Instances Manager 
+# REDAXO Multi-Instances Manager
 
-👉 Für macOs und Linux
+Lokale REDAXO- und PHP-Entwicklungsumgebungen mit Docker – direkt in VS Code.
+Name eingeben, „REDAXO“ wählen, nach etwa einer Minute läuft REDAXO unter **https://&lt;name&gt;.localhost**.
 
-Based on: [Docker image for REDAXO](https://github.com/FriendsOfREDAXO/docker-redaxo) Danke Dirk! 🙏
+![Instanz-Liste mit Details und Diensten](docs/images/instances.png)
 
-![Screenshot](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/blob/main/screenshot.png?raw=true)
+- **REDAXO 5** (aktuelle Version, automatisch installiert), **REDAXO 6** (Entwicklungsversion) oder ein **leeres PHP-Projekt**
+- **PHP 8.1 – 8.6**, **MariaDB 10.11 – 13.0**, Apache 2.4 – Version jederzeit wechselbar
+- **HTTPS auf `*.localhost`** ohne Hosts-Datei, mit **Multidomain** (z. B. für YRewrite)
+- **Mailpit** fängt alle E-Mails ab, **Adminer** für die Datenbank
+- **ImageMagick, libvips, Poppler, Ghostscript, ffmpeg, Composer, Xdebug** sind an Bord
+- **KI-Integration:** `@redaxo` im Copilot-Chat, Tools für den Agent-Modus, **MCP-Server für Claude Code / Claude Desktop**
 
-Eine  TreeView (Seitenleiste)
-- **Server-Symbol** = REDAXO-Instanz (Grün=läuft, Gelb=gestoppt, Rot=Fehler)
-- **Paket-Symbol** = Custom-Instanz (Grün=läuft, Gelb=gestoppt, Rot=Fehler)
-- **● / ○** in Beschreibung = Status (gefüllt=läuft, leer=gestoppt)
-- **Klick auf Instanz** öffnet Aktionsmenü (intuitiver Zugriff)
-- Rechtsklick für Kontext-Menü (wie gehabt)
-- **❓ Help-Button** in der Toolbar für schnelle HilfeS Code Extension zur Verwaltung mehrerer REDAXO-Instanzen ("Custom Instances") mit Docker, SSL-Support und modernem Dashboard.
+Die ausführliche **Hilfe** ist in der Extension enthalten: Befehl **„REDAXO: Hilfe“** oder das **?** in der
+Instanz-Liste (Deutsch und Englisch). Für den Einstieg gibt es zusätzlich **„REDAXO: Erste Schritte“**.
 
-![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue?style=flat-square&logo=visual-studio-code)
-![Docker](https://img.shields.io/badge/Docker-Required-blue?style=flat-square&logo=docker)
-![REDAXO](https://img.shields.io/badge/REDAXO-5.x-green?style=flat-square)
-![PHP](https://img.shields.io/badge/PHP-7.4%20|%208.1--8.5-purple?style=flat-square&logo=php)
-![MariaDB](https://img.shields.io/badge/MariaDB-11.3-blue?style=flat-square)
-![SSL](https://img.shields.io/badge/SSL-mkcert-orange?style=flat-square&logo=letsencrypt)
+<img src="docs/images/help.png" alt="Mitgelieferte Hilfe" width="700">
 
-## ✨ Features
+## Voraussetzungen
 
-### 🎯 Kern-Funktionen
-- **🏗️ Instanz-Management** - Erstellen, starten, stoppen und löschen von REDAXO-Instanzen
-- **🐘 PHP-Version wechseln (Custom)** - PHP-Version pro Custom-Instanz ändern (mit Rebuild)
-- **🗄️ MariaDB-Version wechseln** - MariaDB-Version pro Instanz umstellen (Container-Recreate)
-- **🤖 Copilot Chat Integration** - Verwalte Instanzen direkt via GitHub Copilot Chat mit @redaxo
-- **🎯 Custom Instance Support** - Vollständige Unterstützung für Custom REDAXO Instanzen mit individuellen Verzeichnisstrukturen
-- **⚡ Direkte Instance-Kommunikation** - Console Commands, Datenbank-Queries, Logs - alles aus VS Code
-- **🔍 Smart Path Detection** - Automatische Erkennung verschiedener REDAXO-Verzeichnisstrukturen
-- **🔒 SSL/HTTPS Support** - Automatische SSL-Zertifikate mit mkcert
-- **🐳 Docker Integration** - Vollständig containerisierte Umgebung
-- **📊 Info Pages** - Modernes Webview-Dashboard je Instanz
-- **🔑 Login-Informationen** - Automatische Anzeige von Zugangsdaten und URLs
-- **📱 TreeView** - Seitenleiste mit allen Instanzen und deren Status
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (oder OrbStack, Colima, Docker Engine mit Compose v2)
+- Empfohlen: [mkcert](https://github.com/FiloSottile/mkcert) für vertrauenswürdige Zertifikate (`brew install mkcert nss`)
 
-### ℹ️ Wichtiger Hinweis zur Instanzliste
-- **Stopped Instances** sind normale, vorhandene Instanzen, die aktuell nicht laufen.
-- Sie sind **nicht** verwaist und **keine Core-Sessions**.
-- Eine Instanz wie `core` ist einfach ein Instanzname aus deinem konfigurierten Instances-Ordner.
+macOS, Linux und Windows (Docker Desktop) werden unterstützt.
 
-### 🔧 Technische Features
-- **PHP Support** - PHP 7.4, 8.1, 8.2, 8.3, 8.4, 8.5
-- **MariaDB Support** - 10.6, 10.11, 11.4, 11.8 (LTS) und 12.2 (Rolling)
-- **🗄️ Adminer Integration** - Globaler Adminer-Container für Datenbankverwaltung
-- **� Multi-Database Support** - Erstelle zusätzliche Datenbanken pro Instanz über die UI
-- **�🚀 Dynamic Path Resolution** - Intelligente Erkennung von Console-Pfaden und REDAXO-Strukturen
-- **⚡ Performance Caching** - Path-Detection wird gecacht für schnellere Zugriffe
-- **Port Management** - Automatische Port-Zuweisung und -Verwaltung
-- **SSL Zertifikate** - Lokale Entwicklungszertifikate mit mkcert
-- **Docker Compose** - Automatische Container-Orchestrierung
-- **Docker Images** - Basiert auf [friendsofredaxo/redaxo](https://github.com/FriendsOfREDAXO/docker-redaxo) und [mariadb](https://hub.docker.com/_/mariadb) Images
+## Installation
 
-## 🚀 Installation
+Die Extension wird über die [GitHub-Releases](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/releases)
+verteilt (nicht über den VS Code Marketplace):
 
-### Voraussetzungen
+1. Beim neuesten Release die Datei `redaxo-multi-instances-manager-<version>.vsix` herunterladen.
+2. In VS Code: Erweiterungen-Ansicht → **…** (oben rechts) → **Aus VSIX installieren…** → Datei wählen.
+   Alternativ im Terminal: `code --install-extension redaxo-multi-instances-manager-<version>.vsix`
+3. **Developer: Reload Window** ausführen.
 
-1. **VS Code** (Version 1.74.0 oder höher)
-2. **Docker Desktop** - [Download](https://www.docker.com/products/docker-desktop)
-3. **mkcert** (optional, für SSL)
+Updates installierst du genauso – VS Code aktualisiert per VSIX installierte Erweiterungen nicht automatisch.
+Einstellungen und Instanzen bleiben dabei erhalten.
 
-### Extension Installation
+## Schnellstart
 
-#### Option 1: VSIX Package (Aktuell)
-1. VSIX-Datei von [Releases](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/releases) herunterladen
-2. VS Code öffnen
-3. `Cmd+Shift+P` → "Extensions: Install from VSIX"
-4. VSIX-Datei auswählen und installieren
+1. Links in der Aktivitätsleiste **REDAXO** öffnen.
+2. **+** (Neue Instanz) → Namen eingeben → **REDAXO**.
+3. Fertig: Backend-Link und Passwort kommen als Benachrichtigung.
 
-#### Option 2: Repository klonen
+![Neue Instanz anlegen](docs/images/new-instance.png)
+
+Beim ersten Start einer PHP-Version wird das Docker-Image gebaut (einige Minuten), danach geht es in Sekunden.
+Einmalig **„HTTPS-Zertifikaten vertrauen“** ausführen, dann gibt es keine Browserwarnungen mehr.
+
+## Die Instanz-Liste
+
+Jede Instanz zeigt ihren Status (grün = läuft) und lässt sich aufklappen:
+
+| Eintrag | Klick |
+|---|---|
+| Frontend / Backend | öffnet die Seite im Browser |
+| Domains | zusätzliche Hostnamen verwalten |
+| Login | kopiert das Admin-Passwort |
+| Datenbank | zeigt alle Zugangsdaten zum Kopieren |
+| Ordner | öffnet die Instanz in VS Code |
+
+**Zugangsdaten…** zeigt alles Wichtige auf einen Blick – auswählen kopiert den Wert:
+
+![Zugangsdaten](docs/images/access-data.png)
+
+Über das Kontextmenü (Rechtsklick) erreichst du: Cache löschen, REDAXO-Konsole, Shell, SQL-Konsole, Logs,
+Adminer, PHP-/MariaDB-Version, Xdebug, Export, Container neu aufbauen und Löschen.
+
+## Domains und HTTPS
+
+Ein gemeinsamer Reverse-Proxy (Caddy) liefert alle Instanzen per HTTPS aus:
+
+- `https://kunde.localhost` und jede Subdomain `https://*.kunde.localhost` funktionieren automatisch.
+- Weitere Domains wie `shop.localhost` oder `kunde-b.localhost` über **Domains…** hinzufügen –
+  ideal, um YRewrite-Multidomain-Setups lokal zu testen.
+- `*.localhost` zeigt immer auf den eigenen Rechner – es sind keine Einträge in der Hosts-Datei nötig.
+- Sind Port 80/443 belegt, sucht sich der Proxy automatisch freie Ports (z. B. `https://kunde.localhost:8443`).
+
+Mailpit und Adminer sind unter `https://mail.localhost` bzw. `https://adminer.localhost` erreichbar.
+
+## REDAXO 6
+
+Im Assistenten gibt es zwei Varianten der Entwicklungsversion (PHP 8.5+):
+
+- **REDAXO 6** – Composer-Projekt (`redaxo/project:6.x-dev`) zum Ausprobieren und Bauen von Seiten.
+- **REDAXO 6 Core** – klont `redaxo/core` (Branch `6.x`) zum Mitentwickeln; die Dev-Instanz liegt in `project/`.
+
+Datenbank, Mailer und Basis-URL werden über Umgebungsvariablen (`DATABASE_URL`, `MAILER_DSN`, `REX_BASE_URL`)
+gesetzt, das Setup läuft automatisch. Bei jedem Start wird `console migrate` ausgeführt.
+
+## KI: Copilot und Claude
+
+### Copilot
+
+- **`@redaxo` im Chat:** `/help`, `/list`, `/info <name>`, `/start`, `/stop`, `/console <name> cache:clear`,
+  `/query <name> SELECT …`, `/addons`, `/articles`, `/logs` – oder einfach frei fragen
+  („Lösche den Cache von kunde-shop“).
+- **Agent-Modus:** Die Tools `#redaxo-…` stehen jedem Agenten zur Verfügung. Ändernde Aktionen müssen bestätigt
+  werden, SQL ist standardmäßig nur lesend.
+
+### MCP-Server für Claude Code, Claude Desktop und andere KI-Clients
+
+Die Extension bringt einen [MCP-Server](https://modelcontextprotocol.io) (Model Context Protocol) mit. Darüber kann
+Claude – oder jeder andere MCP-fähige Client – deine Instanzen genauso bedienen wie du in VS Code: Instanzen anlegen,
+starten, die REDAXO-Konsole ausführen, die Datenbank abfragen und Logs lesen. Er nutzt denselben Code wie die
+Extension und dieselben Instanzen.
+
+**Einrichten:** Befehl **„REDAXO: Claude verbinden (MCP)“** ausführen und wählen:
+
+| Ziel | Was passiert |
+|---|---|
+| **Claude Code** | `claude mcp add --scope user redaxo-instances …` – gilt für alle Projekte und auch für die Claude-Code-Erweiterung in VS Code |
+| **Claude Desktop** | trägt den Server in `claude_desktop_config.json` ein (danach Claude Desktop neu starten) |
+| **Konfiguration kopieren** | JSON für andere MCP-Clients (Cursor, Windsurf, …) |
+
+Zusätzlich liegt in jedem Instanz-Ordner eine `.mcp.json`: Öffnest du den Ordner in Claude Code, wird der Server
+automatisch angeboten.
+
+**Was der Server kann:**
+
+| Tool | Zweck | Beispiel-Anfrage |
+|---|---|---|
+| `list_instances` | alle Instanzen mit Status, Versionen, URL | „Welche REDAXO-Instanzen laufen?“ |
+| `get_instance` | URLs, Pfade, Container, DB-Verbindung (Passwörter nur auf Nachfrage) | „Wie verbinde ich mich mit der DB von kunde-shop?“ |
+| `list_versions` | verfügbare PHP-, MariaDB- und REDAXO-Versionen | „Welche PHP-Versionen gibt es?“ |
+| `create_instance` | neue Instanz: REDAXO 5, REDAXO 6, REDAXO 6 Core oder leeres PHP-Projekt | „Lege eine REDAXO-Instanz demo mit PHP 8.5 an.“ |
+| `start_instance` / `stop_instance` | Instanz starten / stoppen | „Starte kunde-shop.“ |
+| `redaxo_console` | `bin/console` als www-data (ohne Shell) | „Installiere YForm in kunde-shop und lösche den Cache.“ |
+| `query_database` | SQL; nur lesend, außer Schreiben wird ausdrücklich erlaubt | „Wie viele Artikel sind offline?“ |
+| `get_logs` | Logs von Web- und DB-Container | „Gibt es PHP-Fehler in kunde-shop?“ |
+| `set_domains` | Zusatzdomains für Multidomain/YRewrite | „Füge shop-b.localhost zu kunde-shop hinzu.“ |
+
+Ein echter Ablauf mit Claude Code sieht so aus: *„Lege eine REDAXO-Instanz mcp-demo an, füge die Domain
+mcp-shop.localhost hinzu, lösche den Cache, zeige die installierten AddOns und prüfe die Logs auf Fehler.“* –
+Claude erledigt das in einem Durchgang mit `create_instance`, `set_domains`, `redaxo_console`, `query_database` und
+`get_logs` und liefert am Ende Frontend- und Backend-URL.
+
+**Sicherheit:** Der Server läuft nur lokal (stdio, kein offener Port). SQL ist standardmäßig nur lesend
+(eine einzelne `SELECT`/`SHOW`/`DESCRIBE`-Anweisung in einer Read-only-Transaktion). Konsolenbefehle werden ohne Shell
+ausgeführt. Passwörter gibt der Server nur heraus, wenn ausdrücklich danach gefragt wird. Ob ein Client Aktionen
+ohne Rückfrage ausführen darf, legst du im Client fest (in Claude Code z. B. per `/permissions`).
+
+**Manuell einrichten** (ohne den VS-Code-Befehl):
+
 ```bash
-git clone https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode.git
-cd redaxo-multi-instances-vscode
+claude mcp add --scope user redaxo-instances -- node ~/.config/redaxo-multi-instances/mcp-server.js
+```
+
+```json
+{
+  "mcpServers": {
+    "redaxo-instances": {
+      "command": "node",
+      "args": ["/Users/<du>/.config/redaxo-multi-instances/mcp-server.js"]
+    }
+  }
+}
+```
+
+Unter Windows liegt der Server in `%APPDATA%\redaxo-multi-instances\mcp-server.js`. Die Extension aktualisiert die
+Datei bei jedem Start; den Instanzen-Ordner liest der Server aus der `settings.json` daneben. Ohne VS Code lässt
+sich der Ordner per Umgebungsvariable `REDAXO_INSTANCES_DIR` setzen.
+
+**Problemlösung:** `claude mcp list` zeigt, ob der Server verbunden ist. Meldet er „No instances folder
+configured“, VS Code mit der Extension einmal starten (oder `REDAXO_INSTANCES_DIR` setzen).
+
+### KI-Anweisungen pro Instanz
+
+Jede Instanz enthält eine `AGENTS.md` (plus `CLAUDE.md` und `.mcp.json`) mit allen Fakten zur Umgebung: Container,
+Pfade, Konsole, Datenbank-Host und REDAXO-Konventionen. Copilot und Claude Code lesen sie automatisch, sobald der
+Ordner geöffnet ist.
+
+## Ordnerstruktur einer Instanz
+
+```
+~/redaxo-instances/kunde/
+├── project/                 ← Webroot (/var/www/html), Document Root: project/public
+├── docker/                  ← Dockerfile, PHP-/Apache-Konfiguration, custom-setup.sh
+├── docker-compose.yml       ← wird generiert – eigene Ergänzungen in docker-compose.override.yml
+├── redaxo-instance.json     ← Konfiguration der Instanz
+└── AGENTS.md, CLAUDE.md     ← Infos für KI-Assistenten
+```
+
+`docker/custom-setup.sh` läuft bei jedem Start im Container – z. B. für zusätzliche Pakete oder PHP-Einstellungen.
+
+## Update von Version 1.x
+
+Version 2 ist ein kompletter Neuaufbau, bestehende Instanzen funktionieren aber weiter. So gehst du vor:
+
+1. **Optional, aber empfohlen:** wichtige Instanzen vorher sichern – mit 1.21 per Rechtsklick → *Export Instance*,
+   bei älteren Versionen Instanz stoppen und den Instanz-Ordner kopieren. (Beim späteren Modernisieren legt Version 2
+   zusätzlich selbst ein Backup an.)
+2. **Neue Version installieren** wie unter [Installation](#installation) beschrieben – einfach über die alte
+   Version drüber, vorher nichts deinstallieren. Danach **Developer: Reload Window**.
+3. **Instanzen prüfen:** Alle Instanzen erscheinen wieder in der Liste. 1.x-Instanzen laufen unverändert weiter –
+   gleiche Container, Ports, Zugangsdaten und Adressen (`http://localhost:<port>`, bisheriges `https://<name>.local:<port>`).
+4. **Einmalig HTTPS einrichten:** Befehl **„REDAXO: HTTPS-Zertifikaten vertrauen (mkcert)“**.
+5. **Instanzen modernisieren – wann du willst:** Rechtsklick → **„Instanz modernisieren…“**. Vorher wird automatisch ein
+   vollständiges Backup erstellt (`.redaxo-mi/backups/` im Instanzen-Ordner). Dateien, Datenbank, Ports, Zugangsdaten
+   und Container-Namen bleiben erhalten, die alte Konfiguration landet in `.legacy/`. Danach ist die Instanz unter
+   `https://<name>.localhost` erreichbar und bekommt PHP-Wechsel, Xdebug, Mailpit und das aktuelle Image.
+   Nicht modernisierte Instanzen funktionieren weiterhin wie bisher.
+
+**Was sich ändert:**
+
+| | Version 1.x | Version 2 |
+|---|---|---|
+| Adressen | `http://localhost:<port>`, `https://<name>.local:<port>` | `https://<name>.localhost` (+ Wildcard, Zusatzdomains) |
+| Hosts-Datei | Einträge `<name>.local` | nicht mehr nötig |
+| PHP | 7.4–8.5, bei REDAXO-Instanzen nicht wirklich wählbar | 8.1–8.6, jederzeit wechselbar |
+| Adminer | eigener Container `redaxo-adminer` | gemeinsamer Dienst (alter Container wird automatisch ersetzt) |
+| Oberfläche | Webviews | native VS-Code-Oberfläche, Hilfe unter „REDAXO: Hilfe“ |
+| Einstellungen | Standard-Versionen, Auto-Refresh, … | nur noch `instancesPath` und `dockerPath` |
+
+**Gut zu wissen:**
+
+- **Port 80/443 belegt?** Andere lokale Server (z. B. Atelier, yerd, Laravel Herd, Valet, MAMP) belegen oft 80/443.
+  Dann weicht der Proxy automatisch aus (`https://<name>.localhost:8443`) und wechselt zurück, sobald die Ports frei
+  sind. Werkzeuge, die die Ports per Firewall-Regel umleiten (z. B. yerd), müssen gestoppt und ihre Regel entfernt werden.
+- **Hosts-Datei aufräumen (optional):** Die von 1.x angelegten Zeilen `127.0.0.1 <name>.local` in `/etc/hosts` werden
+  nur noch für nicht modernisierte Instanzen mit HTTPS gebraucht und können danach entfernt werden.
+- **Zurück zu 1.x:** Das VSIX von [v1.21.0](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/releases/tag/v1.21.0)
+  installieren. Nicht modernisierte Instanzen funktionieren dort unverändert. Eine modernisierte Instanz stellst du
+  zurück, indem du sie stoppst, die Dateien aus `.legacy/` zurück in den Instanz-Ordner kopierst und
+  `redaxo-instance.json` löschst.
+
+## Einstellungen
+
+| Einstellung | Bedeutung |
+|---|---|
+| `redaxo-instances.instancesPath` | Ordner für alle Instanzen (leer = `~/redaxo-instances`) |
+| `redaxo-instances.dockerPath` | nur ändern, wenn `docker` nicht im PATH liegt |
+
+Alles andere – Ports, Versionen, Sprache, Zeitzone – wird automatisch ermittelt.
+
+## Entwicklung
+
+```bash
 npm install
-npm run compile
+npm run watch            # Extension + MCP-Server bauen (F5 startet VS Code mit der Extension)
+npm run test:unit        # schnelle Tests ohne Docker
+npm run test:integration # Tests in VS Code
+npm run test:e2e         # komplette Abläufe mit Docker (dauert einige Minuten)
 ```
 
-## 🏁 Erste Schritte
+Siehe [AGENTS.md](AGENTS.md) für Architektur und Konventionen.
 
-1. **Extension aktivieren** - `Cmd+Shift+P` → `REDAXO: Show Dashboard`
-2. **Erste Instanz erstellen** - `REDAXO: Create New Instance`
-3. **Instanz konfigurieren** - Name, PHP-Version (7.4 + 8.1–8.5), MariaDB 11.8 LTS
-4. **SSL aktivieren** - Optional für HTTPS-Support
-5. **Zugriff** - Automatisch generierte URLs verwenden
+## Lizenz
 
-## 📖 Verwendung
-
-### 🤖 GitHub Copilot Chat Integration
-
-**REDAXO Multi-Instances** bietet einen Chat Participant für GitHub Copilot Chat, mit dem du deine REDAXO-Instanzen direkt aus dem Chat heraus verwalten kannst!
-
-#### Chat Participant verwenden
-
-Öffne GitHub Copilot Chat und verwende **@redaxo** um mit deinen Instanzen zu interagieren:
-
-```
-@redaxo /start demo-site
-@redaxo /console demo-site cache:clear
-@redaxo /query demo-site SELECT * FROM rex_article LIMIT 5
-```
-
-#### Verfügbare Slash Commands
-
-| Command | Beschreibung | Beispiel |
-|---------|--------------|----------|
-| `/create` | Neue Instanz erstellen | `@redaxo /create` |
-| `/start [name]` | Instanz starten | `@redaxo /start demo-site` |
-| `/stop [name]` | Instanz stoppen | `@redaxo /stop demo-site` |
-| `/console <instance> <command>` | REDAXO Console Command ausführen | `@redaxo /console demo-site cache:clear` |
-| `/query <instance> <SQL>` | SQL Query ausführen | `@redaxo /query demo-site SELECT * FROM rex_article` |
-| `/articles [instance]` | Artikel auflisten | `@redaxo /articles demo-site` |
-| `/addons [instance]` | AddOns verwalten | `@redaxo /addons demo-site` |
-| `/config <instance> <key>` | Config-Werte lesen | `@redaxo /config demo-site server` |
-| `/logs <instance>` | Container-Logs anzeigen | `@redaxo /logs demo-site` |
-| `/install-tools <instance>` | CLI-Tools installieren | `@redaxo /install-tools demo-site` |
-
-#### Praktische Anwendungsfälle
-
-**Cache verwalten:**
-```
-@redaxo /console demo-site cache:clear
-@redaxo /console demo-site cache:warmup
-```
-
-**Datenbank abfragen:**
-```
-@redaxo /query demo-site SELECT id, name FROM rex_article WHERE status=1
-@redaxo /query demo-site SHOW TABLES
-```
-
-**AddOns verwalten:**
-```
-@redaxo /console demo-site package:list
-@redaxo /console demo-site package:install yform
-@redaxo /console demo-site package:activate yform
-```
-
-**Debugging:**
-```
-@redaxo /logs demo-site
-@redaxo /config demo-site debug
-@redaxo /query demo-site SELECT * FROM rex_system_log ORDER BY id DESC LIMIT 10
-```
-
-**CLI-Tools installieren:**
-```
-@redaxo /install-tools demo-site
-```
-Installiert automatisch:
-- **Web Container**: vim, nano, curl, wget, unzip, git
-- **DB Container**: mariadb/mariadb-dump (MariaDB) oder mysql/mysqldump (MySQL), vim, nano
-
-Die Extension erkennt automatisch, ob es sich um einen MariaDB oder MySQL Container handelt und verwendet die nativen Tools des jeweiligen Datenbanksystems.
-
-### 🗄️ Adminer - Datenbank-Management
-
-**REDAXO Multi-Instances** enthält einen globalen Adminer-Container für einfache Datenbankverwaltung:
-
-#### Features
-- 🚀 **One-Click Access**: Rechtsklick auf laufende Instanz → "Open in Adminer"
-- 🔗 **Auto-Login**: Browser öffnet mit vorausgefüllten Credentials (Server, Username, Database)
-- 📋 **Clipboard Integration**: Passwort wird automatisch kopiert - einfach einfügen (Cmd+V)
-- 📊 **Large File Support**: 512MB Upload-Limit für große Dumps
-- 🌐 **Port 9200**: Adminer läuft auf http://localhost:9200
-- 🐳 **Network Integration**: Automatische Verbindung zu DB-Containern
-
-#### Verwendung
-1. **Instanz starten** (muss laufen)
-2. **Rechtsklick** auf Instanz in TreeView
-3. **"Open in Adminer"** wählen
-4. Browser öffnet sich mit vorausgefüllten Feldern
-5. **Passwort einfügen** (Cmd+V) - wurde automatisch kopiert
-6. **Login** - fertig!
-
-#### Manuelle Steuerung
-- `Cmd+Shift+P` → `REDAXO: Start Adminer` - Adminer manuell starten
-- `Cmd+Shift+P` → `REDAXO: Stop Adminer` - Adminer stoppen
-
-#### Technische Details
-- Container: `redaxo-adminer` auf Port 9200
-- Image: `adminer:latest`
-- PHP Limits: 512MB upload_max_filesize, post_max_size, memory_limit
-- Netzwerk: `redaxo-adminer-network` für Container-Kommunikation
-- Unterstützt Custom und Standard REDAXO Instanzen
-
-### 💾 Multi-Database Support
-
-Erstelle zusätzliche Datenbanken für deine REDAXO-Instanzen - perfekt für Multi-Mandanten-Systeme oder separate Entwicklungs-Datenbanken!
-
-#### Features
-- 🎯 **One-Click Creation**: Rechtsklick auf laufende Instanz → "Create Additional Database"
-- ✅ **Name Validation**: Automatische Prüfung auf gültige Datenbanknamen
-- 📋 **Existing Databases**: Zeigt alle vorhandenen Datenbanken an
-- 🔐 **Auto-Credentials**: Verwendet automatisch Root-Credentials des Containers
-- 🌍 **UTF8MB4**: Standard Charset/Collation (utf8mb4_unicode_ci)
-- ⚡ **Quick Access**: Direkter Link zu Adminer nach Erstellung
-
-#### Verwendung
-1. **Instanz muss laufen** (Database-Creation nur bei aktiven Instanzen)
-2. **Rechtsklick** auf Instanz in TreeView
-3. **"Create Additional Database"** wählen
-4. **Datenbanknamen eingeben** (z.B., `shop_db`, `staging_db`)
-   - Nur Buchstaben, Zahlen und Unterstriche erlaubt
-   - Max. 64 Zeichen
-5. **Bestätigen** - Datenbank wird erstellt!
-6. Optional: **"Open in Adminer"** für sofortige Verwaltung
-
-#### Anwendungsfälle
-- **Multi-Mandanten-Systeme**: Separate Datenbank pro Mandant
-- **Testing**: Test-Datenbank neben Production-DB
-- **Staging**: Staging-Datenbank für sichere Tests
-- **Backup**: Temporäre Backup-Datenbank
-- **Development**: Separate Dev-Datenbank
-
-#### Beispiel
-```
-Instanz: demo-site (läuft)
-Standard DB: redaxo
-
-Neue DBs erstellen:
-- shop_db          → E-Commerce Daten
-- staging_redaxo   → Staging-Umgebung
-- test_db          → Unit Tests
-```
-
-Alle Datenbanken sind direkt über Adminer oder die Console erreichbar!
-
-### Alle VS Code Kommandos (Auswahl)
-- `REDAXO: Create New Instance` - Neue Instanz erstellen
-- `REDAXO: Show Dashboard` - Dashboard öffnen
-- `REDAXO: Show Login Info` - Login-Daten anzeigen (inkl. DB-Zugang)
-- `REDAXO: Start/Stop Instance` - Instanzen verwalten
-- `REDAXO: Open in Adminer` - Datenbankverwaltung mit Adminer
-- `REDAXO: Create Additional Database` - 💾 Zusätzliche Datenbank erstellen
-- `REDAXO: Setup HTTPS/SSL` - SSL für Instanz einrichten
-- **`REDAXO: Show Help & Documentation`** - 📖 Vollständige Anleitung & Hilfe
-
-### Kontextmenü (Rechtsklick auf Instanz)
-- **Start/Stop Instance** - Container starten/stoppen
-- **Open in Adminer** - Datenbank verwalten (nur bei laufenden Instanzen)
-- **Create Additional Database** - 💾 Zusätzliche Datenbanken erstellen (nur bei laufenden Instanzen)
-- **Show REDAXO Logs** - redaxo.log und system.log anzeigen
-- **Install CLI Tools** - vim, nano, curl, wget, git, mysql/mariadb installieren
-- **Login Information** - Zugangsdaten anzeigen
-- **Import Dump** - removed (use Adminer for import/export)
-- **Setup HTTPS/SSL** - SSL-Zertifikate einrichten
-- **Open Workspace** - Projekt-Ordner in VS Code öffnen
-- **Delete Instance** - Instanz entfernen
-
-### TreeView (Seitenleiste)
-- �️ **Server-Symbol** = REDAXO-Instanz (Grün=läuft, Gelb=gestoppt, Rot=Fehler)
-- � **Paket-Symbol** = Custom-Instanz (Grün=läuft, Gelb=gestoppt, Rot=Fehler)
-- **● / ○** in Beschreibung = Status (gefüllt=läuft, leer=gestoppt)
-- **Klick auf Instanz** öffnet Aktionsmenü (intuitiver Zugriff)
-- Rechtsklick für Kontext-Menü (wie gehabt)
-- **❓ Help-Button** in der Toolbar für schnelle Hilfe
-
-### 🎯 Unterschied: REDAXO-Instanz vs. Custom Instance
-- **🆕 + Button (Create Instance)**: Vollständige REDAXO-Installation, sofort nutzbar
-- **📦 Custom Instance**: Leere PHP-Instanz für eigene Projekte (ja auch das CMS mit dem W oder Laravel) oder manuelle REDAXO-Installation
-
-### 🚀 REDAXO Loader für Custom Instances
-Für Custom Instances mit automatischer REDAXO-Installation:
-1. [REDAXO Loader](https://redaxo.org/loader) herunterladen
-2. In `project/public/` Ordner der Custom Instance kopieren
-3. Instance im Browser öffnen und REDAXO installieren
-
-## 🔒 SSL/HTTPS Setup (Optional)
-
-### macOS
-```bash
-brew install mkcert nss
-mkcert -install
-```
-
-### Linux
-```bash
-sudo apt install libnss3-tools
-curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64"
-chmod +x mkcert-v*-linux-amd64
-sudo cp mkcert-v*-linux-amd64 /usr/local/bin/mkcert
-mkcert -install
-```
-
-### Zugriff auf HTTPS-Instanzen
-- **Frontend**: `https://instancename.local:8443`
-- **Backend**: `https://instancename.local:8443/redaxo/`
-
-## 🔧 Troubleshooting
-
-### Container startet nicht
-```bash
-docker logs redaxo-instanzname
-docker ps -a | grep redaxo
-```
-
-### SSL-Zertifikat nicht vertrauenswürdig
-```bash
-mkcert -uninstall
-mkcert -install
-```
-
-### Domain nicht erreichbar
-```bash
-cat /etc/hosts | grep instancename.local
-sudo dscacheutil -flushcache  # macOS
-```
-
-## 👨‍💻 Entwicklung
-
-```bash
-git clone https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode.git
-cd redaxo-multi-instances-vscode
-npm install
-npm run compile
-npm run watch  # Watch-Modus
-F5  # Development Host starten
-```
-
-## 🤝 Beitragen
----
-
-1. Repository forken
-2. Feature Branch erstellen: `git checkout -b feature/name`
-3. Änderungen committen: `git commit -m 'Add feature'`
-4. Branch pushen: `git push origin feature/name`
-5. Pull Request erstellen
-
-## 📞 Support
-
-- **GitHub Issues**: [Issues erstellen](https://github.com/FriendsOfREDAXO/redaxo-multi-instances-vscode/issues)
-- **REDAXO Community**: [REDAXO Slack](https://redaxo.org/slack/)
-
-## Lead
-
-[Thomas Skerbis](https://github.com/skerbis)
-
----
-
-**Made by [FriendsOfREDAXO](https://github.com/FriendsOfREDAXO) 
+MIT – [FriendsOfREDAXO](https://github.com/FriendsOfREDAXO)

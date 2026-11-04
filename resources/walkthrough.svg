@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="REDAXO instances">
+  <rect width="640" height="400" rx="24" fill="#1f2a37"/>
+  <g font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+    <rect x="48" y="48" width="544" height="72" rx="12" fill="#2d3b4e"/>
+    <circle cx="88" cy="84" r="10" fill="#4ade80"/>
+    <text x="112" y="92" font-size="24" fill="#f3f4f6" font-weight="600">kunde-shop</text>
+    <text x="400" y="92" font-size="18" fill="#9ca3af">PHP 8.5 · MariaDB 12.3</text>
+    <rect x="48" y="136" width="544" height="72" rx="12" fill="#2d3b4e"/>
+    <circle cx="88" cy="172" r="10" fill="#4ade80"/>
+    <text x="112" y="180" font-size="24" fill="#f3f4f6" font-weight="600">redaxo6-dev</text>
+    <text x="400" y="180" font-size="18" fill="#9ca3af">REDAXO 6 · PHP 8.6</text>
+    <rect x="48" y="224" width="544" height="72" rx="12" fill="#2d3b4e"/>
+    <circle cx="88" cy="260" r="10" fill="none" stroke="#9ca3af" stroke-width="3"/>
+    <text x="112" y="268" font-size="24" fill="#f3f4f6" font-weight="600">altes-projekt</text>
+    <text x="400" y="268" font-size="18" fill="#9ca3af">PHP 8.3 · MariaDB 11.4</text>
+    <text x="48" y="352" font-size="22" fill="#60a5fa">https://kunde-shop.localhost</text>
+  </g>
+</svg>

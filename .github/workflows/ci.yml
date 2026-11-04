@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - run: npm run generate-assets
+      - run: npm run lint
+      - run: npm run check-types
+      - run: npm run test:unit
+      - name: Integration tests (VS Code)
+        run: xvfb-run -a npm run test:integration
+      - run: shellcheck assets/docker/entrypoint.sh
+      - name: Package
+        run: npx vsce package --out extension.vsix
+      - uses: actions/upload-artifact@v7
+        with:
+          name: vsix
+          path: extension.vsix

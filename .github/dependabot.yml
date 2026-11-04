@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      dev-dependencies:
+        dependency-type: development
+      dependencies:
+        dependency-type: production
+    ignore:
+      # must match the minimum VS Code version in engines.vscode
+      - dependency-name: '@types/vscode'
+      # typescript-eslint does not support TypeScript 7 yet
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
