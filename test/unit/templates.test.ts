@@ -102,3 +102,15 @@ describe('templates', () => {
         assert.match(md6, /\/var\/www\/html\/bin\/console/);
     });
 });
+
+describe('shared compose bindings', () => {
+    it('binds on all interfaces when Docker cannot bind privileged loopback ports', () => {
+        const yml = renderSharedCompose({ proxyHttp: 80, proxyHttps: 443, mailpit: 8025, adminer: 9200, proxyBindAll: true }, { ipv6Loopback: true });
+        assert.match(yml, /- "80:80"/);
+        assert.match(yml, /- "443:443"/);
+        assert.doesNotMatch(yml, /::1/);
+        assert.match(yml, /"127\.0\.0\.1:8025:8025"/);
+        const high = renderSharedCompose({ proxyHttp: 8880, proxyHttps: 8843, mailpit: 8025, adminer: 9200, proxyBindAll: true });
+        assert.match(high, /"127\.0\.0\.1:8843:443"/);
+    });
+});

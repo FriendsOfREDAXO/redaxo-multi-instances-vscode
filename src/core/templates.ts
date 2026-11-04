@@ -218,7 +218,8 @@ td:first-child{font-weight:600;width:30%}code{background:#f3f4f6;padding:.1rem .
 /** Shared services: HTTPS reverse proxy, Mailpit and Adminer. */
 export function renderSharedCompose(ports: SharedPorts, options: { ipv6Loopback?: boolean } = {}): string {
     // *.localhost resolves to ::1 first on macOS/Windows; on Linux the IPv6 binding may fail depending on the daemon setup
-    const ipv6 = options.ipv6Loopback ?? process.platform !== 'linux';
+    const bindAll = ports.proxyBindAll === true && (ports.proxyHttp < 1024 || ports.proxyHttps < 1024);
+    const ipv6 = (options.ipv6Loopback ?? process.platform !== 'linux') && !bindAll;
     const v6 = ipv6 ? `
       - "[::1]:${ports.proxyHttp}:80"
       - "[::1]:${ports.proxyHttps}:443"` : '';
@@ -231,8 +232,8 @@ services:
     container_name: redaxo-mi-proxy
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${ports.proxyHttp}:80"
-      - "127.0.0.1:${ports.proxyHttps}:443"${v6}
+      - "${bindAll ? '' : '127.0.0.1:'}${ports.proxyHttp}:80"
+      - "${bindAll ? '' : '127.0.0.1:'}${ports.proxyHttps}:443"${v6}
     volumes:
       - ./caddy:/etc/caddy:ro
       - ./certs:/certs:ro

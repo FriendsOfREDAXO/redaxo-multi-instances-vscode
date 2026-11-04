@@ -21,6 +21,11 @@ export interface SharedPorts {
     proxyHttps: number;
     mailpit: number;
     adminer: number;
+    /**
+     * Bind the proxy ports on all interfaces. Needed for ports < 1024 when Docker Desktop runs without its
+     * privileged helper (only 0.0.0.0 bindings are allowed then).
+     */
+    proxyBindAll?: boolean;
 }
 
 export const PREFERRED_PORTS: SharedPorts = { proxyHttp: 80, proxyHttps: 443, mailpit: 8025, adminer: 9200 };

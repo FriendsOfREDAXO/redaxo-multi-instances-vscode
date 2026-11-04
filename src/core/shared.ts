@@ -148,7 +148,9 @@ export class SharedServices {
         if (missing.length > 0) {
             await this.adoptForeignContainers(missing);
             const current = await this.ports(reserved);
-            const keep: Partial<SharedPorts> = { ...current };
+            const keep: Partial<SharedPorts> = {
+                proxyHttp: current.proxyHttp, proxyHttps: current.proxyHttps, mailpit: current.mailpit, adminer: current.adminer,
+            };
             if (missing.includes('proxy') && !(await isPortFree(current.proxyHttp) && await isPortFree(current.proxyHttps))) {
                 delete keep.proxyHttp;
                 delete keep.proxyHttps;
@@ -161,8 +163,8 @@ export class SharedServices {
                 delete keep.adminer;
             }
             if (Object.keys(keep).length < 4) {
-                const others = new Set([...reserved, ...Object.values(keep)]);
-                const next = await this.allocatePorts(others, keep);
+                const others = new Set([...reserved, ...Object.values(keep).filter((v): v is number => typeof v === 'number')]);
+                const next = { ...await this.allocatePorts(others, keep), proxyBindAll: current.proxyBindAll };
                 this.log.info(`Shared service ports: proxy ${next.proxyHttp}/${next.proxyHttps}, Mailpit ${next.mailpit}, Adminer ${next.adminer}`);
                 await this.savePorts(next);
             }
@@ -187,7 +189,20 @@ export class SharedServices {
             return { portsChanged };
         }
         this.log.info(`Starting shared services: ${missing.join(', ')}`);
-        await this.docker().compose(this.dir, ['up', '-d', '--remove-orphans', ...missing]);
+        try {
+            await this.docker().compose(this.dir, ['up', '-d', '--remove-orphans', ...missing]);
+        } catch (error) {
+            const ports = await this.ports();
+            const privileged = ports.proxyHttp < 1024 || ports.proxyHttps < 1024;
+            if (!missing.includes('proxy') || !privileged || ports.proxyBindAll || !/vmnetd|privileged|permission denied/i.test(String(error))) {
+                throw error;
+            }
+            // Docker Desktop without privileged helper: ports < 1024 can only be bound on all interfaces
+            this.log.warn('Docker cannot bind ports < 1024 to 127.0.0.1 (privileged helper missing) – binding the proxy on all interfaces');
+            await this.savePorts({ ...ports, proxyBindAll: true });
+            await this.writeCompose();
+            await this.docker().compose(this.dir, ['up', '-d', '--remove-orphans', ...missing]);
+        }
         return { portsChanged };
     }
 
