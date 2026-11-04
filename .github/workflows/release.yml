@@ -28,5 +28,6 @@ jobs:
           test -s release-notes.md || echo "REDAXO Multi-Instances Manager ${VERSION}" > release-notes.md
       - uses: softprops/action-gh-release@v3
         with:
+          name: REDAXO Multi-Instances Manager ${{ github.ref_name }}
           body_path: release-notes.md
           files: '*.vsix'
