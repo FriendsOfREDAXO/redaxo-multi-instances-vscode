@@ -1,5 +1,33 @@
 # Changelog
 
+## Version 2.0.0 (2026-11-04)
+
+Complete rebuild following the current VS Code extension guidelines – existing 1.x instances keep working.
+
+### ✨ New
+- **One image for every instance:** own Apache + mod_php image per PHP version (8.1–8.6, incl. 8.6 RC) – the selected PHP version is now really used for REDAXO instances. ImageMagick, libvips (PHP FFI), Poppler, Ghostscript, ffmpeg, Composer and Xdebug are included.
+- **HTTPS on `*.localhost`** via a shared Caddy proxy: `https://<name>.localhost`, wildcard sub domains and any number of extra domains (multi-domain / YRewrite) – no hosts file, trusted certificates with mkcert.
+- **REDAXO 6:** Composer project (`redaxo/project:6.x-dev`) or clone of `redaxo/core` 6.x for core development, fully automatic setup.
+- **Mailpit** catches all mails, **Adminer 6.3** for the database (shared services).
+- **MariaDB 12.3 LTS (default) and 13.0**, safe upgrades (no downgrades), automatic system table upgrade.
+- **Copilot:** 10 language model tools for agent mode, `@redaxo` with tool calling.
+- **Claude:** MCP server for Claude Code / Claude Desktop (`Connect Claude (MCP)`), `AGENTS.md`, `CLAUDE.md` and `.mcp.json` per instance.
+- **Modernize 1.x instances** in place (backup first, data/ports/containers kept), import of 1.x exports.
+- Xdebug toggle, extra databases, REDAXO console with argument support, live status via Docker events.
+- **Built-in help** (German/English) via `REDAXO: Help`, `@redaxo /help`, README with full MCP documentation.
+
+### 🎨 UI
+- Native VS Code UI only: instance tree with details, services view, two-step wizard, quick picks, walkthrough, welcome views, status bar.
+- English and German (follows the VS Code display language).
+
+### 🧹 Simplified
+- Ports, versions, language and time zone are determined automatically. Remaining settings: `instancesPath`, `dockerPath`.
+- Removed: PHP 7.4, MariaDB 10.6 (EOL), `.local` domains, webviews, hosts file handling.
+
+### 🔧 Technical
+- esbuild, TypeScript 6, ESLint 10 flat config, `vscode.l10n`, `LogOutputChannel`.
+- Unit, integration (VS Code) and Docker end-to-end tests; 0 npm audit findings.
+
 ## Version 1.21.0 (2026-04-30)
 
 ### ✨ New Features

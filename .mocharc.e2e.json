@@ -1,0 +1,7 @@
+{
+  "require": ["tsx/cjs"],
+  "extension": ["ts"],
+  "spec": ["test/e2e/**/*.e2e.test.ts"],
+  "ui": "bdd",
+  "timeout": 1800000
+}
