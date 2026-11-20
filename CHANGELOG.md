@@ -1,5 +1,17 @@
 # Changelog
 
+## Version 2.5.0 (2026-11-20)
+
+### ✨ Neu
+- **Instanzen umbenennen** (Rechtsklick → „Umbenennen…“): Ordner, Container, Adresse (`<name>.localhost`, auch Subdomains
+  unter Domains), Zertifikate und KI-Dateien folgen dem neuen Namen; Dateien und Datenbank bleiben unverändert – das
+  Datenbank-Volume wird weiterverwendet, nicht kopiert, und beim späteren Löschen mit entfernt. Claude-Sitzungen ziehen mit.
+- **Lokale Server umbenennen.**
+
+### 🔧 Geändert
+- **Rechtsklick-Menü einer Instanz aufgeräumt:** oben Starten/Stoppen, Backend, Frontend, Zugangsdaten; der Rest in den
+  Untermenüs „Werkzeuge“, „Live-Server“, „Sichern & Übertragen“ und „Einstellungen“; am Ende Umbenennen und Löschen.
+
 ## Version 2.4.0 (2026-11-20)
 
 ### ✨ Neu

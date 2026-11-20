@@ -403,5 +403,11 @@
   "Taking over Claude sessions…": "Übernehme Claude-Sitzungen…",
   "Move old copy to trash": "Alte Kopie in den Papierkorb",
   "{0} sessions and {1} memory files taken over into {2}.": "{0} Sitzungen und {1} Gedächtnis-Dateien nach {2} übernommen.",
-  "The old copy is still in {0}.": "Die alte Kopie liegt noch in {0}."
+  "The old copy is still in {0}.": "Die alte Kopie liegt noch in {0}.",
+  "Rename which local server?": "Welchen lokalen Server umbenennen?",
+  "Rename {0}": "{0} umbenennen",
+  "Renaming {0} to {1}…": "Benenne {0} in {1} um…",
+  "Rename which instance?": "Welche Instanz umbenennen?",
+  "New name – also the new address {0}.localhost. Files and database stay, the instance restarts.": "Neuer Name – zugleich die neue Adresse {0}.localhost. Dateien und Datenbank bleiben, die Instanz startet neu.",
+  "{0} is now {1}: {2}": "{0} heißt jetzt {1}: {2}"
 }

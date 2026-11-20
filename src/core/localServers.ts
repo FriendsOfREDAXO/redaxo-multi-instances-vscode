@@ -192,6 +192,28 @@ export class LocalServers {
         return this.describe(all[i]);
     }
 
+    /** New name (= new address); restarts the server when it was running. The project folder is not touched. */
+    async rename(name: string, newName: string): Promise<LocalServer> {
+        const nameError = validateInstanceName(newName);
+        if (nameError) {
+            throw new Error(`Invalid name "${newName}": ${nameError}`);
+        }
+        const all = await this.configs();
+        const i = all.findIndex(s => s.name === name);
+        if (i < 0) {
+            throw new Error(`Local server "${name}" not found`);
+        }
+        if (all.some(s => s.name === newName)) {
+            throw new Error(`A local server "${newName}" already exists`);
+        }
+        const wasRunning = Boolean(await this.livePid(name));
+        await this.stop(name);
+        all[i] = { ...all[i], name: newName };
+        await this.save(all);
+        await fs.rename(this.file(name, 'log'), this.file(newName, 'log')).catch(() => undefined);
+        return wasRunning ? this.start(newName) : this.get(newName);
+    }
+
     /** Removes the server from the list (stops it first). The project folder is not touched. */
     async remove(name: string): Promise<void> {
         await this.stop(name).catch(() => undefined);

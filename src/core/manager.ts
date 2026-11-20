@@ -9,7 +9,7 @@ import { QUERY_SCRIPT, QueryResult, isReadOnlyStatement, isValidIdentifier, syst
 import { Docker, Logger, ProgressReporter } from './docker';
 import { run } from './exec';
 import {
-    COMPOSER_CACHE_VOLUME, INSTANCE_CONFIG_FILE, Instance, InstanceConfig, InstanceKind, SHARED_DIR, SHARED_NETWORK,
+    COMPOSER_CACHE_VOLUME, INSTANCE_CONFIG_FILE, Instance, InstanceConfig, InstanceKind, InstanceLayout, SHARED_DIR, SHARED_NETWORK,
     defaultLayout, validateDomain, validateInstanceName,
 } from './model';
 import { describeOccupant } from './diagnose';
@@ -17,6 +17,7 @@ import { DetectedProject, GitStatus, detectProject, gitClone, gitInit, prepareCl
 import { findFreePort, generatePassword } from './ports';
 import { CoreSettings } from './settings';
 import { LocalServer, LocalServers } from './localServers';
+import { claudeProjectKey, claudeProjectsDir, moveClaudeSessions } from './claude';
 import { REMOTE_FILE, RemoteProfile, domainRewrites, pullDatabase, pullMedia, readRemoteProfile, writeRemoteProfile } from './remote';
 import { SharedServices } from './shared';
 import {
@@ -151,6 +152,15 @@ export class InstanceManager {
             throw new InstanceError(`An instance "${input.name}" already exists`, 'exists');
         }
         const server = await this.local.add(input, await this.instancePorts());
+        await this.syncLocalProxy();
+        return server;
+    }
+
+    async renameLocalServer(name: string, newName: string): Promise<LocalServer> {
+        if (await exists(this.instancePath(newName))) {
+            throw new InstanceError(`An instance "${newName}" already exists`, 'exists');
+        }
+        const server = await this.local.rename(name, newName);
         await this.syncLocalProxy();
         return server;
     }
@@ -548,6 +558,10 @@ export class InstanceManager {
         if (await findComposeFile(instance.path)) {
             await this.docker.compose(instance.path, ['down', '--remove-orphans', ...(external ? [] : ['-v'])], { allowFailure: true });
         }
+        // a volume kept by a rename still belongs to the instance
+        if (instance.layout.dbStorage.type === 'volume' && instance.layout.dbStorage.external && instance.layout.dbStorage.owned) {
+            await this.docker.run(['volume', 'rm', instance.layout.dbStorage.external], { allowFailure: true, onLine: () => {} });
+        }
         await this.removeDirectory(instance.path);
         try {
             await this.shared.syncProxy(await this.list({ withStatus: false }));
@@ -555,6 +569,99 @@ export class InstanceManager {
             // proxy not configured
         }
         this.log.info(`Instance ${name} deleted`);
+    }
+
+    /**
+     * Renames an instance in place: folder, containers, address (`<name>.localhost` and its subdomains), certificates, AI
+     * files – the database volume is kept (no copy), files are not touched. Claude sessions of the old folder are copied
+     * to the new one; their old folders are returned (the caller may move them to the trash).
+     */
+    async rename(name: string, newName: string, progress: ProgressReporter = () => {}): Promise<{ instance: Instance; oldClaudeDirs: string[] }> {
+        const nameError = validateInstanceName(newName);
+        if (nameError) {
+            throw new InstanceError(`Invalid name "${newName}": ${nameError}`, 'invalid');
+        }
+        const instance = await this.get(name);
+        if (instance.format !== 'v2' || !instance.config) {
+            throw new InstanceError('Instances from version 1.x have to be modernized before they can be renamed', 'legacy');
+        }
+        const oldDir = instance.path;
+        const newDir = this.instancePath(newName);
+        if (await exists(newDir) || (await this.local.configs()).some(s => s.name === newName)) {
+            throw new InstanceError(`"${newName}" already exists`, 'exists');
+        }
+        const wasRunning = instance.status === 'running' || instance.status === 'partial';
+        const old = instance.config;
+        const oldLayout = old.layout;
+        let volume: string | undefined;
+        if (oldLayout.dbStorage.type === 'volume') {
+            volume = oldLayout.dbStorage.external ?? `${oldLayout.composeProject}_${oldLayout.dbStorage.volume}`;
+            const res = await this.docker.run(['volume', 'inspect', volume], { allowFailure: true, onLine: () => {} });
+            if (res.code !== 0) {
+                throw new InstanceError(`Database volume ${volume} not found – start the instance once before renaming`, 'failed');
+            }
+        }
+
+        progress('Stopping the instance…');
+        await this.docker.compose(oldDir, ['down', '--remove-orphans'], { allowFailure: true });
+        progress('Renaming…');
+        await fs.rename(oldDir, newDir);
+        try {
+            const fresh = defaultLayout(newName);
+            const layout: InstanceLayout = {
+                ...oldLayout,
+                composeProject: fresh.composeProject, webContainer: fresh.webContainer, dbContainer: fresh.dbContainer,
+                dbStorage: volume ? { type: 'volume', volume: oldLayout.dbStorage.type === 'volume' ? oldLayout.dbStorage.volume : 'db-data', external: volume, owned: true } : oldLayout.dbStorage,
+            };
+            const suffix = (n: string) => `.${n}.localhost`;
+            const cfg: InstanceConfig = {
+                ...old, name: newName, layout,
+                domains: old.domains.map(d => (d.endsWith(suffix(name)) ? d.slice(0, -suffix(name).length) + suffix(newName) : d)),
+            };
+            // own files that name the old folder or containers: compose override and REDAXO configs (DB host)
+            const replaceIn = async (file: string) => {
+                const text = await fs.readFile(file, 'utf8').catch(() => undefined);
+                if (text === undefined) {
+                    return;
+                }
+                const next = text.split(oldDir).join(newDir)
+                    .split(oldLayout.dbContainer).join(layout.dbContainer)
+                    .split(oldLayout.webContainer).join(layout.webContainer);
+                if (next !== text) {
+                    await fs.writeFile(file, next, 'utf8');
+                }
+            };
+            await replaceIn(path.join(newDir, 'docker-compose.override.yml'));
+            const webroot = path.join(newDir, layout.webroot);
+            const docroot = path.join(webroot, path.posix.relative('/var/www/html', layout.docroot));
+            for (const file of [path.join(docroot, 'redaxo/data/core/config.yml'), path.join(webroot, 'var/data/core/config.yml'), path.join(webroot, 'redaxo/data/core/config.yml')]) {
+                await replaceIn(file);
+            }
+            await this.writeInstanceFiles(newDir, cfg);
+            await this.rewriteRedaxoServer(newDir, cfg);
+        } catch (error) {
+            // put the folder back so nothing is lost
+            await fs.rename(newDir, oldDir).catch(() => undefined);
+            throw error;
+        }
+
+        progress('Taking the Claude sessions along…');
+        const oldClaudeDirs: string[] = [];
+        for (const [from, to] of [[oldDir, newDir], [path.join(oldDir, oldLayout.webroot), path.join(newDir, oldLayout.webroot)]]) {
+            const key = claudeProjectKey(from);
+            const dir = path.join(claudeProjectsDir(), key);
+            if (await exists(dir)) {
+                await moveClaudeSessions(key, from, to);
+                oldClaudeDirs.push(dir);
+            }
+        }
+
+        await this.shared.syncProxy(await this.list({ withStatus: false })).catch(e => this.log.warn(`Proxy: ${String(e)}`));
+        if (wasRunning) {
+            await this.start(newName, progress);
+        }
+        this.log.info(`Instance ${name} renamed to ${newName}`);
+        return { instance: await this.get(newName), oldClaudeDirs };
     }
 
     /** Recreates the containers (and rebuilds the image of v2 instances). */

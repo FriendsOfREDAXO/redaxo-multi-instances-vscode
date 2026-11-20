@@ -96,3 +96,18 @@ describe('multi-site projects', () => {
         assert.equal(JSON.stringify(sites).includes('app_key'), false);
     });
 });
+
+describe('renaming local servers', () => {
+    it('renames a stopped server and keeps its settings', async () => {
+        const instances = await tmpDir();
+        const project = await tmpDir();
+        const local = new LocalServers(() => instances);
+        await local.add({ name: 'alt', kind: 'static', path: project, docroot: 'dist', port: 18_432 });
+        await local.add({ name: 'other', kind: 'static', path: project, docroot: '', port: 18_433 });
+        await assert.rejects(local.rename('alt', 'other'), /already exists/);
+        await assert.rejects(local.rename('alt', 'Bad Name'), /Invalid name/);
+        const s = await local.rename('alt', 'neu');
+        assert.deepEqual([s.name, s.docroot, s.port, s.directUrl], ['neu', 'dist', 18_432, 'http://neu.localhost:18432/']);
+        assert.deepEqual((await local.configs()).map(c => c.name), ['neu', 'other']);
+    });
+});
