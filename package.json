@@ -2,7 +2,7 @@
   "name": "redaxo-multi-instances-manager",
   "displayName": "%displayName%",
   "description": "%description%",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "publisher": "skerbis",
   "icon": "resources/icon.png",
   "repository": {
@@ -519,6 +519,30 @@
         "title": "%command.stopAllLocalServers%",
         "category": "%category%",
         "icon": "$(stop-circle)"
+      },
+      {
+        "command": "redaxo-instances.setupLiveServer",
+        "title": "%command.setupLiveServer%",
+        "category": "%category%",
+        "icon": "$(cloud)"
+      },
+      {
+        "command": "redaxo-instances.compareWithLive",
+        "title": "%command.compareWithLive%",
+        "category": "%category%",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "redaxo-instances.pullLive",
+        "title": "%command.pullLive%",
+        "category": "%category%",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "redaxo-instances.deployToLive",
+        "title": "%command.deployToLive%",
+        "category": "%category%",
+        "icon": "$(cloud-upload)"
       }
     ],
     "menus": {
@@ -859,6 +883,41 @@
           "command": "redaxo-instances.duplicateInstance",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
           "group": "7_transfer@3"
+        },
+        {
+          "command": "redaxo-instances.compareWithLive",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance .*v2 redaxo/",
+          "group": "4_live@1"
+        },
+        {
+          "command": "redaxo-instances.pullLive",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance .*v2 redaxo/",
+          "group": "4_live@2"
+        },
+        {
+          "command": "redaxo-instances.deployToLive",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance .*v2 redaxo/",
+          "group": "4_live@3"
+        },
+        {
+          "command": "redaxo-instances.setupLiveServer",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance .*v2 redaxo/",
+          "group": "4_live@4"
+        },
+        {
+          "command": "redaxo-instances.pullLive",
+          "when": "view == redaxo-instances.instancesView && viewItem == 'detail live'",
+          "group": "inline@1"
+        },
+        {
+          "command": "redaxo-instances.deployToLive",
+          "when": "view == redaxo-instances.instancesView && viewItem == 'detail live'",
+          "group": "inline@2"
+        },
+        {
+          "command": "redaxo-instances.setupLiveServer",
+          "when": "view == redaxo-instances.instancesView && viewItem == 'detail live'",
+          "group": "1_live@1"
         }
       ],
       "commandPalette": [

@@ -140,5 +140,9 @@
   "tool.start_local_server.name": "Start local server",
   "tool.start_local_server.description": "Start local server",
   "tool.stop_local_server.name": "Stop local server",
-  "tool.stop_local_server.description": "Stop local server"
+  "tool.stop_local_server.description": "Stop local server",
+  "command.setupLiveServer": "Live-Server einrichten…",
+  "command.compareWithLive": "Mit Live abgleichen",
+  "command.pullLive": "Live-Stand holen…",
+  "command.deployToLive": "Auf Live deployen…"
 }
