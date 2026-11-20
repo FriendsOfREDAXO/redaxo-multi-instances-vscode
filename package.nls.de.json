@@ -147,5 +147,11 @@
   "command.deployToLive": "Auf Live deployen…",
   "command.takeOverClaudeSessions": "Claude-Sitzungen übernehmen…",
   "command.backupSiteDatabase": "SQLite-Datenbank sichern",
-  "command.useSiteHostsForHttps": "Hosts der Sites für HTTPS übernehmen"
+  "command.useSiteHostsForHttps": "Hosts der Sites für HTTPS übernehmen",
+  "submenu.tools": "Werkzeuge",
+  "submenu.live": "Live-Server",
+  "submenu.backup": "Sichern & Übertragen",
+  "submenu.settings": "Einstellungen",
+  "command.renameInstance": "Umbenennen…",
+  "command.renameLocalServer": "Umbenennen…"
 }

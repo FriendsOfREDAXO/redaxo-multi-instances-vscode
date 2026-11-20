@@ -30,9 +30,15 @@ describe('package.json', () => {
     });
 
     it('only references declared commands in menus', () => {
-        for (const [menu, items] of Object.entries(pkg.contributes.menus as Record<string, Array<{ command: string }>>)) {
+        const submenus = new Set(((pkg.contributes.submenus ?? []) as Array<{ id: string }>).map(m => m.id));
+        for (const [menu, items] of Object.entries(pkg.contributes.menus as Record<string, Array<{ command?: string; submenu?: string }>>)) {
             for (const item of items) {
-                assert.ok(declared.has(item.command), `${menu}: ${item.command}`);
+                if (item.submenu) {
+                    assert.ok(submenus.has(item.submenu), `${menu}: undeclared submenu ${item.submenu}`);
+                    assert.ok(Array.isArray(pkg.contributes.menus[item.submenu]), `${menu}: submenu ${item.submenu} has no entries`);
+                } else {
+                    assert.ok(item.command && declared.has(item.command), `${menu}: ${item.command}`);
+                }
             }
         }
     });
