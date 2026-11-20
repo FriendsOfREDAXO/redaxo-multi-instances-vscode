@@ -1,4 +1,5 @@
-import { promises as fs } from 'node:fs';
+import { createReadStream, createWriteStream, promises as fs } from 'node:fs';
+import * as readline from 'node:readline';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { commandExists } from './exec';
@@ -48,8 +49,8 @@ export function isClaudeInstalled(): Promise<boolean> {
 }
 
 /** Sessions started in the instance folder or its web root, newest first. */
-export async function listClaudeSessions(instancePath: string, webroot = 'project', limit = 20, projectsDir = claudeProjectsDir()): Promise<ClaudeSession[]> {
-    const dirs = [...new Set([instancePath, path.join(instancePath, webroot)])];
+export async function listClaudeSessions(instancePath: string, webroot = 'project', limit = 20, projectsDir = claudeProjectsDir(), extraDirs: readonly string[] = []): Promise<ClaudeSession[]> {
+    const dirs = [...new Set([instancePath, path.join(instancePath, webroot), ...extraDirs])];
     const sessions: ClaudeSession[] = [];
     for (const dir of dirs) {
         const folder = path.join(projectsDir, claudeProjectKey(dir));
@@ -152,4 +153,174 @@ export async function renameClaudeSession(session: Pick<ClaudeSession, 'id' | 'f
     }
     const customTitle = title.replace(/\s+/g, ' ').trim().slice(0, 200);
     await fs.appendFile(session.file, `\n${JSON.stringify({ type: 'custom-title', customTitle, sessionId: session.id })}\n`, 'utf8');
+}
+
+/** A Claude Code project folder (all sessions of one working directory). */
+export interface ClaudeProject {
+    /** Folder below ~/.claude/projects. */
+    key: string;
+    dir: string;
+    /** Working directory recorded in the sessions. */
+    cwd?: string;
+    cwdExists: boolean;
+    sessions: number;
+    sizeBytes: number;
+    modified?: Date;
+    hasMemory: boolean;
+}
+
+/** All Claude Code projects with the working directory their sessions were started in (read from the transcripts). */
+export async function listClaudeProjects(projectsDir = claudeProjectsDir()): Promise<ClaudeProject[]> {
+    const out: ClaudeProject[] = [];
+    for (const key of await fs.readdir(projectsDir).catch(() => [] as string[])) {
+        const dir = path.join(projectsDir, key);
+        const stat = await fs.stat(dir).catch(() => undefined);
+        if (!stat?.isDirectory() || key.startsWith('.')) {
+            continue;
+        }
+        const files = (await fs.readdir(dir)).filter(f => f.endsWith('.jsonl') && isSessionId(f.slice(0, -6)));
+        let cwd: string | undefined;
+        let size = 0;
+        let modified: Date | undefined;
+        for (const f of files) {
+            const s = await fs.stat(path.join(dir, f));
+            size += s.size;
+            modified = !modified || s.mtime > modified ? s.mtime : modified;
+            if (!cwd) {
+                const handle = await fs.open(path.join(dir, f), 'r');
+                try {
+                    const buf = Buffer.alloc(Math.min(PEEK, s.size));
+                    await handle.read(buf, 0, buf.length, 0);
+                    cwd = parseSessionInfo(buf.toString('utf8')).cwd;
+                } finally {
+                    await handle.close();
+                }
+            }
+        }
+        // the recorded cwd must belong to this folder (sessions started in a subfolder carry their own cwd)
+        const owner = cwd && claudeProjectKey(cwd) === key ? cwd : undefined;
+        out.push({
+            key, dir, cwd: owner, cwdExists: owner ? await fs.stat(owner).then(s => s.isDirectory(), () => false) : false,
+            sessions: files.length, sizeBytes: size, modified,
+            hasMemory: await fs.access(path.join(dir, 'memory')).then(() => true, () => false),
+        });
+    }
+    return out.sort((a, b) => (b.modified?.getTime() ?? 0) - (a.modified?.getTime() ?? 0));
+}
+
+/**
+ * Takes the sessions (and memory) of a Claude Code project over to another working directory – e.g. after a project folder
+ * moved. Files are copied to the folder of `toDir` with all paths rewritten (`fromCwd` → `toDir`, project keys too);
+ * existing sessions there are kept, memory files are merged (MEMORY.md lines appended). The source stays untouched –
+ * delete it afterwards (the extension moves it to the trash).
+ */
+export async function moveClaudeSessions(fromKey: string, fromCwd: string, toDir: string, projectsDir = claudeProjectsDir()): Promise<{ sessions: number; memory: number; target: string }> {
+    const source = path.join(projectsDir, fromKey);
+    const toKey = claudeProjectKey(toDir);
+    const target = path.join(projectsDir, toKey);
+    if (fromKey === toKey) {
+        throw new Error('Source and target are the same folder');
+    }
+    if (path.basename(source) !== fromKey || fromKey.includes('..')) {
+        throw new Error(`Invalid project: ${fromKey}`);
+    }
+    const from = path.resolve(fromCwd);
+    const to = path.resolve(toDir);
+    const esc = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // whole paths only: "/a/shop" must not touch "/a/shop2"
+    const pathRe = new RegExp(`${esc(from)}(?=[/"'\\\\\\s)\\]]|$)`, 'g');
+    const keyRe = new RegExp(`${esc(fromKey)}(?![A-Za-z0-9-])`, 'g');
+    const rewrite = (text: string) => text.replace(pathRe, to).replace(keyRe, toKey);
+    let sessions = 0;
+    let memory = 0;
+
+    const copyTree = async (src: string, dst: string, isMemory: boolean): Promise<void> => {
+        await fs.mkdir(dst, { recursive: true });
+        for (const entry of await fs.readdir(src, { withFileTypes: true })) {
+            const s = path.join(src, entry.name);
+            const d = path.join(dst, rewrite(entry.name));
+            if (entry.isDirectory()) {
+                await copyTree(s, d, isMemory || (src === source && entry.name === 'memory'));
+                continue;
+            }
+            if (!entry.isFile()) {
+                continue;
+            }
+            const exists = await fs.access(d).then(() => true, () => false);
+            if (isMemory && entry.name === 'MEMORY.md' && exists) {
+                // merge the index: append lines the target does not have yet
+                const have = new Set((await fs.readFile(d, 'utf8')).split('\n').map(l => l.trim()));
+                const add = rewrite(await fs.readFile(s, 'utf8')).split('\n').filter(l => l.trim() && !have.has(l.trim()));
+                if (add.length) {
+                    await fs.appendFile(d, `${add.join('\n')}\n`);
+                }
+                memory++;
+                continue;
+            }
+            if (exists) {
+                continue; // never overwrite sessions or notes in the target
+            }
+            if (entry.name.endsWith('.jsonl')) {
+                await rewriteLines(s, d, rewrite);
+            } else if (/\.(json|md|txt)$/i.test(entry.name)) {
+                await fs.writeFile(d, rewrite(await fs.readFile(s, 'utf8')), 'utf8');
+            } else {
+                await fs.copyFile(s, d);
+            }
+            await fs.utimes(d, (await fs.stat(s)).atime, (await fs.stat(s)).mtime);
+            if (isMemory) {
+                memory++;
+            } else if (src === source && entry.name.endsWith('.jsonl')) {
+                sessions++;
+            }
+        }
+    };
+    await copyTree(source, target, false);
+
+    return { sessions, memory, target };
+}
+
+/** Copies a JSON-lines transcript line by line (transcripts can be hundreds of MB) and checks every line stays valid JSON. */
+async function rewriteLines(src: string, dst: string, rewrite: (s: string) => string): Promise<void> {
+    const out = createWriteStream(dst, 'utf8');
+    const lines = readline.createInterface({ input: createReadStream(src, 'utf8'), crlfDelay: Infinity });
+    let n = 0;
+    try {
+        for await (const line of lines) {
+            n++;
+            const next = rewrite(line);
+            if (next !== line && next.trim()) {
+                try {
+                    JSON.parse(next);
+                } catch {
+                    throw new Error(`Line ${n} of ${path.basename(src)} would become invalid – nothing was moved`);
+                }
+            }
+            if (!out.write(`${next}\n`)) {
+                await new Promise<void>(r => out.once('drain', () => r()));
+            }
+        }
+    } catch (error) {
+        out.destroy();
+        await fs.rm(dst, { force: true });
+        throw error;
+    }
+    await new Promise<void>((resolve, reject) => out.end((err?: Error | null) => (err ? reject(err) : resolve())));
+}
+
+/**
+ * The parent folder when it is a project of its own (has CLAUDE.md or AGENTS.md) – e.g. a repository whose web root is a
+ * subfolder. Its sessions belong to the local server too. Plain parents like ~/projects are not used.
+ */
+export async function projectParent(dir: string): Promise<string | undefined> {
+    const parent = path.dirname(path.resolve(dir));
+    if (parent === path.resolve(dir) || parent === os.homedir()) {
+        return undefined;
+    }
+    for (const marker of ['CLAUDE.md', 'AGENTS.md']) {
+        if (await fs.access(path.join(parent, marker)).then(() => true, () => false)) {
+            return parent;
+        }
+    }
+    return undefined;
 }

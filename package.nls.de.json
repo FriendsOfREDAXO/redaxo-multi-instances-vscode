@@ -144,5 +144,8 @@
   "command.setupLiveServer": "Live-Server einrichten…",
   "command.compareWithLive": "Mit Live abgleichen",
   "command.pullLive": "Live-Stand holen…",
-  "command.deployToLive": "Auf Live deployen…"
+  "command.deployToLive": "Auf Live deployen…",
+  "command.takeOverClaudeSessions": "Claude-Sitzungen übernehmen…",
+  "command.backupSiteDatabase": "SQLite-Datenbank sichern",
+  "command.useSiteHostsForHttps": "Hosts der Sites für HTTPS übernehmen"
 }

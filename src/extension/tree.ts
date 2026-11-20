@@ -184,11 +184,11 @@ export class ClaudeSessionItem extends vscode.TreeItem {
 }
 
 /** The Claude entry for a folder – undefined when Claude Code is not installed. */
-export async function claudeItemFor(owner: ClaudeOwner, webroot?: string): Promise<ClaudeItem | undefined> {
+export async function claudeItemFor(owner: ClaudeOwner, webroot?: string, extraDirs: readonly string[] = []): Promise<ClaudeItem | undefined> {
     if (!hasClaudeChat() && !(await isClaudeInstalled())) {
         return undefined;
     }
-    const sessions = await listClaudeSessions(owner.folder, webroot ?? '').catch(() => []);
+    const sessions = await listClaudeSessions(owner.folder, webroot ?? '', 20, undefined, extraDirs).catch(() => []);
     return new ClaudeItem(owner, sessions);
 }
 

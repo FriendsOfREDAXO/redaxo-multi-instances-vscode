@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { claudeProjectKey, isSessionId, listClaudeSessions, parseSessionInfo, renameClaudeSession } from '../../src/core/claude';
+import { claudeProjectKey, isSessionId, listClaudeProjects, listClaudeSessions, moveClaudeSessions, parseSessionInfo, renameClaudeSession } from '../../src/core/claude';
 
 const line = (o: object) => JSON.stringify(o);
 
@@ -64,6 +64,46 @@ describe('claude sessions', () => {
         await renameClaudeSession({ id, file }, '');
         assert.equal((await list())[0].title, 'Erzeugt');
         await assert.rejects(renameClaudeSession({ id, file: path.join(dir, 'other.jsonl') }, 'x'));
+        await fs.rm(tmp, { recursive: true, force: true });
+    });
+});
+
+describe('moving claude sessions', () => {
+    it('copies sessions and memory to the new folder with rewritten paths and keeps the source', async () => {
+        const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'rmi-move-'));
+        const projects = path.join(tmp, 'projects');
+        const oldDir = path.join(tmp, 'old', 'shop');
+        const newDir = path.join(tmp, 'instances', 'shop');
+        await fs.mkdir(newDir, { recursive: true });
+        const fromKey = claudeProjectKey(oldDir);
+        const src = path.join(projects, fromKey);
+        await fs.mkdir(path.join(src, 'memory'), { recursive: true });
+        const id = '44444444-4444-4444-8444-444444444444';
+        await fs.writeFile(path.join(src, `${id}.jsonl`), [
+            line({ type: 'user', cwd: oldDir, message: { content: `edit ${oldDir}/a.php and ${oldDir}2/b.php` } }),
+            line({ type: 'ai-title', aiTitle: 'Shop' }),
+        ].join('\n'));
+        await fs.writeFile(path.join(src, 'memory', 'MEMORY.md'), '- [Note](note.md) — x\n');
+        await fs.writeFile(path.join(src, 'memory', 'note.md'), `Code in ${oldDir}\n`);
+        // target already has memory
+        const dst = path.join(projects, claudeProjectKey(newDir));
+        await fs.mkdir(path.join(dst, 'memory'), { recursive: true });
+        await fs.writeFile(path.join(dst, 'memory', 'MEMORY.md'), '- [Other](other.md) — y\n');
+
+        const orphan = (await listClaudeProjects(projects)).find(p => p.key === fromKey);
+        assert.equal(orphan?.cwd, oldDir);
+        assert.equal(orphan?.cwdExists, false);
+
+        const r = await moveClaudeSessions(fromKey, oldDir, newDir, projects);
+        assert.deepEqual([r.sessions, r.memory], [1, 2]);
+        const moved = await fs.readFile(path.join(dst, `${id}.jsonl`), 'utf8');
+        assert.match(moved, new RegExp(`"cwd":"${newDir.replace(/[/.]/g, '\\$&')}"`));
+        assert.ok(moved.includes(`${newDir}/a.php`) && moved.includes(`${oldDir}2/b.php`), 'only whole paths are rewritten');
+        assert.equal(await fs.readFile(path.join(dst, 'memory', 'MEMORY.md'), 'utf8'), '- [Other](other.md) — y\n- [Note](note.md) — x\n');
+        assert.equal(await fs.readFile(path.join(dst, 'memory', 'note.md'), 'utf8'), `Code in ${newDir}\n`);
+        assert.ok(await fs.stat(path.join(src, `${id}.jsonl`)), 'source stays');
+        const sessions = await listClaudeSessions(newDir, 'project', 20, projects);
+        assert.deepEqual(sessions.map(s => [s.title, s.cwd]), [['Shop', newDir]]);
         await fs.rm(tmp, { recursive: true, force: true });
     });
 });

@@ -387,5 +387,21 @@
   "Deploy {0} files to {1}:{2}?": "{0} Dateien nach {1}:{2} deployen?",
   "Deploying {0}…": "Deploye {0}…",
   "{0} files deployed (backup {1}), but \"{2}\" failed on the server.": "{0} Dateien deployt (Sicherung {1}), aber „{2}“ ist auf dem Server fehlgeschlagen.",
-  "{0} files deployed to {1} (backup {2}).": "{0} Dateien nach {1} deployt (Sicherung {2})."
+  "{0} files deployed to {1} (backup {2}).": "{0} Dateien nach {1} deployt (Sicherung {2}).",
+  "Sites": "Sites",
+  "Websites of this project (config/sites) – all served by this server": "Websites dieses Projekts (config/sites) – alle über diesen Server",
+  "Backing up the database of {0}…": "Sichere die Datenbank von {0}…",
+  "Database of {0} saved: {1}": "Datenbank von {0} gesichert: {1}",
+  "{0} host names of {1} go through the HTTPS proxy now (when it runs).": "{0} Hostnamen von {1} laufen jetzt über den HTTPS-Proxy (wenn er läuft).",
+  "Take Claude sessions over into which folder?": "Claude-Sitzungen in welchen Ordner übernehmen?",
+  "Target folder": "Zielordner",
+  "memory": "Gedächtnis",
+  "Folder no longer exists": "Ordner gibt es nicht mehr",
+  "Other folders": "Andere Ordner",
+  "Take Claude sessions over into {0}": "Claude-Sitzungen nach {0} übernehmen",
+  "Sessions of which folder?": "Sitzungen welches Ordners?",
+  "Taking over Claude sessions…": "Übernehme Claude-Sitzungen…",
+  "Move old copy to trash": "Alte Kopie in den Papierkorb",
+  "{0} sessions and {1} memory files taken over into {2}.": "{0} Sitzungen und {1} Gedächtnis-Dateien nach {2} übernommen.",
+  "The old copy is still in {0}.": "Die alte Kopie liegt noch in {0}."
 }

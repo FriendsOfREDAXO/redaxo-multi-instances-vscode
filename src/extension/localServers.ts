@@ -4,6 +4,8 @@ import { LocalServer, LocalServerKind, detectServer, findPhpBinaries } from '../
 import { InstanceManager } from '../core/manager';
 import { validateInstanceName } from '../core/model';
 import { ClaudeItem, ClaudeSessionItem, claudeChildren, claudeItemFor } from './tree';
+import { SiteInfo, backupSqlite, detectSites } from '../core/sites';
+import { projectParent } from '../core/claude';
 
 const l10n = vscode.l10n;
 
@@ -46,7 +48,31 @@ export class LocalDetailItem extends vscode.TreeItem {
     }
 }
 
-type Element = LocalServerItem | LocalDetailItem | ClaudeItem | ClaudeSessionItem;
+/** "Sites" of a multi-site project (config/sites/*.php) below its local server. */
+export class SitesItem extends vscode.TreeItem {
+    constructor(readonly server: LocalServer, readonly sites: SiteInfo[]) {
+        super(l10n.t('Sites'), vscode.TreeItemCollapsibleState.Collapsed);
+        this.id = `local:${server.name}:sites`;
+        this.description = String(sites.length);
+        this.iconPath = new vscode.ThemeIcon('globe');
+        this.contextValue = 'localSites';
+        this.tooltip = l10n.t('Websites of this project (config/sites) – all served by this server');
+    }
+}
+
+export class SiteItem extends vscode.TreeItem {
+    constructor(readonly server: LocalServer, readonly site: SiteInfo, readonly url: string) {
+        super(site.key, vscode.TreeItemCollapsibleState.None);
+        this.id = `local:${server.name}:site:${site.key}`;
+        this.description = site.hosts.join(', ');
+        this.iconPath = new vscode.ThemeIcon(site.database ? 'database' : 'globe');
+        this.contextValue = site.database ? 'localSite sqlite' : 'localSite';
+        this.tooltip = new vscode.MarkdownString(`**${site.key}**\n\n${url}${site.database ? `\n\nSQLite: \`${site.database}\`` : ''}`);
+        this.command = { command: 'redaxo-instances.openUrl', title: '', arguments: [url] };
+    }
+}
+
+type Element = LocalServerItem | LocalDetailItem | SitesItem | SiteItem | ClaudeItem | ClaudeSessionItem;
 
 export class LocalServersTreeProvider implements vscode.TreeDataProvider<Element>, vscode.Disposable {
     private readonly emitter = new vscode.EventEmitter<Element | undefined>();
@@ -85,11 +111,26 @@ export class LocalServersTreeProvider implements vscode.TreeDataProvider<Element
                 { command: 'vscode.openFolder', title: '', arguments: [vscode.Uri.file(s.path), { forceNewWindow: true }] }, s.path));
             items.push(new LocalDetailItem(s, 'log', l10n.t('Log'), path.basename(s.logFile), 'output',
                 { command: 'redaxo-instances.showLocalServerLog', title: '', arguments: [s.name] }));
-            const claude = await claudeItemFor({ key: `local:${s.name}`, name: s.name, folder: s.path });
+            const sites = await detectSites(s.path).catch(() => undefined);
+            if (sites) {
+                items.push(new SitesItem(s, sites));
+            }
+            const parent = await projectParent(s.path);
+            const claude = await claudeItemFor({ key: `local:${s.name}`, name: s.name, folder: s.path }, '', parent ? [parent] : []);
             if (claude) {
                 items.push(claude);
             }
             return items;
+        }
+        if (element instanceof SitesItem) {
+            const https = element.server.status === 'running' ? await this.manager.localServerHttpsUrl(element.server) : undefined;
+            const port = https ? (/:(\d+)\/$/.exec(https)?.[1] ?? '') : '';
+            return element.sites.map(site => {
+                const host = site.hosts[0] ?? `${site.key}.localhost`;
+                // HTTPS only for hosts the proxy knows (taken over with "Use hosts for HTTPS")
+                const proxied = https && element.server.domains.includes(host);
+                return new SiteItem(element.server, site, proxied ? `https://${host}${port ? `:${port}` : ''}/` : `http://${host}:${element.server.port}/`);
+            });
         }
         if (element instanceof ClaudeItem) {
             return claudeChildren(element);
@@ -334,6 +375,27 @@ export function registerLocalServerCommands(context: vscode.ExtensionContext, ma
             await manager.removeLocalServer(name);
             refresh();
         }
+    });
+    register('redaxo-instances.backupSiteDatabase', async (item: SiteItem) => {
+        if (!(item instanceof SiteItem) || !item.site.database) {
+            return;
+        }
+        const dir = path.join(manager.settings.instancesDir, '.redaxo-mi', 'local', 'backups', item.server.name);
+        const file = await withProgress(l10n.t('Backing up the database of {0}…', item.site.key), () => backupSqlite(item.site.database ?? '', dir, item.site.key));
+        const reveal = process.platform === 'darwin' ? l10n.t('Reveal in Finder') : l10n.t('Reveal in file manager');
+        if (await vscode.window.showInformationMessage(l10n.t('Database of {0} saved: {1}', item.site.key, path.basename(file)), reveal) === reveal) {
+            await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(file));
+        }
+    });
+    register('redaxo-instances.useSiteHostsForHttps', async (item: SitesItem) => {
+        if (!(item instanceof SitesItem)) {
+            return;
+        }
+        const hosts = [...new Set(item.sites.flatMap(s => s.hosts))].filter(h => h !== `${item.server.name}.localhost` && !h.endsWith(`.${item.server.name}.localhost`));
+        await manager.local.update(item.server.name, { domains: [...new Set([...item.server.domains, ...hosts])].sort() });
+        await manager.syncLocalProxy();
+        refresh();
+        void vscode.window.showInformationMessage(l10n.t('{0} host names of {1} go through the HTTPS proxy now (when it runs).', hosts.length, item.server.name));
     });
     register('redaxo-instances.stopAllLocalServers', async () => {
         for (const s of await manager.local.list()) {

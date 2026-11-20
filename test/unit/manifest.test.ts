@@ -39,7 +39,7 @@ describe('package.json', () => {
 
     it('registers every declared command in code (and vice versa)', () => {
         const source = readFileSync(path.join(root, 'src', 'extension', 'commands.ts'), 'utf8');
-        const local = ['localServers.ts', 'live.ts'].map(f => readFileSync(path.join(root, 'src', 'extension', f), 'utf8')).join('\n');
+        const local = ['localServers.ts', 'live.ts', 'claudeChat.ts'].map(f => readFileSync(path.join(root, 'src', 'extension', f), 'utf8')).join('\n');
         const registered = new Set([
             ...[...source.matchAll(/^\s+'(redaxo-instances\.[A-Za-z]+)':/gm)].map(m => m[1]),
             ...[...local.matchAll(/register\('(redaxo-instances\.[A-Za-z]+)'/g)].map(m => m[1]),

@@ -102,6 +102,11 @@ Not every project needs Docker and MariaDB. Plain HTML, a flat-file CMS with SQL
 - Address: `http://<name>.localhost:<port>` (subdomains too). When the HTTPS proxy runs, also `https://<name>.localhost`.
 - Servers keep running when VS Code closes; the log is one click away. Start/stop, “Change…” and “Remove…” (the folder
   stays) in the context menu. Claude can list, start and stop them via MCP.
+- **Several websites in one project** (e.g. a flat-file CMS with `config/sites/<key>.php` and one SQLite database per
+  site): “Sites” below the server lists them with their addresses. The lock icon adds their host names to the HTTPS proxy
+  (`https://shop.localhost` without port); the save icon backs up a site's SQLite database consistently (`sqlite3 .backup`)
+  to `.redaxo-mi/local/backups/`. Only `label` and `hosts` are read from the site files – they are never executed.
+- When the server lives in a subfolder of a project with `CLAUDE.md`/`AGENTS.md`, “Claude” also shows that project's sessions.
 - Own commands must listen on `127.0.0.1` so the HTTPS proxy can reach them (many dev servers only listen on `::1`
   otherwise) – for Vite, Astro, Next.js and others the extension adds it itself.
 
@@ -169,6 +174,13 @@ Passwords are only returned when explicitly asked for.
 Every instance also contains an **`AGENTS.md`** (plus `CLAUDE.md` and `.mcp.json`) with all facts about the environment:
 container names, paths, console, database host. Copilot and Claude Code read it automatically when the instance folder
 is open. Refresh it with right click → **Update AI Instructions (AGENTS.md)**.
+
+### Moving sessions
+
+When a project folder moved (or an instance was renamed), its Claude sessions still belong to the old path. Right-click
+“Claude” → **Take Over Claude Sessions…** lists the sessions whose folder no longer exists first. They are copied with
+rewritten paths (whole paths only), memory is merged (`MEMORY.md` extended, nothing overwritten); afterwards the old copy
+can go to the trash.
 
 ## Xdebug
 

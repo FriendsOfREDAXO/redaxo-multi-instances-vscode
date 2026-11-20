@@ -2,7 +2,7 @@
   "name": "redaxo-multi-instances-manager",
   "displayName": "%displayName%",
   "description": "%description%",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "publisher": "skerbis",
   "icon": "resources/icon.png",
   "repository": {
@@ -543,6 +543,24 @@
         "title": "%command.deployToLive%",
         "category": "%category%",
         "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "redaxo-instances.takeOverClaudeSessions",
+        "title": "%command.takeOverClaudeSessions%",
+        "category": "%category%",
+        "icon": "$(arrow-swap)"
+      },
+      {
+        "command": "redaxo-instances.backupSiteDatabase",
+        "title": "%command.backupSiteDatabase%",
+        "category": "%category%",
+        "icon": "$(save)"
+      },
+      {
+        "command": "redaxo-instances.useSiteHostsForHttps",
+        "title": "%command.useSiteHostsForHttps%",
+        "category": "%category%",
+        "icon": "$(lock)"
       }
     ],
     "menus": {
@@ -918,6 +936,36 @@
           "command": "redaxo-instances.setupLiveServer",
           "when": "view == redaxo-instances.instancesView && viewItem == 'detail live'",
           "group": "1_live@1"
+        },
+        {
+          "command": "redaxo-instances.takeOverClaudeSessions",
+          "when": "view =~ /^redaxo-instances\\.(instancesView|localServersView)$/ && viewItem == claude",
+          "group": "inline@1"
+        },
+        {
+          "command": "redaxo-instances.takeOverClaudeSessions",
+          "when": "view =~ /^redaxo-instances\\.(instancesView|localServersView)$/ && viewItem == claude",
+          "group": "1_claude@1"
+        },
+        {
+          "command": "redaxo-instances.backupSiteDatabase",
+          "when": "view == redaxo-instances.localServersView && viewItem == 'localSite sqlite'",
+          "group": "inline@1"
+        },
+        {
+          "command": "redaxo-instances.backupSiteDatabase",
+          "when": "view == redaxo-instances.localServersView && viewItem == 'localSite sqlite'",
+          "group": "1_site@1"
+        },
+        {
+          "command": "redaxo-instances.useSiteHostsForHttps",
+          "when": "view == redaxo-instances.localServersView && viewItem == localSites",
+          "group": "inline@1"
+        },
+        {
+          "command": "redaxo-instances.useSiteHostsForHttps",
+          "when": "view == redaxo-instances.localServersView && viewItem == localSites",
+          "group": "1_sites@1"
         }
       ],
       "commandPalette": [
@@ -959,6 +1007,14 @@
         },
         {
           "command": "redaxo-instances.copyValue",
+          "when": "false"
+        },
+        {
+          "command": "redaxo-instances.backupSiteDatabase",
+          "when": "false"
+        },
+        {
+          "command": "redaxo-instances.useSiteHostsForHttps",
           "when": "false"
         }
       ]
