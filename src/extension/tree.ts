@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
+import { ClaudeSession, isClaudeInstalled, listClaudeSessions } from '../core/claude';
 import { InstanceManager } from '../core/manager';
+import { hasClaudeChat } from './claudeChat';
 import { Instance } from '../core/model';
 import { SharedService } from '../core/shared';
 
@@ -137,7 +139,64 @@ function details(i: Instance): DetailItem[] {
     return items;
 }
 
-export type InstancesTreeElement = InstanceItem | DetailItem;
+/** Whose sessions: an instance or a local server (both have a folder). */
+export interface ClaudeOwner {
+    /** Unique id prefix for tree items, e.g. `instance:shop`. */
+    key: string;
+    name: string;
+    /** Folder new sessions start in (and that is opened for the chat). */
+    folder: string;
+}
+
+/** "Claude" below an instance or local server (only when Claude Code is installed): its sessions and a new one. */
+export class ClaudeItem extends vscode.TreeItem {
+    constructor(readonly owner: ClaudeOwner, readonly sessions: ClaudeSession[]) {
+        super('Claude', sessions.length ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
+        this.id = `claude:${owner.key}`;
+        this.iconPath = new vscode.ThemeIcon('sparkle');
+        this.contextValue = 'claude';
+        if (sessions.length) {
+            this.description = sessions.length === 1 ? l10n.t('1 session') : l10n.t('{0} sessions', sessions.length);
+            this.tooltip = l10n.t('Claude Code sessions started in the folder of this instance');
+        } else {
+            this.description = l10n.t('start a session');
+            this.tooltip = l10n.t('Starts Claude Code in the folder of this instance');
+            this.command = { command: 'redaxo-instances.openClaudeInFolder', title: '', arguments: [owner.folder] };
+        }
+    }
+}
+
+export class ClaudeSessionItem extends vscode.TreeItem {
+    constructor(readonly owner: ClaudeOwner, readonly session: ClaudeSession | undefined) {
+        super(session ? (session.title || l10n.t('Session without title')) : l10n.t('New session'), vscode.TreeItemCollapsibleState.None);
+        this.id = `claude:${owner.key}:${session?.id ?? 'new'}`;
+        this.contextValue = session ? 'claudeSession' : 'claudeNewSession';
+        if (session) {
+            this.description = session.modified.toLocaleString(vscode.env.language, { dateStyle: 'medium', timeStyle: 'short' });
+            this.iconPath = new vscode.ThemeIcon('comment-discussion');
+            this.tooltip = new vscode.MarkdownString(`**${session.title || session.id}**\n\n${l10n.t('Folder')}: \`${session.cwd}\`\n\n${formatBytes(session.sizeBytes)} · \`${session.id}\``);
+            this.command = { command: 'redaxo-instances.openClaudeInFolder', title: '', arguments: [session.cwd, session.id] };
+        } else {
+            this.iconPath = new vscode.ThemeIcon('add');
+            this.command = { command: 'redaxo-instances.openClaudeInFolder', title: '', arguments: [owner.folder] };
+        }
+    }
+}
+
+/** The Claude entry for a folder – undefined when Claude Code is not installed. */
+export async function claudeItemFor(owner: ClaudeOwner, webroot?: string): Promise<ClaudeItem | undefined> {
+    if (!hasClaudeChat() && !(await isClaudeInstalled())) {
+        return undefined;
+    }
+    const sessions = await listClaudeSessions(owner.folder, webroot ?? '').catch(() => []);
+    return new ClaudeItem(owner, sessions);
+}
+
+export function claudeChildren(item: ClaudeItem): ClaudeSessionItem[] {
+    return [...item.sessions.map(s => new ClaudeSessionItem(item.owner, s)), new ClaudeSessionItem(item.owner, undefined)];
+}
+
+export type InstancesTreeElement = InstanceItem | DetailItem | ClaudeItem | ClaudeSessionItem;
 
 export class InstancesTreeProvider implements vscode.TreeDataProvider<InstancesTreeElement>, vscode.Disposable {
     private readonly emitter = new vscode.EventEmitter<InstancesTreeElement | undefined>();
@@ -181,7 +240,15 @@ export class InstancesTreeProvider implements vscode.TreeDataProvider<InstancesT
             return (await this.load()).map(i => new InstanceItem(i));
         }
         if (element instanceof InstanceItem) {
-            return details(element.instance);
+            const items: InstancesTreeElement[] = details(element.instance);
+            const claude = await claudeItemFor({ key: `instance:${element.instance.name}`, name: element.instance.name, folder: element.instance.path }, element.instance.layout.webroot);
+            if (claude) {
+                items.push(claude);
+            }
+            return items;
+        }
+        if (element instanceof ClaudeItem) {
+            return claudeChildren(element);
         }
         return [];
     }
@@ -218,6 +285,9 @@ export class InstancesTreeProvider implements vscode.TreeDataProvider<InstancesT
     }
 
     getParent(element: InstancesTreeElement): InstancesTreeElement | undefined {
+        if (element instanceof ClaudeSessionItem) {
+            return undefined; // parent is rebuilt on expand; reveal() is not used for sessions
+        }
         return element instanceof DetailItem ? new InstanceItem(element.instance) : undefined;
     }
 

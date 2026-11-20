@@ -339,6 +339,48 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
                 ...list.map(s => `| ${s.id} | ${s.label || '-'} | ${s.createdAt} | ${Math.round(s.sizeBytes / 1024 / 1024 * 10) / 10} MB |`)].join('\n');
         },
     },
+    {
+        name: 'list_local_servers',
+        title: 'List local servers',
+        description: 'Lists the local web servers without Docker (PHP built-in server, static files, own command such as npm run dev): name, kind, status, folder and address.',
+        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+        mutating: false,
+        async run(manager) {
+            const servers = await manager.local.list();
+            if (!servers.length) {
+                return 'No local servers.';
+            }
+            const lines = await Promise.all(servers.map(async s => {
+                const https = s.status === 'running' ? await manager.localServerHttpsUrl(s) : undefined;
+                const how = s.kind === 'command' ? `command: ${s.command}` : s.kind === 'php' ? `php -S, docroot ${s.docroot || '.'}${s.router ? `, router ${s.router}` : ''}` : `static, docroot ${s.docroot || '.'}`;
+                return `- ${s.name} (${s.status}) – ${how}\n  folder: ${s.path}\n  address: ${https ?? s.directUrl}${https ? ` (direct ${s.directUrl})` : ''}\n  log: ${s.logFile}`;
+            }));
+            return lines.join('\n');
+        },
+    },
+    {
+        name: 'start_local_server',
+        title: 'Start local server',
+        description: 'Starts a local web server (without Docker) in the background and waits until its port answers.',
+        inputSchema: { type: 'object', properties: { name: { type: 'string', description: 'Name of the local server' } }, required: ['name'], additionalProperties: false },
+        mutating: true,
+        async run(manager, input) {
+            const s = await manager.local.start(str(input, 'name'));
+            await manager.syncLocalProxy();
+            return `Started ${s.name}: ${(await manager.localServerHttpsUrl(s)) ?? s.directUrl}`;
+        },
+    },
+    {
+        name: 'stop_local_server',
+        title: 'Stop local server',
+        description: 'Stops a local web server (the project folder is not touched).',
+        inputSchema: { type: 'object', properties: { name: { type: 'string', description: 'Name of the local server' } }, required: ['name'], additionalProperties: false },
+        mutating: true,
+        async run(manager, input) {
+            await manager.local.stop(str(input, 'name'));
+            return `Stopped ${str(input, 'name')}.`;
+        },
+    },
 ];
 
 export function findTool(name: string): ToolDefinition | undefined {

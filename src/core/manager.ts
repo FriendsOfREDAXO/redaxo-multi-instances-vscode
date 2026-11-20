@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
+import { createReadStream, createWriteStream, existsSync } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -16,6 +16,7 @@ import { describeOccupant } from './diagnose';
 import { DetectedProject, GitStatus, detectProject, gitClone, gitInit, prepareClonedRedaxo5, repoName } from './git';
 import { findFreePort, generatePassword } from './ports';
 import { CoreSettings } from './settings';
+import { LocalServer, LocalServers } from './localServers';
 import { SharedServices } from './shared';
 import {
     canonicalPath, composeProjectFromDir, findComposeFile, instanceFromConfig, listInstanceDirs, loadInstance, parseEnv,
@@ -135,8 +136,51 @@ export class InstanceManager {
     private dockerClient?: Docker;
     readonly shared: SharedServices;
 
-    constructor(private readonly getSettings: () => CoreSettings, readonly log: Logger) {
-        this.shared = new SharedServices(() => this.docker, getSettings, log);
+    /** Web servers without Docker (PHP built-in server, static files, own command). */
+    readonly local: LocalServers;
+
+    constructor(private readonly getSettings: () => CoreSettings, readonly log: Logger, staticServerScript?: string) {
+        this.local = new LocalServers(() => getSettings().instancesDir, () => staticServerScript ?? bundledStaticServer());
+        this.shared = new SharedServices(() => this.docker, getSettings, log, () => this.local.configs());
+    }
+
+    /** Registers a local server (name and port must not collide with instances) and updates the HTTPS proxy. */
+    async createLocalServer(input: Parameters<LocalServers['add']>[0]): Promise<LocalServer> {
+        if (await exists(this.instancePath(input.name))) {
+            throw new InstanceError(`An instance "${input.name}" already exists`, 'exists');
+        }
+        const server = await this.local.add(input, await this.instancePorts());
+        await this.syncLocalProxy();
+        return server;
+    }
+
+    async removeLocalServer(name: string): Promise<void> {
+        await this.local.remove(name);
+        await this.syncLocalProxy();
+    }
+
+    /** Proxy config follows the list of local servers – only when the proxy already runs (no Docker needed otherwise). */
+    async syncLocalProxy(): Promise<void> {
+        try {
+            if ((await this.shared.status()).proxy) {
+                await this.shared.syncProxy(await this.list({ withStatus: false }));
+            }
+        } catch (error) {
+            this.log.warn(`Proxy: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+
+    /** HTTPS address via the proxy when it runs, else undefined. */
+    async localServerHttpsUrl(server: LocalServer): Promise<string | undefined> {
+        try {
+            if (!(await this.shared.status()).proxy) {
+                return undefined;
+            }
+            const p = await this.shared.ports();
+            return `https://${server.name}.localhost${p.proxyHttps === 443 ? '' : `:${p.proxyHttps}`}/`;
+        } catch {
+            return undefined;
+        }
     }
 
     get settings(): CoreSettings {
@@ -1204,6 +1248,16 @@ export class InstanceManager {
         }
     }
 
+    /**
+     * Makes the database reachable for the shared services (Adminer) by its container name. The database is not part of the
+     * shared network in docker-compose.yml – Compose would add the service name `db` as an alias there, and with several
+     * instances `db` would then resolve to the databases of other instances as well.
+     */
+    async connectDatabaseToShared(instance: Instance): Promise<void> {
+        await this.docker.ensureNetwork(SHARED_NETWORK);
+        await this.docker.connectNetwork(SHARED_NETWORK, instance.layout.dbContainer);
+    }
+
     private async ensureDbRunning(instance: Instance, progress: ProgressReporter): Promise<boolean> {
         if (await this.docker.isRunning(instance.layout.dbContainer)) {
             return false;
@@ -1405,4 +1459,10 @@ export class InstanceManager {
                 `command -v mariadb >/dev/null && exec mariadb -u${instance.db.user} ${instance.db.name} || exec mysql -u${instance.db.user} ${instance.db.name}`],
         };
     }
+}
+
+/** dist/static-server.js next to the bundle (extension and MCP server live in dist/). */
+function bundledStaticServer(): string | undefined {
+    const file = path.join(__dirname, 'static-server.js');
+    return existsSync(file) ? file : undefined;
 }

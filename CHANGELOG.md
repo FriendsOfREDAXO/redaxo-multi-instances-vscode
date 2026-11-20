@@ -1,5 +1,33 @@
 # Changelog
 
+## Version 2.2.0 (2026-11-20)
+
+### ✨ Neu
+- **Lokale Server ohne Docker:** neuer Bereich „Lokale Server“ für Projekte, die kein Docker/MariaDB brauchen – statische
+  Dateien (eigener Server mit Live-Reload), PHP mit dem eingebauten Server (`php -S` mit Router, installiertes PHP) oder
+  ein eigener Befehl (`npm run dev`, Vite, Hugo …). Der Ordner bleibt, wo er ist; die Art wird beim Anlegen erkannt.
+  Adresse `http://<name>.localhost:<port>`, mit laufendem Proxy auch `https://<name>.localhost`. Die Server laufen im
+  Hintergrund weiter (PID- und Logdatei), auch mit Claude-Eintrag; MCP-Tools `list_local_servers`, `start_local_server`,
+  `stop_local_server`.
+- **Claude-Sitzungen an der Instanz:** Ist Claude Code installiert, zeigt jede Instanz den Eintrag „Claude“ mit den Sitzungen,
+  die in ihrem Ordner (oder in `project/`) gestartet wurden – mit Titel und Datum. „Neue Sitzung“ startet eine. Auch sehr große Verläufe werden nur am Anfang
+  und Ende gelesen.
+- **Im Claude-Chat öffnen:** Ist Claude Code für VS Code installiert, öffnet ein Klick die Sitzung im Chat. Ist ihr Ordner
+  in diesem Fenster nicht offen, öffnet die Extension ihn in einem neuen Fenster und dort den Chat. Das Terminal-Symbol
+  setzt die Sitzung stattdessen mit `claude --resume` im Terminal fort.
+- **Sitzungen umbenennen:** Stift-Symbol bzw. Rechtsklick → „Sitzung umbenennen…“ – gespeichert wie mit `/rename` in Claude
+  Code, also auch bei `claude --resume` sichtbar. Leer lassen stellt den erzeugten Titel wieder her.
+
+### 🐛 Fehlerbehebungen
+- **Proxy-Konfiguration:** Das Caddyfile wird atomar geschrieben und das Neuladen bei Bedarf wiederholt – über die
+  Docker-Dateifreigabe konnte der Proxy sonst eine halb geschriebene Datei lesen („syntax error“).
+- **Datenbank anderer Instanzen erwischt:** Die Datenbank hing im gemeinsamen Netz `redaxo-mi` – dort vergibt Docker Compose
+  ihren Dienstnamen `db` als Alias. Laufen mehrere Instanzen, verteilt Docker `db` reihum auf deren Datenbanken: REDAXO
+  meldete zufällig „Could not connect to database“ bzw. „Access denied“ (Fehler 500), je nach Anfrage. Die Datenbank liegt
+  jetzt nur noch im Netz ihrer Instanz; für Adminer wird sie beim Öffnen ohne Alias – nur unter ihrem Container-Namen – an das
+  gemeinsame Netz angeschlossen. Bestehende Instanzen werden beim nächsten Start umgestellt (der Datenbank-Container wird dabei
+  neu erzeugt, die Daten bleiben im Volume).
+
 ## Version 2.1.0 (2026-11-04)
 
 ### ✨ Neu

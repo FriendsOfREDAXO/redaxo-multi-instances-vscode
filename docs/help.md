@@ -5,6 +5,7 @@ Open this help at any time with **REDAXO: Help** (Command Palette `⇧⌘P` / `C
 - [Quick start](#quick-start)
 - [The instances view](#the-instances-view)
 - [Domains and HTTPS](#domains-and-https)
+- [Local servers (without Docker)](#local-servers-without-docker)
 - [Working with an instance](#working-with-an-instance)
 - [REDAXO 6](#redaxo-6)
 - [AI: Copilot and Claude (MCP)](#ai-copilot-and-claude-mcp)
@@ -50,6 +51,7 @@ Expand an instance to see:
 | Login | copies the admin password |
 | Database | shows all access data to copy |
 | Folder | opens the instance in VS Code |
+| Claude | only with Claude Code installed: the sessions started in the instance folder (title, date) – a click opens it in the Claude chat (in a new window with its folder if needed), the terminal icon resumes it with `claude --resume`, “New session” starts one; the pencil renames a session (like `/rename`) |
 
 All other actions are in the **context menu** (right click). The **Services** view shows the HTTPS proxy, Mailpit and Adminer.
 The status bar shows how many instances are running.
@@ -66,6 +68,24 @@ A shared proxy serves every instance via HTTPS:
   addresses then look like `https://customer.localhost:8443`. The instances view always shows the correct address.
 
 Every instance is also reachable directly via `http://localhost:<port>` (see **Access Data…**).
+
+## Local servers (without Docker)
+
+Not every project needs Docker and MariaDB. Plain HTML, a flat-file CMS with SQLite or a Vite/Hugo project run faster as a
+**local server**: **Local Servers → +**, pick the folder – the extension suggests the kind.
+
+| Kind | Runs | Meant for |
+|---|---|---|
+| Static files | the extension's own server, with live reload | HTML, prototypes, design hand-offs |
+| PHP built-in server | `php -S` with document root and router script (installed PHP, e.g. Homebrew) | flat-file CMS, small PHP tools |
+| Own command | e.g. `npm run dev -- --port $PORT --host 127.0.0.1`, `hugo server` | any other dev server |
+
+- The folder stays where it is; the extension only remembers kind, paths and port.
+- Address: `http://<name>.localhost:<port>` (subdomains too). When the HTTPS proxy runs, also `https://<name>.localhost`.
+- Servers keep running when VS Code closes; the log is one click away. Start/stop, “Change…” and “Remove…” (the folder
+  stays) in the context menu. Claude can list, start and stop them via MCP.
+- Own commands must listen on `127.0.0.1` so the HTTPS proxy can reach them (many dev servers only listen on `::1`
+  otherwise) – for Vite, Astro, Next.js and others the extension adds it itself.
 
 ## Working with an instance
 

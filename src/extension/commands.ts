@@ -3,6 +3,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { detectMkcert } from '../core/certs';
+import { isSessionId, renameClaudeSession } from '../core/claude';
+import { hasClaudeChat, openClaudeChat } from './claudeChat';
 import { InstanceManager } from '../core/manager';
 import { Instance } from '../core/model';
 import { SharedService } from '../core/shared';
@@ -15,7 +17,7 @@ import { DEFAULT_MARIADB_VERSION, compareVersions, isPhpCompatibleWithRedaxo } f
 import type { ProblemsWatcher } from './problems';
 import { setupClaude, writeAiFiles } from './claude';
 import { setInstancesPath } from './config';
-import { DetailItem, InstanceItem, InstancesTreeProvider, ServiceItem, ServicesTreeProvider } from './tree';
+import { ClaudeSessionItem, DetailItem, InstanceItem, InstancesTreeProvider, ServiceItem, ServicesTreeProvider } from './tree';
 import { askDomains, askInstanceName, createInstanceWizard, pickMariaDbVersion, pickPhpVersion } from './wizard';
 import { formatBytes } from './tree';
 
@@ -215,6 +217,45 @@ export function registerCommands(ctx: CommandContext): void {
         'redaxo-instances.openWalkthrough': () => vscode.commands.executeCommand('workbench.action.openWalkthrough',
             `${context.extension.id}#redaxo-instances.gettingStarted`, false),
         'redaxo-instances.openReadme': () => vscode.commands.executeCommand('markdown.showPreview', vscode.Uri.joinPath(context.extensionUri, 'README.md')),
+        'redaxo-instances.openClaudeInFolder': async (folder: string, sessionId?: string, mode?: 'chat' | 'terminal') => {
+            if (typeof folder !== 'string' || (sessionId !== undefined && !isSessionId(sessionId))) {
+                return;
+            }
+            // Claude Code finds sessions by working directory – resume in the folder the session was started in
+            if (!(await fs.stat(folder).then(st => st.isDirectory(), () => false))) {
+                void vscode.window.showErrorMessage(l10n.t('Folder not found: {0}', folder));
+                return;
+            }
+            if ((mode ?? (hasClaudeChat() ? 'chat' : 'terminal')) === 'chat') {
+                await openClaudeChat(context, folder, sessionId);
+                return;
+            }
+            const t = vscode.window.createTerminal({ name: `Claude · ${path.basename(folder)}`, cwd: folder, iconPath: new vscode.ThemeIcon('sparkle') });
+            t.show();
+            t.sendText(sessionId ? `claude --resume ${sessionId}` : 'claude');
+        },
+        'redaxo-instances.resumeClaudeInTerminal': async (item: ClaudeSessionItem) => {
+            if (item instanceof ClaudeSessionItem) {
+                await vscode.commands.executeCommand('redaxo-instances.openClaudeInFolder', item.session?.cwd ?? item.owner.folder, item.session?.id, 'terminal');
+            }
+        },
+        'redaxo-instances.renameClaudeSession': async (item: ClaudeSessionItem) => {
+            const session = item instanceof ClaudeSessionItem ? item.session : undefined;
+            if (!session) {
+                return;
+            }
+            const title = await vscode.window.showInputBox({
+                title: l10n.t('Rename Claude session'),
+                value: session.title,
+                prompt: l10n.t('Shown here and in "claude --resume". Leave empty to use the generated title again.'),
+                validateInput: v => (v.length > 200 ? l10n.t('At most 200 characters') : undefined),
+            });
+            if (title === undefined) {
+                return;
+            }
+            await renameClaudeSession(session, title);
+            tree.refresh();
+        },
         'redaxo-instances.openUrl': (url: string) => openUrl(url),
         'redaxo-instances.copyValue': async (value: string | DetailItem, what?: string) => {
             const text = value instanceof DetailItem ? value.value ?? '' : value;
@@ -731,6 +772,7 @@ export function registerCommands(ctx: CommandContext): void {
             if (!i || !(await ensureShared('adminer'))) {
                 return;
             }
+            await manager.connectDatabaseToShared(i);
             const base = await manager.shared.url('adminer');
             const url = `${base}?server=${encodeURIComponent(i.layout.dbContainer)}&username=${encodeURIComponent(i.db.user)}&db=${encodeURIComponent(i.db.name)}`;
             await vscode.env.clipboard.writeText(i.db.password);

@@ -2,7 +2,7 @@
   "name": "redaxo-multi-instances-manager",
   "displayName": "%displayName%",
   "description": "%description%",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "publisher": "skerbis",
   "icon": "resources/icon.png",
   "repository": {
@@ -68,6 +68,12 @@
           "contextualTitle": "REDAXO"
         },
         {
+          "id": "redaxo-instances.localServersView",
+          "name": "%view.localServers%",
+          "icon": "$(vm)",
+          "contextualTitle": "REDAXO"
+        },
+        {
           "id": "redaxo-instances.servicesView",
           "name": "%view.services%",
           "icon": "$(globe)",
@@ -86,6 +92,11 @@
         "view": "redaxo-instances.instancesView",
         "when": "redaxo-instances.dockerAvailable && !redaxo-instances.hasInstances",
         "contents": "%welcome.empty%"
+      },
+      {
+        "view": "redaxo-instances.localServersView",
+        "when": "!redaxo-instances.hasLocalServers",
+        "contents": "%welcome.localServers%"
       }
     ],
     "commands": [
@@ -372,6 +383,24 @@
         "icon": "$(tools)"
       },
       {
+        "command": "redaxo-instances.openClaudeInFolder",
+        "title": "%command.openClaudeInFolder%",
+        "category": "%category%",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "redaxo-instances.resumeClaudeInTerminal",
+        "title": "%command.resumeClaudeInTerminal%",
+        "category": "%category%",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "redaxo-instances.renameClaudeSession",
+        "title": "%command.renameClaudeSession%",
+        "category": "%category%",
+        "icon": "$(edit)"
+      },
+      {
         "command": "redaxo-instances.openUrl",
         "title": "%command.openUrl%",
         "category": "%category%",
@@ -436,6 +465,60 @@
         "title": "%command.showPortDiagnosis%",
         "category": "%category%",
         "icon": "$(question)"
+      },
+      {
+        "command": "redaxo-instances.createLocalServer",
+        "title": "%command.createLocalServer%",
+        "category": "%category%",
+        "icon": "$(add)"
+      },
+      {
+        "command": "redaxo-instances.startLocalServer",
+        "title": "%command.startLocalServer%",
+        "category": "%category%",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "redaxo-instances.stopLocalServer",
+        "title": "%command.stopLocalServer%",
+        "category": "%category%",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "redaxo-instances.restartLocalServer",
+        "title": "%command.restartLocalServer%",
+        "category": "%category%",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "redaxo-instances.openLocalServer",
+        "title": "%command.openLocalServer%",
+        "category": "%category%",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "redaxo-instances.showLocalServerLog",
+        "title": "%command.showLocalServerLog%",
+        "category": "%category%",
+        "icon": "$(output)"
+      },
+      {
+        "command": "redaxo-instances.editLocalServer",
+        "title": "%command.editLocalServer%",
+        "category": "%category%",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "redaxo-instances.removeLocalServer",
+        "title": "%command.removeLocalServer%",
+        "category": "%category%",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "redaxo-instances.stopAllLocalServers",
+        "title": "%command.stopAllLocalServers%",
+        "category": "%category%",
+        "icon": "$(stop-circle)"
       }
     ],
     "menus": {
@@ -509,9 +592,89 @@
           "command": "redaxo-instances.showPortDiagnosis",
           "when": "view == redaxo-instances.servicesView",
           "group": "1_https@2"
+        },
+        {
+          "command": "redaxo-instances.createLocalServer",
+          "when": "view == redaxo-instances.localServersView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "redaxo-instances.stopAllLocalServers",
+          "when": "view == redaxo-instances.localServersView",
+          "group": "1_local@1"
         }
       ],
       "view/item/context": [
+        {
+          "command": "redaxo-instances.startLocalServer",
+          "when": "view == redaxo-instances.localServersView && viewItem == 'localServer stopped'",
+          "group": "inline@1"
+        },
+        {
+          "command": "redaxo-instances.stopLocalServer",
+          "when": "view == redaxo-instances.localServersView && viewItem == 'localServer running'",
+          "group": "inline@1"
+        },
+        {
+          "command": "redaxo-instances.openLocalServer",
+          "when": "view == redaxo-instances.localServersView && viewItem =~ /^localServer /",
+          "group": "inline@2"
+        },
+        {
+          "command": "redaxo-instances.startLocalServer",
+          "when": "view == redaxo-instances.localServersView && viewItem == 'localServer stopped'",
+          "group": "1_run@1"
+        },
+        {
+          "command": "redaxo-instances.stopLocalServer",
+          "when": "view == redaxo-instances.localServersView && viewItem == 'localServer running'",
+          "group": "1_run@1"
+        },
+        {
+          "command": "redaxo-instances.restartLocalServer",
+          "when": "view == redaxo-instances.localServersView && viewItem =~ /^localServer /",
+          "group": "1_run@2"
+        },
+        {
+          "command": "redaxo-instances.openLocalServer",
+          "when": "view == redaxo-instances.localServersView && viewItem =~ /^localServer /",
+          "group": "1_run@3"
+        },
+        {
+          "command": "redaxo-instances.showLocalServerLog",
+          "when": "view == redaxo-instances.localServersView && viewItem =~ /^localServer /",
+          "group": "2_info@1"
+        },
+        {
+          "command": "redaxo-instances.editLocalServer",
+          "when": "view == redaxo-instances.localServersView && viewItem =~ /^localServer /",
+          "group": "2_info@2"
+        },
+        {
+          "command": "redaxo-instances.removeLocalServer",
+          "when": "view == redaxo-instances.localServersView && viewItem =~ /^localServer /",
+          "group": "9_remove@1"
+        },
+        {
+          "command": "redaxo-instances.resumeClaudeInTerminal",
+          "when": "view =~ /^redaxo-instances\\.(instancesView|localServersView)$/ && viewItem =~ /^claude(Session|NewSession)$/",
+          "group": "inline@2"
+        },
+        {
+          "command": "redaxo-instances.resumeClaudeInTerminal",
+          "when": "view =~ /^redaxo-instances\\.(instancesView|localServersView)$/ && viewItem =~ /^claude(Session|NewSession)$/",
+          "group": "1_session@2"
+        },
+        {
+          "command": "redaxo-instances.renameClaudeSession",
+          "when": "view =~ /^redaxo-instances\\.(instancesView|localServersView)$/ && viewItem == claudeSession",
+          "group": "inline@1"
+        },
+        {
+          "command": "redaxo-instances.renameClaudeSession",
+          "when": "view =~ /^redaxo-instances\\.(instancesView|localServersView)$/ && viewItem == claudeSession",
+          "group": "1_session@1"
+        },
         {
           "command": "redaxo-instances.startInstance",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance stopped/",
@@ -721,6 +884,18 @@
         },
         {
           "command": "redaxo-instances.openUrl",
+          "when": "false"
+        },
+        {
+          "command": "redaxo-instances.openClaudeInFolder",
+          "when": "false"
+        },
+        {
+          "command": "redaxo-instances.renameClaudeSession",
+          "when": "false"
+        },
+        {
+          "command": "redaxo-instances.resumeClaudeInTerminal",
           "when": "false"
         },
         {
@@ -1295,6 +1470,79 @@
             "name": {
               "type": "string",
               "description": "Instance name (see list_instances)"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "redaxo_list_local_servers",
+        "displayName": "%tool.list_local_servers.name%",
+        "toolReferenceName": "redaxo-list-local-servers",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server-environment)",
+        "userDescription": "%tool.list_local_servers.description%",
+        "modelDescription": "Lists the local web servers without Docker (PHP built-in server, static files, own command such as npm run dev): name, kind, status, folder and address.",
+        "tags": [
+          "redaxo",
+          "docker",
+          "php"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "redaxo_start_local_server",
+        "displayName": "%tool.start_local_server.name%",
+        "toolReferenceName": "redaxo-start-local-server",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server-environment)",
+        "userDescription": "%tool.start_local_server.description%",
+        "modelDescription": "Starts a local web server (without Docker) in the background and waits until its port answers.",
+        "tags": [
+          "redaxo",
+          "docker",
+          "php"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Name of the local server"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "redaxo_stop_local_server",
+        "displayName": "%tool.stop_local_server.name%",
+        "toolReferenceName": "redaxo-stop-local-server",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server-environment)",
+        "userDescription": "%tool.stop_local_server.description%",
+        "modelDescription": "Stops a local web server (the project folder is not touched).",
+        "tags": [
+          "redaxo",
+          "docker",
+          "php"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Name of the local server"
             }
           },
           "required": [

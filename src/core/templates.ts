@@ -152,8 +152,10 @@ ${env.map(([k, v]) => `      ${k}: ${q(v)}`).join('\n')}
       timeout: 5s
       retries: 60
       start_period: 30s
+    # only the instance network: on the shared network the service name "db" would collide with other instances
+    # (Adminer gets access via InstanceManager.connectDatabaseToShared)
     networks:
-${l.dbAliases?.length ? `      default:\n        aliases:\n${l.dbAliases.map(a => `          - ${a}`).join('\n')}\n      ${SHARED_NETWORK}: {}` : `      - default\n      - ${SHARED_NETWORK}`}
+${l.dbAliases?.length ? `      default:\n        aliases:\n${l.dbAliases.map(a => `          - ${a}`).join('\n')}` : '      - default'}
 ${volumesSection}
 networks:
   ${SHARED_NETWORK}:
@@ -231,6 +233,8 @@ services:
     image: ${SHARED_IMAGES.proxy}
     container_name: redaxo-mi-proxy
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${bindAll ? '' : '127.0.0.1:'}${ports.proxyHttp}:80"
       - "${bindAll ? '' : '127.0.0.1:'}${ports.proxyHttps}:443"${v6}

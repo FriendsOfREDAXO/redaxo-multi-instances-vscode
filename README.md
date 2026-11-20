@@ -59,6 +59,7 @@ Jede Instanz zeigt ihren Status (grün = läuft) und lässt sich aufklappen:
 | Login | kopiert das Admin-Passwort |
 | Datenbank | zeigt alle Zugangsdaten zum Kopieren |
 | Ordner | öffnet die Instanz in VS Code |
+| Claude | Claude-Code-Sitzungen der Instanz fortsetzen oder neu starten (nur mit installiertem Claude Code) |
 
 **Zugangsdaten…** zeigt alles Wichtige auf einen Blick – auswählen kopiert den Wert:
 
@@ -67,6 +68,13 @@ Jede Instanz zeigt ihren Status (grün = läuft) und lässt sich aufklappen:
 Über das Kontextmenü (Rechtsklick) erreichst du: Cache löschen, REDAXO-Konsole, Shell, SQL-Konsole, Logs,
 Adminer, PHP-/MariaDB-Version, Debugging, Sicherungspunkte, Git, Dev Container, Duplizieren, Export,
 Container neu aufbauen und Löschen. Der Tooltip einer Instanz zeigt CPU, RAM und Speicherbedarf.
+
+## Lokale Server (ohne Docker)
+
+Für Projekte ohne Datenbank oder mit SQLite: **Lokale Server → +** liefert einen Ordner direkt aus – als statische Seite
+(mit Live-Reload), mit dem eingebauten PHP-Server (`php -S` mit Router) oder per eigenem Befehl (`npm run dev`, Hugo …).
+Der Ordner bleibt, wo er ist; Adresse `http://<name>.localhost:<port>`, mit laufendem Proxy auch `https://<name>.localhost`.
+Details in der Hilfe.
 
 ## Entwickeln mit einer Instanz
 
