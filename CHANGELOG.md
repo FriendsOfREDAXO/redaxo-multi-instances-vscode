@@ -1,5 +1,16 @@
 # Changelog
 
+## Version 2.4.0 (2026-11-20)
+
+### ✨ Neu
+- **Sites bei lokalen Servern:** Projekte mit mehreren Websites (`config/sites/<key>.php`, SQLite je Website – z. B. ein
+  Flat-File-CMS) zeigen „Sites“ mit Adressen. Hostnamen per Klick in den HTTPS-Proxy übernehmen, SQLite-Datenbank einer
+  Website konsistent sichern (`sqlite3 .backup`). Aus den Site-Dateien werden nur `label` und `hosts` gelesen.
+- **Claude-Sitzungen übernehmen:** nach dem Umzug eines Projektordners die Sitzungen des alten Pfads übernehmen – kopiert mit
+  umgeschriebenen Pfaden (zeilenweise, auch bei sehr großen Verläufen; nur ganze Pfade), Gedächtnis zusammengeführt, alte
+  Kopie auf Wunsch in den Papierkorb.
+- Lokale Server in einem Unterordner eines Projekts mit `CLAUDE.md`/`AGENTS.md` zeigen auch dessen Claude-Sitzungen.
+
 ## Version 2.3.0 (2026-11-20)
 
 ### ✨ Neu

@@ -102,6 +102,12 @@ laufen schneller als **lokaler Server**: **Lokale Server → +**, Ordner wählen
 - Adresse: `http://<name>.localhost:<port>` (auch Subdomains). Läuft der HTTPS-Proxy, zusätzlich `https://<name>.localhost`.
 - Server laufen im Hintergrund weiter, auch wenn VS Code geschlossen ist; Log per Klick. ▶/■, „Ändern…“, „Entfernen…“
   (der Ordner bleibt) im Rechtsklick-Menü. Claude kann sie über MCP auflisten, starten und stoppen.
+- **Mehrere Websites in einem Projekt** (z. B. ein Flat-File-CMS mit `config/sites/<key>.php` und SQLite je Website):
+  Unter dem Server erscheint „Sites“ mit allen Websites und ihren Adressen. Das Schloss-Symbol übernimmt deren Hostnamen in
+  den HTTPS-Proxy (`https://shop.localhost` ohne Port); das Speicher-Symbol sichert die SQLite-Datenbank einer Website
+  konsistent (`sqlite3 .backup`) nach `.redaxo-mi/local/backups/`. Aus den Site-Dateien werden nur `label` und `hosts`
+  gelesen – sie werden nicht ausgeführt.
+- Liegt der Server in einem Unterordner eines Projekts mit `CLAUDE.md`/`AGENTS.md`, zeigt „Claude“ auch dessen Sitzungen.
 - Eigene Befehle müssen auf `127.0.0.1` lauschen, damit der HTTPS-Proxy sie erreicht (viele Dev-Server lauschen sonst
   nur auf `::1`) – für Vite, Astro, Next.js & Co. trägt die Extension das selbst ein.
 
@@ -169,6 +175,13 @@ Passwörter gibt der Server nur heraus, wenn ausdrücklich danach gefragt wird.
 Jede Instanz enthält außerdem eine **`AGENTS.md`** (plus `CLAUDE.md` und `.mcp.json`) mit allen Fakten zur Umgebung:
 Container-Namen, Pfade, Konsole, Datenbank-Host. Copilot und Claude Code lesen sie automatisch, sobald der
 Instanz-Ordner geöffnet ist. Aktualisieren: Rechtsklick → **KI-Anweisungen aktualisieren (AGENTS.md)**.
+
+### Sitzungen umziehen
+
+Ist ein Projektordner umgezogen (oder eine Instanz umbenannt), hängen seine Claude-Sitzungen noch am alten Pfad. Rechtsklick
+auf „Claude“ → **Claude-Sitzungen übernehmen…** listet zuerst die Sitzungen, deren Ordner es nicht mehr gibt. Sie werden mit
+umgeschriebenen Pfaden kopiert (nur ganze Pfade), das Gedächtnis wird zusammengeführt (`MEMORY.md` ergänzt, nichts
+überschrieben); die alte Kopie wandert danach auf Wunsch in den Papierkorb.
 
 ## Xdebug
 

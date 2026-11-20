@@ -3,6 +3,7 @@ import { existsSync, promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { LocalServers, detectServer, devCommand } from '../../src/core/localServers';
+import { detectSites, parseSiteConfig } from '../../src/core/sites';
 
 const STATIC_SERVER = path.join(__dirname, '..', '..', 'dist', 'static-server.js');
 
@@ -79,5 +80,19 @@ describe('local servers', () => {
         }
         assert.equal((await local.get('site')).status, 'stopped');
         assert.match(await local.log('site'), /GET \/ 200/);
+    });
+});
+
+describe('multi-site projects', () => {
+    it('reads only label and hosts from site files and finds the SQLite database', async () => {
+        assert.deepEqual(parseSiteConfig("<?php return array ( 'label' => 'shop.localhost:8099', 'hosts' => array ( 0 => 'shop.localhost:8099', 1 => 'Shop.localhost', ), 'app_key' => 'secret', );"),
+            { label: 'shop.localhost:8099', hosts: ['shop.localhost'] });
+        assert.deepEqual(parseSiteConfig("<?php return ['hosts' => ['a.localhost', 'b.localhost:8080', 'bad host'], 'x' => 1];").hosts, ['a.localhost', 'b.localhost']);
+        const dir = await tmpDir();
+        await write(dir, { 'config/sites/shop.php': "<?php return ['label' => 'Shop', 'hosts' => ['shop.localhost'], 'app_key' => 's'];", 'storage/sites/shop/database/site.sqlite': '' });
+        const sites = await detectSites(dir);
+        assert.equal(sites?.[0].key, 'shop');
+        assert.equal(sites?.[0].database, path.join(dir, 'storage/sites/shop/database/site.sqlite'));
+        assert.equal(JSON.stringify(sites).includes('app_key'), false);
     });
 });
