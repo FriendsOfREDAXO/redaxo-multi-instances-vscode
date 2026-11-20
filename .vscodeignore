@@ -2,6 +2,7 @@
 **
 !dist/extension.js
 !dist/mcp-server.js
+!dist/static-server.js
 !package.json
 !package.nls.json
 !package.nls.*.json

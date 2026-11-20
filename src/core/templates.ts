@@ -233,6 +233,8 @@ services:
     image: ${SHARED_IMAGES.proxy}
     container_name: redaxo-mi-proxy
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${bindAll ? '' : '127.0.0.1:'}${ports.proxyHttp}:80"
       - "${bindAll ? '' : '127.0.0.1:'}${ports.proxyHttps}:443"${v6}

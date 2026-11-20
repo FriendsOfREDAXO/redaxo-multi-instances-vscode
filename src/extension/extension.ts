@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { resumePendingClaudeChat } from './claudeChat';
+import { LocalServersTreeProvider, registerLocalServerCommands } from './localServers';
 import { detectMkcert } from '../core/certs';
 import { Logger } from '../core/docker';
 import { InstanceManager } from '../core/manager';
@@ -30,7 +31,7 @@ export function activate(context: vscode.ExtensionContext): ExtensionApi {
     };
 
     let settings = readCoreSettings();
-    const manager = new InstanceManager(() => settings, logger);
+    const manager = new InstanceManager(() => settings, logger, vscode.Uri.joinPath(context.extensionUri, 'dist', 'static-server.js').fsPath);
     let trusted: boolean | undefined;
 
     const tree = new InstancesTreeProvider(manager);
@@ -60,9 +61,17 @@ export function activate(context: vscode.ExtensionContext): ExtensionApi {
         }
     }, undefined, context.subscriptions);
 
+    const localTree = new LocalServersTreeProvider(manager);
+    const localView = vscode.window.createTreeView('redaxo-instances.localServersView', { treeDataProvider: localTree });
+    context.subscriptions.push(localTree, localView);
+    // local servers are plain processes – no Docker events; poll while the view is visible
+    const localPoll = setInterval(() => localView.visible && localTree.refresh(), 10_000);
+    context.subscriptions.push({ dispose: () => clearInterval(localPoll) });
+
     const refresh = () => {
         tree.refresh();
         services.refresh();
+        localTree.refresh();
     };
 
     const problems = new ProblemsWatcher(manager);
@@ -81,6 +90,7 @@ export function activate(context: vscode.ExtensionContext): ExtensionApi {
         refresh,
     };
     registerCommands(ctx);
+    registerLocalServerCommands(context, manager, localTree, log, () => services.refresh());
     void resumePendingClaudeChat(context);
     registerLanguageModelTools(context, manager, refresh);
     registerChatParticipant(context, manager, refresh);

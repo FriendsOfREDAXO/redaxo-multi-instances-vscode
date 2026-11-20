@@ -2,6 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { ensureCertificate, removeCertificate } from './certs';
 import { Docker, Logger } from './docker';
+import { LocalServerConfig } from './localServers';
 import { Instance, SHARED_DIR, SHARED_NETWORK } from './model';
 import { PortOccupant, diagnosePort } from './diagnose';
 import { findFreePort, isPortFree } from './ports';
@@ -25,6 +26,7 @@ export class SharedServices {
         private readonly docker: () => Docker,
         private readonly settings: () => CoreSettings,
         private readonly log: Logger,
+        private readonly localServers: () => Promise<readonly LocalServerConfig[]> = async () => [],
     ) {}
 
     get dir(): string {
@@ -273,6 +275,18 @@ export class SharedServices {
             sites.push({ name: instance.name, hosts: instance.urls.hosts, upstream: `${instance.layout.webContainer}:80`, cert });
         }
 
+        // local servers (without Docker) run on the host – the proxy reaches them via host.docker.internal
+        for (const server of await this.localServers().catch(() => [])) {
+            if (keep.has(server.name)) {
+                continue; // an instance with the same name wins
+            }
+            const hosts = [`${server.name}.localhost`, `*.${server.name}.localhost`, ...server.domains];
+            keep.add(server.name);
+            const cert = await ensureCertificate(this.certsDir, server.name, hosts);
+            trusted &&= cert !== undefined;
+            sites.push({ name: `${server.name} (local)`, hosts, upstream: `host.docker.internal:${server.port}`, cert });
+        }
+
         // remove certificates of deleted instances
         try {
             for (const file of await fs.readdir(this.certsDir)) {
@@ -285,9 +299,13 @@ export class SharedServices {
             // no certs dir yet
         }
 
-        const directory = instances
-            .filter(i => i.format === 'v2')
-            .map(i => ({ name: i.name, url: i.urls.frontend }));
+        const ports = await this.ports();
+        const httpsPort = ports.proxyHttps === 443 ? '' : `:${ports.proxyHttps}`;
+        const directory = [
+            ...instances.filter(i => i.format === 'v2').map(i => ({ name: i.name, url: i.urls.frontend })),
+            ...(await this.localServers().catch(() => [])).filter(s => !instances.some(i => i.name === s.name))
+                .map(s => ({ name: s.name, url: `https://${s.name}.localhost${httpsPort}/` })),
+        ].sort((a, b) => a.name.localeCompare(b.name));
         const caddyfile = renderCaddyfile(sites, { lang: this.settings().lang, directory });
         const file = path.join(this.dir, 'caddy', 'Caddyfile');
         let current = '';
@@ -297,10 +315,20 @@ export class SharedServices {
             // first run
         }
         if (current !== caddyfile) {
-            await fs.writeFile(file, caddyfile, 'utf8');
+            // atomic: through the bind mount the container could otherwise read a half-written file
+            const tmp = `${file}.${process.pid}.tmp`;
+            await fs.writeFile(tmp, caddyfile, 'utf8');
+            await fs.rename(tmp, file);
             if ((await this.status()).proxy) {
                 this.log.info('Reloading HTTPS proxy configuration');
-                await this.docker().exec(SHARED_CONTAINERS.proxy, ['caddy', 'reload', '--config', '/etc/caddy/Caddyfile', '--adapter', 'caddyfile', '--force']);
+                const reload = () => this.docker().exec(SHARED_CONTAINERS.proxy, ['caddy', 'reload', '--config', '/etc/caddy/Caddyfile', '--adapter', 'caddyfile', '--force']);
+                try {
+                    await reload();
+                } catch {
+                    // the file share may deliver the new file with a short delay – one more try
+                    await new Promise(r => setTimeout(r, 1000));
+                    await reload();
+                }
             }
         }
         return { trusted };

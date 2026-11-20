@@ -39,6 +39,7 @@ const common = {
 const contexts = await Promise.all([
     esbuild.context({ ...common, entryPoints: ['src/extension/extension.ts'], outfile: 'dist/extension.js', external: ['vscode'] }),
     esbuild.context({ ...common, entryPoints: ['src/mcp/server.ts'], outfile: 'dist/mcp-server.js', banner: { js: '#!/usr/bin/env node' } }),
+    esbuild.context({ ...common, entryPoints: ['src/static/server.ts'], outfile: 'dist/static-server.js' }),
 ]);
 
 if (watch) {

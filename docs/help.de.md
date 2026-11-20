@@ -5,6 +5,7 @@ Diese Hilfe öffnest du jederzeit mit **REDAXO: Hilfe** (Befehlspalette `⇧⌘P
 - [Schnellstart](#schnellstart)
 - [Die Instanz-Liste](#die-instanz-liste)
 - [Domains und HTTPS](#domains-und-https)
+- [Lokale Server (ohne Docker)](#lokale-server-ohne-docker)
 - [Arbeiten mit einer Instanz](#arbeiten-mit-einer-instanz)
 - [REDAXO 6](#redaxo-6)
 - [KI: Copilot und Claude (MCP)](#ki-copilot-und-claude-mcp)
@@ -67,6 +68,24 @@ Ein gemeinsamer Proxy liefert alle Instanzen per HTTPS aus:
   die Adressen lauten dann z. B. `https://kunde.localhost:8443`. Die Instanz-Liste zeigt immer die richtige Adresse.
 
 Direkt ohne Proxy ist jede Instanz zusätzlich unter `http://localhost:<port>` erreichbar (siehe **Zugangsdaten…**).
+
+## Lokale Server (ohne Docker)
+
+Nicht jedes Projekt braucht Docker und MariaDB. Reines HTML, ein Flat-File-CMS mit SQLite oder ein Vite-/Hugo-Projekt
+laufen schneller als **lokaler Server**: **Lokale Server → +**, Ordner wählen – die Extension schlägt die Art vor.
+
+| Art | Startet | Gedacht für |
+|---|---|---|
+| Statische Dateien | eingebauter Server der Extension, mit Live-Reload | HTML, Prototypen, Design-Übergaben |
+| PHP (eingebauter Server) | `php -S` mit Document Root und Router-Skript (installiertes PHP, z. B. Homebrew) | Flat-File-CMS, kleine PHP-Tools |
+| Eigener Befehl | z. B. `npm run dev -- --port $PORT --host 127.0.0.1`, `hugo server` | jeder andere Dev-Server |
+
+- Der Ordner bleibt, wo er ist; die Extension merkt sich nur Art, Pfade und Port.
+- Adresse: `http://<name>.localhost:<port>` (auch Subdomains). Läuft der HTTPS-Proxy, zusätzlich `https://<name>.localhost`.
+- Server laufen im Hintergrund weiter, auch wenn VS Code geschlossen ist; Log per Klick. ▶/■, „Ändern…“, „Entfernen…“
+  (der Ordner bleibt) im Rechtsklick-Menü. Claude kann sie über MCP auflisten, starten und stoppen.
+- Eigene Befehle müssen auf `127.0.0.1` lauschen, damit der HTTPS-Proxy sie erreicht (viele Dev-Server lauschen sonst
+  nur auf `::1`) – für Vite, Astro, Next.js & Co. trägt die Extension das selbst ein.
 
 ## Arbeiten mit einer Instanz
 

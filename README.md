@@ -69,6 +69,13 @@ Jede Instanz zeigt ihren Status (grün = läuft) und lässt sich aufklappen:
 Adminer, PHP-/MariaDB-Version, Debugging, Sicherungspunkte, Git, Dev Container, Duplizieren, Export,
 Container neu aufbauen und Löschen. Der Tooltip einer Instanz zeigt CPU, RAM und Speicherbedarf.
 
+## Lokale Server (ohne Docker)
+
+Für Projekte ohne Datenbank oder mit SQLite: **Lokale Server → +** liefert einen Ordner direkt aus – als statische Seite
+(mit Live-Reload), mit dem eingebauten PHP-Server (`php -S` mit Router) oder per eigenem Befehl (`npm run dev`, Hugo …).
+Der Ordner bleibt, wo er ist; Adresse `http://<name>.localhost:<port>`, mit laufendem Proxy auch `https://<name>.localhost`.
+Details in der Hilfe.
+
 ## Entwickeln mit einer Instanz
 
 - **Debugging starten (Xdebug):** ein Klick – Xdebug wird eingeschaltet, der Debugger startet mit dem richtigen
