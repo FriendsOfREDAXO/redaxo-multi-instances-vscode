@@ -279,5 +279,13 @@
   "Stopping {0}…": "{0} wird gestoppt…",
   "{0} stopped.": "{0} gestoppt.",
   "Instances already include Composer, git, the mariadb client, ImageMagick, libvips, Poppler, Ghostscript and ffmpeg.": "Die Instanzen enthalten bereits Composer, git, den MariaDB-Client, ImageMagick, libvips, Poppler, Ghostscript und ffmpeg.",
-  "Show all instances": "Alle Instanzen anzeigen"
+  "Show all instances": "Alle Instanzen anzeigen",
+  "1 session": "1 Sitzung",
+  "{0} sessions": "{0} Sitzungen",
+  "Claude Code sessions started in the folder of this instance": "Claude-Code-Sitzungen, die im Ordner dieser Instanz gestartet wurden",
+  "start a session": "Sitzung starten",
+  "Starts Claude Code in the folder of this instance": "Startet Claude Code im Ordner dieser Instanz",
+  "Session without title": "Sitzung ohne Titel",
+  "New session": "Neue Sitzung",
+  "Start Claude in which instance?": "Claude in welcher Instanz starten?"
 }

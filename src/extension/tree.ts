@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { ClaudeSession, isClaudeInstalled, listClaudeSessions } from '../core/claude';
 import { InstanceManager } from '../core/manager';
 import { Instance } from '../core/model';
 import { SharedService } from '../core/shared';
@@ -137,7 +138,42 @@ function details(i: Instance): DetailItem[] {
     return items;
 }
 
-export type InstancesTreeElement = InstanceItem | DetailItem;
+/** "Claude" below an instance (only when Claude Code is installed): its sessions and a new one. */
+export class ClaudeItem extends vscode.TreeItem {
+    constructor(readonly instance: Instance, readonly sessions: ClaudeSession[]) {
+        super('Claude', sessions.length ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
+        this.id = `claude:${instance.name}`;
+        this.iconPath = new vscode.ThemeIcon('sparkle');
+        this.contextValue = 'claude';
+        if (sessions.length) {
+            this.description = sessions.length === 1 ? l10n.t('1 session') : l10n.t('{0} sessions', sessions.length);
+            this.tooltip = l10n.t('Claude Code sessions started in the folder of this instance');
+        } else {
+            this.description = l10n.t('start a session');
+            this.tooltip = l10n.t('Starts Claude Code in the folder of this instance');
+            this.command = { command: 'redaxo-instances.openClaudeSession', title: '', arguments: [instance.name] };
+        }
+    }
+}
+
+export class ClaudeSessionItem extends vscode.TreeItem {
+    constructor(readonly instance: Instance, readonly session: ClaudeSession | undefined) {
+        super(session ? (session.title || l10n.t('Session without title')) : l10n.t('New session'), vscode.TreeItemCollapsibleState.None);
+        this.id = `claude:${instance.name}:${session?.id ?? 'new'}`;
+        this.contextValue = 'claudeSession';
+        if (session) {
+            this.description = session.modified.toLocaleString(vscode.env.language, { dateStyle: 'medium', timeStyle: 'short' });
+            this.iconPath = new vscode.ThemeIcon('comment-discussion');
+            this.tooltip = new vscode.MarkdownString(`**${session.title || session.id}**\n\n${l10n.t('Folder')}: \`${session.cwd}\`\n\n${formatBytes(session.sizeBytes)} · \`${session.id}\``);
+            this.command = { command: 'redaxo-instances.openClaudeSession', title: '', arguments: [instance.name, session.id, session.cwd] };
+        } else {
+            this.iconPath = new vscode.ThemeIcon('add');
+            this.command = { command: 'redaxo-instances.openClaudeSession', title: '', arguments: [instance.name] };
+        }
+    }
+}
+
+export type InstancesTreeElement = InstanceItem | DetailItem | ClaudeItem | ClaudeSessionItem;
 
 export class InstancesTreeProvider implements vscode.TreeDataProvider<InstancesTreeElement>, vscode.Disposable {
     private readonly emitter = new vscode.EventEmitter<InstancesTreeElement | undefined>();
@@ -181,7 +217,15 @@ export class InstancesTreeProvider implements vscode.TreeDataProvider<InstancesT
             return (await this.load()).map(i => new InstanceItem(i));
         }
         if (element instanceof InstanceItem) {
-            return details(element.instance);
+            const items: InstancesTreeElement[] = details(element.instance);
+            if (await isClaudeInstalled()) {
+                const sessions = await listClaudeSessions(element.instance.path, element.instance.layout.webroot).catch(() => []);
+                items.push(new ClaudeItem(element.instance, sessions));
+            }
+            return items;
+        }
+        if (element instanceof ClaudeItem) {
+            return [...element.sessions.map(s => new ClaudeSessionItem(element.instance, s)), new ClaudeSessionItem(element.instance, undefined)];
         }
         return [];
     }
@@ -218,7 +262,10 @@ export class InstancesTreeProvider implements vscode.TreeDataProvider<InstancesT
     }
 
     getParent(element: InstancesTreeElement): InstancesTreeElement | undefined {
-        return element instanceof DetailItem ? new InstanceItem(element.instance) : undefined;
+        if (element instanceof ClaudeSessionItem) {
+            return undefined; // parent is rebuilt on expand; reveal() is not used for sessions
+        }
+        return element instanceof DetailItem || element instanceof ClaudeItem ? new InstanceItem(element.instance) : undefined;
     }
 
     dispose(): void {

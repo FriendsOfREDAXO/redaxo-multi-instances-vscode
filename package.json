@@ -372,6 +372,12 @@
         "icon": "$(tools)"
       },
       {
+        "command": "redaxo-instances.openClaudeSession",
+        "title": "%command.openClaudeSession%",
+        "category": "%category%",
+        "icon": "$(sparkle)"
+      },
+      {
         "command": "redaxo-instances.openUrl",
         "title": "%command.openUrl%",
         "category": "%category%",
@@ -721,6 +727,10 @@
         },
         {
           "command": "redaxo-instances.openUrl",
+          "when": "false"
+        },
+        {
+          "command": "redaxo-instances.openClaudeSession",
           "when": "false"
         },
         {

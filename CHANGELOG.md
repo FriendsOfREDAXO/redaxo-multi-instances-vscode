@@ -2,6 +2,12 @@
 
 ## Version 2.1.1 (2026-11-20)
 
+### ✨ Neu
+- **Claude-Sitzungen an der Instanz:** Ist Claude Code installiert, zeigt jede Instanz den Eintrag „Claude“ mit den Sitzungen,
+  die in ihrem Ordner (oder in `project/`) gestartet wurden – mit Titel und Datum. Ein Klick setzt die Sitzung im Terminal
+  im richtigen Ordner fort (`claude --resume`), „Neue Sitzung“ startet eine. Auch sehr große Verläufe werden nur am Anfang
+  und Ende gelesen.
+
 ### 🐛 Fehlerbehebungen
 - **Datenbank anderer Instanzen erwischt:** Die Datenbank hing im gemeinsamen Netz `redaxo-mi` – dort vergibt Docker Compose
   ihren Dienstnamen `db` als Alias. Laufen mehrere Instanzen, verteilt Docker `db` reihum auf deren Datenbanken: REDAXO

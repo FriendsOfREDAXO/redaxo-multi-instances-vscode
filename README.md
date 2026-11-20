@@ -59,6 +59,7 @@ Jede Instanz zeigt ihren Status (grün = läuft) und lässt sich aufklappen:
 | Login | kopiert das Admin-Passwort |
 | Datenbank | zeigt alle Zugangsdaten zum Kopieren |
 | Ordner | öffnet die Instanz in VS Code |
+| Claude | Claude-Code-Sitzungen der Instanz fortsetzen oder neu starten (nur mit installiertem Claude Code) |
 
 **Zugangsdaten…** zeigt alles Wichtige auf einen Blick – auswählen kopiert den Wert:
 

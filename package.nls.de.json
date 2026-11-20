@@ -46,6 +46,7 @@
   "command.showInstanceContextMenu": "Schnellaktionen…",
   "command.updateHosts": "In Hosts-Datei eintragen (nicht mehr nötig)",
   "command.installCLITools": "CLI-Tools installieren (1.x-Instanzen)",
+  "command.openClaudeSession": "Claude-Sitzung öffnen",
   "command.openUrl": "URL öffnen",
   "command.copyValue": "Kopieren",
   "tool.list_instances.name": "REDAXO-Instanzen auflisten",
