@@ -378,6 +378,12 @@
         "icon": "$(sparkle)"
       },
       {
+        "command": "redaxo-instances.resumeClaudeInTerminal",
+        "title": "%command.resumeClaudeInTerminal%",
+        "category": "%category%",
+        "icon": "$(terminal)"
+      },
+      {
         "command": "redaxo-instances.renameClaudeSession",
         "title": "%command.renameClaudeSession%",
         "category": "%category%",
@@ -524,6 +530,16 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "redaxo-instances.resumeClaudeInTerminal",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^claude(Session|NewSession)$/",
+          "group": "inline@2"
+        },
+        {
+          "command": "redaxo-instances.resumeClaudeInTerminal",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^claude(Session|NewSession)$/",
+          "group": "1_session@2"
+        },
         {
           "command": "redaxo-instances.renameClaudeSession",
           "when": "view == redaxo-instances.instancesView && viewItem == claudeSession",
@@ -751,6 +767,10 @@
         },
         {
           "command": "redaxo-instances.renameClaudeSession",
+          "when": "false"
+        },
+        {
+          "command": "redaxo-instances.resumeClaudeInTerminal",
           "when": "false"
         },
         {

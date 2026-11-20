@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ClaudeSession, isClaudeInstalled, listClaudeSessions } from '../core/claude';
 import { InstanceManager } from '../core/manager';
+import { hasClaudeChat } from './claudeChat';
 import { Instance } from '../core/model';
 import { SharedService } from '../core/shared';
 
@@ -218,7 +219,7 @@ export class InstancesTreeProvider implements vscode.TreeDataProvider<InstancesT
         }
         if (element instanceof InstanceItem) {
             const items: InstancesTreeElement[] = details(element.instance);
-            if (await isClaudeInstalled()) {
+            if (hasClaudeChat() || await isClaudeInstalled()) {
                 const sessions = await listClaudeSessions(element.instance.path, element.instance.layout.webroot).catch(() => []);
                 items.push(new ClaudeItem(element.instance, sessions));
             }

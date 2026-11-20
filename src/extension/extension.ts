@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { resumePendingClaudeChat } from './claudeChat';
 import { detectMkcert } from '../core/certs';
 import { Logger } from '../core/docker';
 import { InstanceManager } from '../core/manager';
@@ -80,6 +81,7 @@ export function activate(context: vscode.ExtensionContext): ExtensionApi {
         refresh,
     };
     registerCommands(ctx);
+    void resumePendingClaudeChat(context);
     registerLanguageModelTools(context, manager, refresh);
     registerChatParticipant(context, manager, refresh);
 

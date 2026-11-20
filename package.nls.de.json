@@ -47,6 +47,7 @@
   "command.updateHosts": "In Hosts-Datei eintragen (nicht mehr nötig)",
   "command.installCLITools": "CLI-Tools installieren (1.x-Instanzen)",
   "command.openClaudeSession": "Claude-Sitzung öffnen",
+  "command.resumeClaudeInTerminal": "Im Terminal fortsetzen",
   "command.renameClaudeSession": "Sitzung umbenennen…",
   "command.openUrl": "URL öffnen",
   "command.copyValue": "Kopieren",

@@ -50,7 +50,7 @@ Aufgeklappt zeigt jede Instanz:
 | Login | kopiert das Admin-Passwort |
 | Datenbank | zeigt alle Zugangsdaten zum Kopieren |
 | Ordner | öffnet die Instanz in VS Code |
-| Claude | nur mit installiertem Claude Code: die Sitzungen aus dem Instanz-Ordner (Titel, Datum) – Klick setzt sie im Terminal fort (`claude --resume`), „Neue Sitzung“ startet eine; das Stift-Symbol benennt eine Sitzung um (wie `/rename`) |
+| Claude | nur mit installiertem Claude Code: die Sitzungen aus dem Instanz-Ordner (Titel, Datum) – Klick öffnet sie im Claude-Chat (bei Bedarf in einem neuen Fenster mit ihrem Ordner), das Terminal-Symbol setzt sie mit `claude --resume` im Terminal fort, „Neue Sitzung“ startet eine; das Stift-Symbol benennt eine Sitzung um (wie `/rename`) |
 
 Alle weiteren Aktionen findest du per **Rechtsklick** auf die Instanz. Der Bereich **Dienste** zeigt den HTTPS-Proxy, Mailpit und Adminer.
 Die Statusleiste unten links zeigt, wie viele Instanzen laufen.

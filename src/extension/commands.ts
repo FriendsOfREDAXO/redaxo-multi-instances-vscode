@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { detectMkcert } from '../core/certs';
 import { isSessionId, renameClaudeSession } from '../core/claude';
+import { hasClaudeChat, openClaudeChat } from './claudeChat';
 import { InstanceManager } from '../core/manager';
 import { Instance } from '../core/model';
 import { SharedService } from '../core/shared';
@@ -216,19 +217,25 @@ export function registerCommands(ctx: CommandContext): void {
         'redaxo-instances.openWalkthrough': () => vscode.commands.executeCommand('workbench.action.openWalkthrough',
             `${context.extension.id}#redaxo-instances.gettingStarted`, false),
         'redaxo-instances.openReadme': () => vscode.commands.executeCommand('markdown.showPreview', vscode.Uri.joinPath(context.extensionUri, 'README.md')),
-        'redaxo-instances.openClaudeSession': async (name: string, sessionId?: string, cwd?: string) => {
+        'redaxo-instances.openClaudeSession': async (name: string, sessionId?: string, cwd?: string, mode?: 'chat' | 'terminal') => {
             const i = await resolve(name, l10n.t('Start Claude in which instance?'));
-            if (!i) {
+            if (!i || (sessionId !== undefined && !isSessionId(sessionId))) {
                 return;
             }
-            if (sessionId !== undefined && !isSessionId(sessionId)) {
-                return;
-            }
-            // resume in the folder the session was started in – Claude Code looks up sessions by working directory
+            // Claude Code finds sessions by working directory – resume in the folder the session was started in
             const dir = cwd && await fs.stat(cwd).then(st => st.isDirectory(), () => false) ? cwd : i.path;
+            if ((mode ?? (hasClaudeChat() ? 'chat' : 'terminal')) === 'chat') {
+                await openClaudeChat(context, dir, sessionId);
+                return;
+            }
             const t = vscode.window.createTerminal({ name: `Claude · ${i.name}`, cwd: dir, iconPath: new vscode.ThemeIcon('sparkle') });
             t.show();
             t.sendText(sessionId ? `claude --resume ${sessionId}` : 'claude');
+        },
+        'redaxo-instances.resumeClaudeInTerminal': async (item: ClaudeSessionItem) => {
+            if (item instanceof ClaudeSessionItem) {
+                await vscode.commands.executeCommand('redaxo-instances.openClaudeSession', item.instance.name, item.session?.id, item.session?.cwd, 'terminal');
+            }
         },
         'redaxo-instances.renameClaudeSession': async (item: ClaudeSessionItem) => {
             const session = item instanceof ClaudeSessionItem ? item.session : undefined;

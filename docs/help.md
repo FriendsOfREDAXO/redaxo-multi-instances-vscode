@@ -50,7 +50,7 @@ Expand an instance to see:
 | Login | copies the admin password |
 | Database | shows all access data to copy |
 | Folder | opens the instance in VS Code |
-| Claude | only with Claude Code installed: the sessions started in the instance folder (title, date) – a click resumes one in the terminal (`claude --resume`), “New session” starts one; the pencil renames a session (like `/rename`) |
+| Claude | only with Claude Code installed: the sessions started in the instance folder (title, date) – a click opens it in the Claude chat (in a new window with its folder if needed), the terminal icon resumes it with `claude --resume`, “New session” starts one; the pencil renames a session (like `/rename`) |
 
 All other actions are in the **context menu** (right click). The **Services** view shows the HTTPS proxy, Mailpit and Adminer.
 The status bar shows how many instances are running.
