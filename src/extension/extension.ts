@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { resumePendingClaudeChat } from './claudeChat';
+import { registerLiveCommands } from './live';
 import { LocalServersTreeProvider, registerLocalServerCommands } from './localServers';
 import { detectMkcert } from '../core/certs';
 import { Logger } from '../core/docker';
@@ -91,6 +92,7 @@ export function activate(context: vscode.ExtensionContext): ExtensionApi {
     };
     registerCommands(ctx);
     registerLocalServerCommands(context, manager, localTree, log, () => services.refresh());
+    registerLiveCommands(context, manager, log, () => tree.refresh());
     void resumePendingClaudeChat(context);
     registerLanguageModelTools(context, manager, refresh);
     registerChatParticipant(context, manager, refresh);

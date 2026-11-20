@@ -5,6 +5,7 @@ Diese Hilfe öffnest du jederzeit mit **REDAXO: Hilfe** (Befehlspalette `⇧⌘P
 - [Schnellstart](#schnellstart)
 - [Die Instanz-Liste](#die-instanz-liste)
 - [Domains und HTTPS](#domains-und-https)
+- [Live-Server: Stand holen, abgleichen, deployen](#live-server-stand-holen-abgleichen-deployen)
 - [Lokale Server (ohne Docker)](#lokale-server-ohne-docker)
 - [Arbeiten mit einer Instanz](#arbeiten-mit-einer-instanz)
 - [REDAXO 6](#redaxo-6)
@@ -68,6 +69,23 @@ Ein gemeinsamer Proxy liefert alle Instanzen per HTTPS aus:
   die Adressen lauten dann z. B. `https://kunde.localhost:8443`. Die Instanz-Liste zeigt immer die richtige Adresse.
 
 Direkt ohne Proxy ist jede Instanz zusätzlich unter `http://localhost:<port>` erreichbar (siehe **Zugangsdaten…**).
+
+## Live-Server: Stand holen, abgleichen, deployen
+
+Rechtsklick auf eine Instanz → **Live-Server einrichten…**: SSH-Ziel (`benutzer@host` oder Host aus `~/.ssh/config`), der
+Ordner auf dem Server, der dem lokalen Webroot entspricht, und das PHP-CLI dort. Die Extension prüft die Verbindung und findet
+Konsole und Medienordner. Gespeichert wird in `redaxo-remote.json` im Instanz-Ordner – **ohne Passwörter**: SSH nutzt deine
+Schlüssel, die Datenbank-Zugangsdaten liest die Extension bei jedem Dump auf dem Server aus REDAXO (`db:connection-options`).
+
+| Aktion | Was passiert |
+|---|---|
+| **Mit Live abgleichen** | Liste der Dateien, die lokal neu, geändert oder nur auf dem Server sind – Auswahl zeigt den Unterschied (Diff). Liest nur. |
+| **Live-Stand holen…** | Datenbank (die lokale wird vorher in `backups/` gesichert, Hostnamen werden umgeschrieben) und/oder neue und geänderte Medien. Auf dem Server wird nur gelesen. |
+| **Auf Live deployen…** | Probelauf → Dateiliste zum Abwählen → Bestätigung. Überträgt nur Dateien (keine Datenbank, keine Medien, keine `.env.local`/`var/`/`redaxo/data/`), löscht auf dem Server nichts und legt überschriebene Dateien in `~/backup-deploy-<Zeit>/files` ab. Danach laufen die Befehle aus `afterDeploy` (Standard: `cache:clear`, bei REDAXO 6 auch `migrate`). |
+
+Ausgenommen sind außerdem Dateien aus `.gitignore` (abschaltbar mit `"respectGitignore": false`) und Muster aus einer
+`.deployignore` im Webroot bzw. `"exclude"` in `redaxo-remote.json`. Hostnamen für das Holen: `"domainMap"`, z. B.
+`{"www.example.org": "shop.localhost"}` – umgeschrieben werden YRewrite, URL-AddOn, consent_kit und `rex_config`.
 
 ## Lokale Server (ohne Docker)
 

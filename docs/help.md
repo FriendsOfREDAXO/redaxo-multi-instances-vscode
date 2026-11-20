@@ -5,6 +5,7 @@ Open this help at any time with **REDAXO: Help** (Command Palette `⇧⌘P` / `C
 - [Quick start](#quick-start)
 - [The instances view](#the-instances-view)
 - [Domains and HTTPS](#domains-and-https)
+- [Live server: pull, compare, deploy](#live-server-pull-compare-deploy)
 - [Local servers (without Docker)](#local-servers-without-docker)
 - [Working with an instance](#working-with-an-instance)
 - [REDAXO 6](#redaxo-6)
@@ -68,6 +69,23 @@ A shared proxy serves every instance via HTTPS:
   addresses then look like `https://customer.localhost:8443`. The instances view always shows the correct address.
 
 Every instance is also reachable directly via `http://localhost:<port>` (see **Access Data…**).
+
+## Live server: pull, compare, deploy
+
+Right-click an instance → **Set Up Live Server…**: SSH target (`user@host` or a host from `~/.ssh/config`), the folder on
+the server that matches the local web root, and the PHP CLI there. The extension tests the connection and finds console and
+media folder. Saved in `redaxo-remote.json` in the instance folder – **without passwords**: SSH uses your keys, the database
+credentials are read on the server from REDAXO (`db:connection-options`) for every dump.
+
+| Action | What happens |
+|---|---|
+| **Compare with Live** | Files that are new or changed locally or only on the server – pick one to see the diff. Read only. |
+| **Pull Live State…** | Database (the local one is saved in `backups/` first, host names are rewritten) and/or new and changed media. The server is only read. |
+| **Deploy to Live…** | Dry run → file list to untick → confirmation. Transfers files only (no database, no media, no `.env.local`/`var/`/`redaxo/data/`), never deletes on the server and keeps overwritten files in `~/backup-deploy-<time>/files`. Then the `afterDeploy` commands run (default: `cache:clear`, for REDAXO 6 also `migrate`). |
+
+Also excluded: files from `.gitignore` (turn off with `"respectGitignore": false`) and patterns from a `.deployignore` in
+the web root or `"exclude"` in `redaxo-remote.json`. Host names when pulling: `"domainMap"`, e.g.
+`{"www.example.org": "shop.localhost"}` – YRewrite, URL add-on, consent_kit and `rex_config` are rewritten.
 
 ## Local servers (without Docker)
 

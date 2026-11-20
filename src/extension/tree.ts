@@ -241,6 +241,17 @@ export class InstancesTreeProvider implements vscode.TreeDataProvider<InstancesT
         }
         if (element instanceof InstanceItem) {
             const items: InstancesTreeElement[] = details(element.instance);
+            if (element.instance.format === 'v2' && element.instance.kind === 'redaxo') {
+                const remote = await this.manager.remoteProfile(element.instance.name).catch(() => undefined);
+                items.push(remote
+                    ? new DetailItem(element.instance, 'live', 'Live', `${remote.host}:${remote.path}`, 'action', 'cloud', undefined,
+                        { command: 'redaxo-instances.compareWithLive', title: '', arguments: [element.instance.name] })
+                    : new DetailItem(element.instance, 'live', 'Live', l10n.t('set up live server…'), 'action', 'cloud', undefined,
+                        { command: 'redaxo-instances.setupLiveServer', title: '', arguments: [element.instance.name] }));
+                if (remote) {
+                    items[items.length - 1].contextValue = 'detail live';
+                }
+            }
             const claude = await claudeItemFor({ key: `instance:${element.instance.name}`, name: element.instance.name, folder: element.instance.path }, element.instance.layout.webroot);
             if (claude) {
                 items.push(claude);

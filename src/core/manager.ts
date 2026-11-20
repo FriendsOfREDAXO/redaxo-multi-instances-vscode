@@ -17,6 +17,7 @@ import { DetectedProject, GitStatus, detectProject, gitClone, gitInit, prepareCl
 import { findFreePort, generatePassword } from './ports';
 import { CoreSettings } from './settings';
 import { LocalServer, LocalServers } from './localServers';
+import { REMOTE_FILE, RemoteProfile, domainRewrites, pullDatabase, pullMedia, readRemoteProfile, writeRemoteProfile } from './remote';
 import { SharedServices } from './shared';
 import {
     canonicalPath, composeProjectFromDir, findComposeFile, instanceFromConfig, listInstanceDirs, loadInstance, parseEnv,
@@ -1239,6 +1240,83 @@ export class InstanceManager {
                 await this.docker.compose(instance.path, ['stop', instance.layout.dbService], { allowFailure: true });
             }
         }
+    }
+
+    // ───────────────────────────────────────────── live server
+
+    async remoteProfile(name: string): Promise<RemoteProfile | undefined> {
+        return readRemoteProfile((await this.get(name, false)).path);
+    }
+
+    async saveRemoteProfile(name: string, profile: RemoteProfile): Promise<void> {
+        const instance = await this.get(name, false);
+        await writeRemoteProfile(instance.path, profile);
+        await this.ensureGitignoreEntry(instance.path, REMOTE_FILE);
+    }
+
+    /**
+     * Pulls the live state into the instance: the database (local database backed up first, then replaced by the live dump,
+     * host names rewritten via `domainMap`) and/or new and changed media. The server is only read.
+     */
+    async pullLive(name: string, what: { database?: boolean; media?: boolean }, progress: ProgressReporter = () => {}): Promise<{ backup?: string; dumpBytes?: number; media?: number }> {
+        const instance = await this.get(name);
+        await this.requireRunning(instance);
+        const profile = await readRemoteProfile(instance.path);
+        if (!profile) {
+            throw new InstanceError(`No live server configured for "${name}"`, 'invalid');
+        }
+        const result: { backup?: string; dumpBytes?: number; media?: number } = {};
+        const stamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 13);
+        const backups = path.join(instance.path, 'backups');
+        await fs.mkdir(backups, { recursive: true });
+
+        if (what.database) {
+            progress('Fetching the live database…');
+            const dump = path.join(backups, `live-${stamp}.sql.gz`);
+            result.dumpBytes = await pullDatabase(profile, dump, bytes => progress(`Fetching the live database… ${(bytes / 1024 / 1024).toFixed(1)} MB`));
+
+            progress('Backing up the local database…');
+            const db = instance.db.name;
+            if (!isValidIdentifier(db)) {
+                throw new InstanceError(`Invalid database name ${db}`, 'invalid');
+            }
+            result.backup = path.join(backups, `local-before-live-${stamp}.sql.gz`);
+            const tmpBackup = `/tmp/redaxo-mi-backup-${Date.now()}.sql.gz`;
+            await this.docker.exec(instance.layout.dbContainer, ['sh', '-c',
+                `D=$(command -v mariadb-dump || command -v mysqldump); "$D" -uroot --single-transaction --routines --triggers --hex-blob ${db} | gzip -c > ${tmpBackup}`], {
+                execEnv: { MYSQL_PWD: instance.db.rootPassword }, timeout: 3_600_000,
+            });
+            await this.docker.run(['cp', `${instance.layout.dbContainer}:${tmpBackup}`, result.backup], { onLine: () => {} });
+
+            progress('Importing the live database…');
+            const tmp = `/tmp/redaxo-mi-live-${Date.now()}.sql.gz`;
+            await this.docker.run(['cp', dump, `${instance.layout.dbContainer}:${tmp}`], { onLine: () => {} });
+            await this.dbRoot(instance, `DROP DATABASE IF EXISTS \`${db}\`; CREATE DATABASE \`${db}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON \`${db}\`.* TO '${instance.db.user}'@'%';`);
+            await this.docker.exec(instance.layout.dbContainer, ['sh', '-c',
+                `BIN=$(command -v mariadb || command -v mysql); gunzip -c ${tmp} | "$BIN" -uroot ${db}; rc=$?; rm -f ${tmp} ${tmpBackup}; exit $rc`], {
+                execEnv: { MYSQL_PWD: instance.db.rootPassword }, timeout: 3_600_000,
+            });
+
+            const statements = domainRewrites(profile.domainMap, await this.tables(instance));
+            if (statements.length) {
+                progress('Rewriting host names…');
+                await this.dbRoot(instance, `USE \`${db}\`; ${statements.join(' ')}`);
+            }
+        }
+        if (what.media) {
+            progress('Fetching new and changed media…');
+            result.media = (await pullMedia(profile, path.join(instance.docrootPath, 'media'))).length;
+        }
+        progress('Clearing the cache…');
+        await this.console(name, ['cache:clear']).catch(() => undefined);
+        this.log.info(`Live state pulled into ${name} (${JSON.stringify(result)})`);
+        return result;
+    }
+
+    /** `table.column` of every column in the instance database. */
+    private async tables(instance: Instance): Promise<Set<string>> {
+        const out = await this.dbRoot(instance, `SELECT CONCAT(table_name, '.', column_name) FROM information_schema.columns WHERE table_schema = '${instance.db.name}'`);
+        return new Set(out.split('\n').map(t => t.trim()).filter(Boolean));
     }
 
     async deleteSnapshot(name: string, id: string): Promise<void> {

@@ -69,6 +69,12 @@ Jede Instanz zeigt ihren Status (grün = läuft) und lässt sich aufklappen:
 Adminer, PHP-/MariaDB-Version, Debugging, Sicherungspunkte, Git, Dev Container, Duplizieren, Export,
 Container neu aufbauen und Löschen. Der Tooltip einer Instanz zeigt CPU, RAM und Speicherbedarf.
 
+## Live-Server
+
+Pro Instanz lässt sich ein Live-Server hinterlegen (SSH, ohne Passwörter): **Mit Live abgleichen** (Diff je Datei),
+**Live-Stand holen** (Datenbank mit Sicherung und Umschreiben der Hostnamen, Medien) und **Auf Live deployen** (Probelauf,
+Auswahl, Bestätigung, Sicherung der überschriebenen Dateien auf dem Server). Details in der Hilfe.
+
 ## Lokale Server (ohne Docker)
 
 Für Projekte ohne Datenbank oder mit SQLite: **Lokale Server → +** liefert einen Ordner direkt aus – als statische Seite

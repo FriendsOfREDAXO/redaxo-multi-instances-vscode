@@ -1,5 +1,17 @@
 # Changelog
 
+## Version 2.3.0 (2026-11-20)
+
+### ✨ Neu
+- **Live-Server:** pro Instanz ein Server-Profil (`redaxo-remote.json`, SSH mit eigenen Schlüsseln, keine Passwörter;
+  DB-Zugang liest die Extension auf dem Server aus REDAXO). Neu im Rechtsklick-Menü und als Eintrag „Live“:
+  - **Mit Live abgleichen:** neue, geänderte und nur auf dem Server vorhandene Dateien, mit Diff je Datei.
+  - **Live-Stand holen…:** Datenbank (lokale vorher in `backups/`, Hostnamen per `domainMap` umgeschrieben – YRewrite,
+    URL-AddOn, consent_kit, rex_config) und/oder neue und geänderte Medien. Auf dem Server wird nur gelesen.
+  - **Auf Live deployen…:** Probelauf, Dateiauswahl, Bestätigung; nur Dateien, nichts wird gelöscht, überschriebene Dateien
+    landen in `~/backup-deploy-<Zeit>/files`; danach `cache:clear` (REDAXO 6 auch `migrate`).
+  - Ausgenommen: Daten, Caches, Medien, `.env.local`, `vendor/`, Dateien aus `.gitignore`, `.deployignore`.
+
 ## Version 2.2.0 (2026-11-20)
 
 ### ✨ Neu
