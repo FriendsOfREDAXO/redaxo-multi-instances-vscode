@@ -47,6 +47,7 @@
   "command.updateHosts": "Add to Hosts File (not needed anymore)",
   "command.installCLITools": "Install CLI Tools (1.x instances)",
   "command.openClaudeSession": "Open Claude session",
+  "command.renameClaudeSession": "Rename session…",
   "command.openUrl": "Open URL",
   "command.copyValue": "Copy",
   "tool.list_instances.name": "List REDAXO instances",

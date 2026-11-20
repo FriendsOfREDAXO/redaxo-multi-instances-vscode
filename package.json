@@ -378,6 +378,12 @@
         "icon": "$(sparkle)"
       },
       {
+        "command": "redaxo-instances.renameClaudeSession",
+        "title": "%command.renameClaudeSession%",
+        "category": "%category%",
+        "icon": "$(edit)"
+      },
+      {
         "command": "redaxo-instances.openUrl",
         "title": "%command.openUrl%",
         "category": "%category%",
@@ -518,6 +524,16 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "redaxo-instances.renameClaudeSession",
+          "when": "view == redaxo-instances.instancesView && viewItem == claudeSession",
+          "group": "inline@1"
+        },
+        {
+          "command": "redaxo-instances.renameClaudeSession",
+          "when": "view == redaxo-instances.instancesView && viewItem == claudeSession",
+          "group": "1_session@1"
+        },
         {
           "command": "redaxo-instances.startInstance",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance stopped/",
@@ -731,6 +747,10 @@
         },
         {
           "command": "redaxo-instances.openClaudeSession",
+          "when": "false"
+        },
+        {
+          "command": "redaxo-instances.renameClaudeSession",
           "when": "false"
         },
         {

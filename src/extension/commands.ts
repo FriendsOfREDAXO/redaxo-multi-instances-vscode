@@ -3,7 +3,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { detectMkcert } from '../core/certs';
-import { isSessionId } from '../core/claude';
+import { isSessionId, renameClaudeSession } from '../core/claude';
 import { InstanceManager } from '../core/manager';
 import { Instance } from '../core/model';
 import { SharedService } from '../core/shared';
@@ -16,7 +16,7 @@ import { DEFAULT_MARIADB_VERSION, compareVersions, isPhpCompatibleWithRedaxo } f
 import type { ProblemsWatcher } from './problems';
 import { setupClaude, writeAiFiles } from './claude';
 import { setInstancesPath } from './config';
-import { DetailItem, InstanceItem, InstancesTreeProvider, ServiceItem, ServicesTreeProvider } from './tree';
+import { ClaudeSessionItem, DetailItem, InstanceItem, InstancesTreeProvider, ServiceItem, ServicesTreeProvider } from './tree';
 import { askDomains, askInstanceName, createInstanceWizard, pickMariaDbVersion, pickPhpVersion } from './wizard';
 import { formatBytes } from './tree';
 
@@ -229,6 +229,23 @@ export function registerCommands(ctx: CommandContext): void {
             const t = vscode.window.createTerminal({ name: `Claude · ${i.name}`, cwd: dir, iconPath: new vscode.ThemeIcon('sparkle') });
             t.show();
             t.sendText(sessionId ? `claude --resume ${sessionId}` : 'claude');
+        },
+        'redaxo-instances.renameClaudeSession': async (item: ClaudeSessionItem) => {
+            const session = item instanceof ClaudeSessionItem ? item.session : undefined;
+            if (!session) {
+                return;
+            }
+            const title = await vscode.window.showInputBox({
+                title: l10n.t('Rename Claude session'),
+                value: session.title,
+                prompt: l10n.t('Shown here and in "claude --resume". Leave empty to use the generated title again.'),
+                validateInput: v => (v.length > 200 ? l10n.t('At most 200 characters') : undefined),
+            });
+            if (title === undefined) {
+                return;
+            }
+            await renameClaudeSession(session, title);
+            tree.refresh();
         },
         'redaxo-instances.openUrl': (url: string) => openUrl(url),
         'redaxo-instances.copyValue': async (value: string | DetailItem, what?: string) => {

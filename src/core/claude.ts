@@ -6,6 +6,8 @@ import { commandExists } from './exec';
 /** A Claude Code session that belongs to an instance (started in its folder or in `project/`). */
 export interface ClaudeSession {
     id: string;
+    /** Transcript (`<id>.jsonl`). */
+    file: string;
     /** Working directory the session was started in – `claude --resume` must run there. */
     cwd: string;
     title: string;
@@ -65,7 +67,7 @@ export async function listClaudeSessions(instancePath: string, webroot = 'projec
                 if (!info.hasMessages) {
                     continue;
                 }
-                sessions.push({ id: file.slice(0, -6), cwd: info.cwd ?? dir, title: info.title, modified: stat.mtime, sizeBytes: stat.size });
+                sessions.push({ id: file.slice(0, -6), file: full, cwd: info.cwd ?? dir, title: info.title, modified: stat.mtime, sizeBytes: stat.size });
             } catch {
                 // unreadable transcript – skip
             }
@@ -114,7 +116,7 @@ export function parseSessionInfo(head: string, tail = ''): SessionInfo {
             continue; // cut at the start or end of a chunk
         }
         if (o.type === 'custom-title' && typeof o.customTitle === 'string') {
-            custom = o.customTitle;
+            custom = o.customTitle; // the last record wins, '' resets to the generated title
         } else if (o.type === 'ai-title' && typeof o.aiTitle === 'string') {
             generated = o.aiTitle;
         } else if (o.type === 'summary' && typeof o.summary === 'string' && !generated) {
@@ -138,4 +140,16 @@ function promptText(message: unknown): string {
         : Array.isArray(content) ? content.map(c => (c && typeof c === 'object' && (c as { type?: unknown }).type === 'text' ? String((c as { text?: unknown }).text ?? '') : '')).join(' ') : '';
     // slash commands, hook output and other injected text start with a tag
     return text.trim().startsWith('<') ? '' : text;
+}
+
+/**
+ * Renames a session the way Claude Code's `/rename` does: a `custom-title` record appended to the transcript (the last one
+ * wins). An empty title removes the custom name again (the generated title is shown).
+ */
+export async function renameClaudeSession(session: Pick<ClaudeSession, 'id' | 'file'>, title: string): Promise<void> {
+    if (!isSessionId(session.id) || path.basename(session.file) !== `${session.id}.jsonl`) {
+        throw new Error(`Not a Claude session: ${session.file}`);
+    }
+    const customTitle = title.replace(/\s+/g, ' ').trim().slice(0, 200);
+    await fs.appendFile(session.file, `\n${JSON.stringify({ type: 'custom-title', customTitle, sessionId: session.id })}\n`, 'utf8');
 }

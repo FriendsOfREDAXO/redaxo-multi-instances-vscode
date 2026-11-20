@@ -160,7 +160,7 @@ export class ClaudeSessionItem extends vscode.TreeItem {
     constructor(readonly instance: Instance, readonly session: ClaudeSession | undefined) {
         super(session ? (session.title || l10n.t('Session without title')) : l10n.t('New session'), vscode.TreeItemCollapsibleState.None);
         this.id = `claude:${instance.name}:${session?.id ?? 'new'}`;
-        this.contextValue = 'claudeSession';
+        this.contextValue = session ? 'claudeSession' : 'claudeNewSession';
         if (session) {
             this.description = session.modified.toLocaleString(vscode.env.language, { dateStyle: 'medium', timeStyle: 'short' });
             this.iconPath = new vscode.ThemeIcon('comment-discussion');

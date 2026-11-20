@@ -287,5 +287,8 @@
   "Starts Claude Code in the folder of this instance": "Startet Claude Code im Ordner dieser Instanz",
   "Session without title": "Sitzung ohne Titel",
   "New session": "Neue Sitzung",
-  "Start Claude in which instance?": "Claude in welcher Instanz starten?"
+  "Start Claude in which instance?": "Claude in welcher Instanz starten?",
+  "Rename Claude session": "Claude-Sitzung umbenennen",
+  "Shown here and in \"claude --resume\". Leave empty to use the generated title again.": "Erscheint hier und bei „claude --resume“. Leer lassen, um wieder den erzeugten Titel zu verwenden.",
+  "At most 200 characters": "Höchstens 200 Zeichen"
 }

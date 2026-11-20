@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { claudeProjectKey, isSessionId, listClaudeSessions, parseSessionInfo } from '../../src/core/claude';
+import { claudeProjectKey, isSessionId, listClaudeSessions, parseSessionInfo, renameClaudeSession } from '../../src/core/claude';
 
 const line = (o: object) => JSON.stringify(o);
 
@@ -47,6 +47,23 @@ describe('claude sessions', () => {
         await fs.writeFile(path.join(tmp, 'projects', claudeProjectKey(instance), 'notes.jsonl'), '');
         const sessions = await listClaudeSessions(instance, 'project', 20, path.join(tmp, 'projects'));
         assert.deepEqual(sessions.map(s => [s.title, s.cwd]), [['neu', path.join(instance, 'project')], ['alt', instance]]);
+        await fs.rm(tmp, { recursive: true, force: true });
+    });
+
+    it('renames a session like /rename and can reset the name', async () => {
+        const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'rmi-claude-'));
+        const id = '33333333-3333-4333-8333-333333333333';
+        const dir = path.join(tmp, 'projects', claudeProjectKey('/x/shop'));
+        await fs.mkdir(dir, { recursive: true });
+        const file = path.join(dir, `${id}.jsonl`);
+        await fs.writeFile(file, [line({ type: 'user', cwd: '/x/shop', message: { content: 'hi' } }), line({ type: 'ai-title', aiTitle: 'Erzeugt' })].join('\n'));
+        const list = () => listClaudeSessions('/x/shop', 'project', 20, path.join(tmp, 'projects'));
+        await renameClaudeSession({ id, file }, '  Navigation   bauen ');
+        assert.equal((await list())[0].title, 'Navigation bauen');
+        assert.match(await fs.readFile(file, 'utf8'), /\{"type":"custom-title","customTitle":"Navigation bauen","sessionId":"33333333-/);
+        await renameClaudeSession({ id, file }, '');
+        assert.equal((await list())[0].title, 'Erzeugt');
+        await assert.rejects(renameClaudeSession({ id, file: path.join(dir, 'other.jsonl') }, 'x'));
         await fs.rm(tmp, { recursive: true, force: true });
     });
 });

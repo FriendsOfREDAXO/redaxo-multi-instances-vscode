@@ -7,6 +7,8 @@
   die in ihrem Ordner (oder in `project/`) gestartet wurden – mit Titel und Datum. Ein Klick setzt die Sitzung im Terminal
   im richtigen Ordner fort (`claude --resume`), „Neue Sitzung“ startet eine. Auch sehr große Verläufe werden nur am Anfang
   und Ende gelesen.
+- **Sitzungen umbenennen:** Stift-Symbol bzw. Rechtsklick → „Sitzung umbenennen…“ – gespeichert wie mit `/rename` in Claude
+  Code, also auch bei `claude --resume` sichtbar. Leer lassen stellt den erzeugten Titel wieder her.
 
 ### 🐛 Fehlerbehebungen
 - **Datenbank anderer Instanzen erwischt:** Die Datenbank hing im gemeinsamen Netz `redaxo-mi` – dort vergibt Docker Compose
