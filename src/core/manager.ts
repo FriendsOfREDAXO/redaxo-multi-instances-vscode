@@ -1204,6 +1204,16 @@ export class InstanceManager {
         }
     }
 
+    /**
+     * Makes the database reachable for the shared services (Adminer) by its container name. The database is not part of the
+     * shared network in docker-compose.yml – Compose would add the service name `db` as an alias there, and with several
+     * instances `db` would then resolve to the databases of other instances as well.
+     */
+    async connectDatabaseToShared(instance: Instance): Promise<void> {
+        await this.docker.ensureNetwork(SHARED_NETWORK);
+        await this.docker.connectNetwork(SHARED_NETWORK, instance.layout.dbContainer);
+    }
+
     private async ensureDbRunning(instance: Instance, progress: ProgressReporter): Promise<boolean> {
         if (await this.docker.isRunning(instance.layout.dbContainer)) {
             return false;

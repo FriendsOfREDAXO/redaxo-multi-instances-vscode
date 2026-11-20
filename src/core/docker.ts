@@ -115,6 +115,18 @@ export class Docker {
         }
     }
 
+    /**
+     * Connects a running container to a network without extra aliases (reachable by its container name only).
+     * Does nothing when it is already connected.
+     */
+    async connectNetwork(network: string, container: string): Promise<void> {
+        const res = await run(this.bin, ['inspect', '-f', '{{json .NetworkSettings.Networks}}', container], { allowFailure: true, timeout: 10_000 });
+        if (res.code === 0 && (JSON.parse(res.stdout.trim() || '{}') as Record<string, unknown>)[network]) {
+            return;
+        }
+        await this.run(['network', 'connect', network, container]);
+    }
+
     async ensureVolume(name: string): Promise<void> {
         const res = await run(this.bin, ['volume', 'inspect', name], { allowFailure: true, timeout: 10_000 });
         if (res.code !== 0) {

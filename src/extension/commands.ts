@@ -731,6 +731,7 @@ export function registerCommands(ctx: CommandContext): void {
             if (!i || !(await ensureShared('adminer'))) {
                 return;
             }
+            await manager.connectDatabaseToShared(i);
             const base = await manager.shared.url('adminer');
             const url = `${base}?server=${encodeURIComponent(i.layout.dbContainer)}&username=${encodeURIComponent(i.db.user)}&db=${encodeURIComponent(i.db.name)}`;
             await vscode.env.clipboard.writeText(i.db.password);

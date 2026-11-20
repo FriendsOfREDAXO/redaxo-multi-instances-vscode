@@ -1,5 +1,15 @@
 # Changelog
 
+## Version 2.1.1 (2026-11-20)
+
+### 🐛 Fehlerbehebungen
+- **Datenbank anderer Instanzen erwischt:** Die Datenbank hing im gemeinsamen Netz `redaxo-mi` – dort vergibt Docker Compose
+  ihren Dienstnamen `db` als Alias. Laufen mehrere Instanzen, verteilt Docker `db` reihum auf deren Datenbanken: REDAXO
+  meldete zufällig „Could not connect to database“ bzw. „Access denied“ (Fehler 500), je nach Anfrage. Die Datenbank liegt
+  jetzt nur noch im Netz ihrer Instanz; für Adminer wird sie beim Öffnen ohne Alias – nur unter ihrem Container-Namen – an das
+  gemeinsame Netz angeschlossen. Bestehende Instanzen werden beim nächsten Start umgestellt (der Datenbank-Container wird dabei
+  neu erzeugt, die Daten bleiben im Volume).
+
 ## Version 2.1.0 (2026-11-04)
 
 ### ✨ Neu

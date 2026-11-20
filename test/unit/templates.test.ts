@@ -45,6 +45,15 @@ describe('templates', () => {
         assert.doesNotMatch(yml, /REDAXO6_SOURCE/);
     });
 
+    it('keeps the database out of the shared network (the alias "db" would collide between instances)', () => {
+        const yml = renderCompose(sampleConfig(), { settings, ports, filesHash: 'h1' });
+        const db = yml.slice(yml.indexOf('\n  db:\n'), yml.indexOf('\nvolumes:'));
+        assert.match(db, /networks:\n {6}- default\n/);
+        assert.doesNotMatch(db, /redaxo-mi/);
+        const web = yml.slice(yml.indexOf('\n  web:\n'), yml.indexOf('\n  db:\n'));
+        assert.match(web, /networks:\n {6}- default\n {6}- redaxo-mi\n/);
+    });
+
     it('renders a REDAXO 6 compose file with environment configuration', () => {
         const yml = renderCompose(sampleConfig({ redaxo6: 'core', redaxoVersion: '6.x-dev', db: { name: 'redaxo', user: 'redaxo', password: 'p@ss/w', rootPassword: 'r' } }),
             { settings, ports: { ...ports, proxyHttps: 8443 }, filesHash: 'h1' });
