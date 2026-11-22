@@ -5,6 +5,7 @@ Diese Hilfe öffnest du jederzeit mit **REDAXO: Hilfe** (Befehlspalette `⇧⌘P
 - [Schnellstart](#schnellstart)
 - [Die Instanz-Liste](#die-instanz-liste)
 - [Domains und HTTPS](#domains-und-https)
+- [AddOn-Updates](#addon-updates)
 - [Live-Server: Stand holen, abgleichen, deployen](#live-server-stand-holen-abgleichen-deployen)
 - [Lokale Server (ohne Docker)](#lokale-server-ohne-docker)
 - [Arbeiten mit einer Instanz](#arbeiten-mit-einer-instanz)
@@ -69,6 +70,18 @@ Ein gemeinsamer Proxy liefert alle Instanzen per HTTPS aus:
   die Adressen lauten dann z. B. `https://kunde.localhost:8443`. Die Instanz-Liste zeigt immer die richtige Adresse.
 
 Direkt ohne Proxy ist jede Instanz zusätzlich unter `http://localhost:<port>` erreichbar (siehe **Zugangsdaten…**).
+
+## AddOn-Updates
+
+Rechtsklick auf eine laufende Instanz → **Werkzeuge → AddOn-Updates…** zeigt, was es Neues gibt: bei REDAXO 5 die AddOns aus
+dem Installer von redaxo.org, bei REDAXO 6 die direkten Composer-Pakete. Hauptversionen (z. B. 7.x → 8.0) und Vorabversionen
+(beta, RC) sind markiert und nicht vorausgewählt – vorher den Changelog lesen. Bei REDAXO 6 zeigt die Liste auch, wenn die
+`composer.json` eine Version festschreibt; ein Update ändert dann nichts und wird so gemeldet. Vor dem Einspielen kann ein
+**Sicherungspunkt** entstehen (rückgängig über „Sicherungspunkte…“). REDAXO 5: `install:update`, REDAXO 6: `composer update … -W`,
+danach `migrate` und `cache:clear`.
+
+**AddOn-Updates aller Instanzen** (Menü „…“ über der Liste) erstellt einen Bericht über alle laufenden Instanzen. Claude kann
+die Updates einer Instanz über das MCP-Tool `list_updates` abfragen.
 
 ## Live-Server: Stand holen, abgleichen, deployen
 

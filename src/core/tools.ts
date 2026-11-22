@@ -381,6 +381,20 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
             return `Stopped ${str(input, 'name')}.`;
         },
     },
+    {
+        name: 'list_updates',
+        title: 'List add-on updates',
+        description: 'Lists available updates of a running REDAXO instance: add-ons from redaxo.org (REDAXO 5) or direct Composer packages (REDAXO 6), with installed and newest version, major version steps and blocking composer.json constraints. Installing is done in VS Code (Tools → Add-on Updates…).',
+        inputSchema: { type: 'object', properties: { name: nameProp }, required: ['name'], additionalProperties: false },
+        mutating: false,
+        async run(manager, input) {
+            const updates = await manager.listUpdates(str(input, 'name'));
+            if (!updates.length) {
+                return 'Everything is up to date.';
+            }
+            return updates.map(u => `- ${u.key}: ${u.installed} → ${u.latest}${u.major ? ' (major version)' : ''}${u.prerelease ? ' (pre-release)' : ''}${u.blocked ? ` (composer.json requires "${u.constraint}")` : ''}`).join('\n');
+        },
+    },
 ];
 
 export function findTool(name: string): ToolDefinition | undefined {

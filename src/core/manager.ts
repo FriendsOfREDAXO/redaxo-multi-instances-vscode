@@ -17,6 +17,7 @@ import { DetectedProject, GitStatus, detectProject, gitClone, gitInit, prepareCl
 import { findFreePort, generatePassword } from './ports';
 import { CoreSettings } from './settings';
 import { LocalServer, LocalServers } from './localServers';
+import { PackageUpdate, constraintAllows, parseComposerUpdates, parseRedaxoUpdates } from './updates';
 import { claudeProjectKey, claudeProjectsDir, moveClaudeSessions } from './claude';
 import { REMOTE_FILE, RemoteProfile, domainRewrites, pullDatabase, pullMedia, readRemoteProfile, writeRemoteProfile } from './remote';
 import { SharedServices } from './shared';
@@ -1347,6 +1348,122 @@ export class InstanceManager {
                 await this.docker.compose(instance.path, ['stop', instance.layout.dbService], { allowFailure: true });
             }
         }
+    }
+
+    // ───────────────────────────────────────────── add-on updates
+
+    /** Composer inside the web container – as www-data with the container's Composer home (like the entrypoint). */
+    private async composerIn(instance: Instance, args: readonly string[], timeout = 900_000): Promise<{ code: number; output: string; stdout: string }> {
+        const res = await this.docker.exec(instance.layout.webContainer, ['sh', '-c', 'cd /var/www/html && exec composer "$@"', 'composer', ...args], {
+            user: 'www-data', allowFailure: true, timeout,
+            execEnv: {
+                HOME: '/tmp/composer-home', COMPOSER_HOME: '/tmp/composer-home', COMPOSER_CACHE_DIR: '/var/cache/composer', COMPOSER_NO_INTERACTION: '1',
+                // a core checkout is the root package – inside the container git often cannot tell its version
+                ...(instance.redaxo6 === 'core' ? { COMPOSER_ROOT_VERSION: await this.rootVersion(instance) } : {}),
+            },
+        });
+        return { code: res.code, output: (res.stdout + res.stderr).trim(), stdout: res.stdout };
+    }
+
+    /** require + require-dev of the root composer.json. */
+    private async rootConstraints(instance: Instance): Promise<Record<string, string>> {
+        try {
+            const json = JSON.parse(await fs.readFile(path.join(instance.webrootPath, 'composer.json'), 'utf8')) as { require?: Record<string, string>; 'require-dev'?: Record<string, string> };
+            return { ...json.require, ...json['require-dev'] };
+        } catch {
+            return {};
+        }
+    }
+
+    /** Version of the root package from `extra.branch-alias` (e.g. `6.x-dev`). */
+    private async rootVersion(instance: Instance): Promise<string> {
+        try {
+            const json = JSON.parse(await fs.readFile(path.join(instance.webrootPath, 'composer.json'), 'utf8')) as { extra?: { 'branch-alias'?: Record<string, string> } };
+            const alias = Object.values(json.extra?.['branch-alias'] ?? {})[0];
+            return typeof alias === 'string' && /^[\w.-]+$/.test(alias) ? alias : '6.x-dev';
+        } catch {
+            return '6.x-dev';
+        }
+    }
+
+    /** Available updates: REDAXO 5 via the installer of redaxo.org, REDAXO 6 via `composer outdated --direct`. */
+    async listUpdates(name: string): Promise<PackageUpdate[]> {
+        const instance = await this.get(name);
+        await this.requireRunning(instance);
+        if (instance.kind !== 'redaxo') {
+            throw new InstanceError(`"${name}" is no REDAXO instance`, 'invalid');
+        }
+        if (instance.redaxo6) {
+            const res = await this.composerIn(instance, ['outdated', '--direct', '--format=json', '--no-ansi']);
+            if (res.code !== 0 && !res.stdout.includes('{')) {
+                throw new InstanceError(`composer outdated: ${res.output.split('\n').slice(-3).join(' ')}`, 'failed');
+            }
+            const constraints = await this.rootConstraints(instance);
+            return parseComposerUpdates(res.stdout).map(u => {
+                const constraint = constraints[u.key];
+                return constraint ? { ...u, constraint, blocked: !constraintAllows(constraint, u.latest) } : u;
+            });
+        }
+        const res = await this.console(name, ['install:list', '--updates-only', '--json']);
+        if (res.code !== 0) {
+            throw new InstanceError(`install:list: ${res.output.split('\n').slice(-3).join(' ')}`, 'failed');
+        }
+        return parseRedaxoUpdates(res.output);
+    }
+
+    /**
+     * Installs updates (REDAXO 5: `install:update` per add-on; REDAXO 6: `composer update … -W`, then migrate). With
+     * `snapshot` a snapshot is created first. Returns the outcome per package.
+     */
+    async updatePackages(name: string, keys: readonly string[], options: { snapshot?: boolean } = {}, progress: ProgressReporter = () => {}): Promise<{ key: string; ok: boolean; output: string }[]> {
+        const instance = await this.get(name);
+        await this.requireRunning(instance);
+        for (const k of keys) {
+            if (!/^[A-Za-z0-9_./-]+$/.test(k)) {
+                throw new InstanceError(`Invalid package: ${k}`, 'invalid');
+            }
+        }
+        if (options.snapshot) {
+            progress('Creating a snapshot…');
+            await this.createSnapshot(name, `before updates: ${keys.join(', ')}`.slice(0, 120), progress);
+        }
+        const results: { key: string; ok: boolean; output: string }[] = [];
+        if (instance.redaxo6) {
+            const before = new Map((await this.listUpdates(name)).map(u => [u.key, u]));
+            progress(`composer update ${keys.join(' ')}…`);
+            const res = await this.composerIn(instance, ['update', ...keys, '-W', '--no-ansi', '--no-progress']);
+            const ok = res.code === 0;
+            const after = ok ? new Map((await this.listUpdates(name)).map(u => [u.key, u])) : new Map<string, PackageUpdate>();
+            for (const k of keys) {
+                const b = before.get(k);
+                const a = after.get(k);
+                if (ok && b && a && a.installed === b.installed) {
+                    results.push({ key: k, ok: false, output: `unchanged (${a.installed}) – composer.json requires "${a.constraint ?? '?'}"` });
+                } else {
+                    results.push({ key: k, ok, output: ok ? `${b?.installed ?? '?'} → ${a?.installed ?? b?.latest ?? 'latest'}` : res.output.split('\n').slice(-5).join('\n') });
+                }
+            }
+            if (ok) {
+                progress('Migrating…');
+                await this.console(name, ['migrate', '-n']);
+                await this.console(name, ['cache:clear']);
+            }
+            return results;
+        }
+        // the installer asks for the version interactively – pass the newest one
+        const latest = new Map((await this.listUpdates(name)).map(u => [u.key, u.latest]));
+        for (const k of keys) {
+            progress(`Updating ${k}…`);
+            const version = latest.get(k);
+            if (!version) {
+                results.push({ key: k, ok: true, output: 'already up to date' });
+                continue;
+            }
+            const res = await this.console(name, ['install:update', k, version, '-n']);
+            results.push({ key: k, ok: res.code === 0, output: res.output.split('\n').slice(-6).join('\n') });
+        }
+        await this.console(name, ['cache:clear']).catch(() => undefined);
+        return results;
     }
 
     // ───────────────────────────────────────────── live server
