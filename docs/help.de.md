@@ -54,7 +54,7 @@ Aufgeklappt zeigt jede Instanz:
 | Ordner | öffnet die Instanz in VS Code |
 | Claude | nur mit installiertem Claude Code: die Sitzungen aus dem Instanz-Ordner (Titel, Datum) – Klick öffnet sie im Claude-Chat (bei Bedarf in einem neuen Fenster mit ihrem Ordner), das Terminal-Symbol setzt sie mit `claude --resume` im Terminal fort, „Neue Sitzung“ startet eine; das Stift-Symbol benennt eine Sitzung um (wie `/rename`) |
 
-Alle weiteren Aktionen findest du per **Rechtsklick** auf die Instanz. Der Bereich **Dienste** zeigt den HTTPS-Proxy, Mailpit und Adminer.
+Alle weiteren Aktionen findest du per **Rechtsklick** auf die Instanz: oben das Häufige, darunter die Untermenüs **Werkzeuge** (Cache, Konsole, Shell, SQL, Adminer, Debugging, Logs), **Live-Server**, **Sichern & Übertragen** und **Einstellungen**, ganz unten **Umbenennen…** (Ordner, Container und Adresse folgen dem neuen Namen, Dateien und Datenbank bleiben) und **Löschen…**. Der Bereich **Dienste** zeigt den HTTPS-Proxy, Mailpit und Adminer.
 Die Statusleiste unten links zeigt, wie viele Instanzen laufen.
 
 ## Domains und HTTPS

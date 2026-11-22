@@ -361,6 +361,21 @@ export function registerLocalServerCommands(context: vscode.ExtensionContext, ma
         await manager.syncLocalProxy();
         refresh();
     });
+    register('redaxo-instances.renameLocalServer', async (arg: ServerArg) => {
+        const name = await pick(arg, l10n.t('Rename which local server?'));
+        if (!name) {
+            return;
+        }
+        const taken = new Set([...(await manager.list({ withStatus: false })).map(x => x.name), ...(await manager.local.configs()).map(x => x.name)]);
+        const newName = await vscode.window.showInputBox({
+            title: l10n.t('Rename {0}', name), value: name, prompt: l10n.t('Becomes the address {0}.localhost', '<name>'),
+            validateInput: v => (v === name ? undefined : validateInstanceName(v) ?? (taken.has(v) ? l10n.t('"{0}" already exists', v) : undefined)),
+        });
+        if (newName && newName !== name) {
+            await withProgress(l10n.t('Renaming {0} to {1}…', name, newName), () => manager.renameLocalServer(name, newName));
+            refresh();
+        }
+    });
     register('redaxo-instances.removeLocalServer', async (arg: ServerArg) => {
         const name = await pick(arg, l10n.t('Remove which local server?'));
         if (!name) {

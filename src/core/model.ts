@@ -12,7 +12,8 @@ export type InstanceFormat = 'v2' | 'legacy-standard' | 'legacy-custom';
 export type InstanceStatus = 'running' | 'partial' | 'stopped' | 'unknown';
 
 export type DbStorage =
-    | { type: 'volume'; volume: string; external?: string }
+    /** `external`: an existing volume (e.g. kept when renaming); `owned`: it still belongs to this instance and is deleted with it. */
+    | { type: 'volume'; volume: string; external?: string; owned?: boolean }
     | { type: 'bind'; path: string };
 
 export interface InstanceLayout {

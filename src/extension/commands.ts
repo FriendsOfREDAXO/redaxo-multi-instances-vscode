@@ -6,7 +6,7 @@ import { detectMkcert } from '../core/certs';
 import { isSessionId, renameClaudeSession } from '../core/claude';
 import { hasClaudeChat, openClaudeChat } from './claudeChat';
 import { InstanceManager } from '../core/manager';
-import { Instance } from '../core/model';
+import { Instance, validateInstanceName } from '../core/model';
 import { SharedService } from '../core/shared';
 import { splitArgs } from '../core/tools';
 import { describeOccupant, pfFlushCommand } from '../core/diagnose';
@@ -350,6 +350,37 @@ export function registerCommands(ctx: CommandContext): void {
                     await manager.stop(i.name);
                 }
             });
+        },
+        'redaxo-instances.renameInstance': async (arg: InstanceArg) => {
+            const i = await resolve(arg, l10n.t('Rename which instance?'), x => x.format === 'v2');
+            if (!i) {
+                return;
+            }
+            const taken = new Set([...(await manager.list({ withStatus: false })).map(x => x.name), ...(await manager.local.configs()).map(x => x.name)]);
+            const newName = await vscode.window.showInputBox({
+                title: l10n.t('Rename {0}', i.name), value: i.name,
+                prompt: l10n.t('New name – also the new address {0}.localhost. Files and database stay, the instance restarts.', '<name>'),
+                validateInput: v => (v === i.name ? undefined : validateInstanceName(v) ?? (taken.has(v) ? l10n.t('"{0}" already exists', v) : undefined)),
+            });
+            if (!newName || newName === i.name) {
+                return;
+            }
+            try {
+                const r = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: l10n.t('Renaming {0} to {1}…', i.name, newName) },
+                    p => manager.rename(i.name, newName, m => p.report({ message: m })));
+                // Claude sessions were copied to the new folder – the old copies go to the trash
+                for (const dir of r.oldClaudeDirs) {
+                    await vscode.workspace.fs.delete(vscode.Uri.file(dir), { recursive: true, useTrash: true }).then(undefined, () => undefined);
+                }
+                tree.refresh();
+                const open = l10n.t('Open');
+                if (await vscode.window.showInformationMessage(l10n.t('{0} is now {1}: {2}', i.name, newName, r.instance.urls.frontend), open) === open) {
+                    openUrl(r.instance.urls.frontend);
+                }
+            } catch (error) {
+                tree.refresh();
+                await showError(error);
+            }
         },
         'redaxo-instances.deleteInstance': async (arg: InstanceArg) => {
             const i = await resolve(arg, l10n.t('Delete which instance?'));

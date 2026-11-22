@@ -2,7 +2,7 @@
   "name": "redaxo-multi-instances-manager",
   "displayName": "%displayName%",
   "description": "%description%",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "publisher": "skerbis",
   "icon": "resources/icon.png",
   "repository": {
@@ -561,6 +561,18 @@
         "title": "%command.useSiteHostsForHttps%",
         "category": "%category%",
         "icon": "$(lock)"
+      },
+      {
+        "command": "redaxo-instances.renameInstance",
+        "title": "%command.renameInstance%",
+        "category": "%category%",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "redaxo-instances.renameLocalServer",
+        "title": "%command.renameLocalServer%",
+        "category": "%category%",
+        "icon": "$(edit)"
       }
     ],
     "menus": {
@@ -648,6 +660,91 @@
       ],
       "view/item/context": [
         {
+          "command": "redaxo-instances.startInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance stopped/",
+          "group": "inline@1"
+        },
+        {
+          "command": "redaxo-instances.stopInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
+          "group": "inline@1"
+        },
+        {
+          "command": "redaxo-instances.openBackend",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/ && viewItem =~ / redaxo$/",
+          "group": "inline@2"
+        },
+        {
+          "command": "redaxo-instances.openInBrowser",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/ && viewItem =~ / custom$/",
+          "group": "inline@2"
+        },
+        {
+          "command": "redaxo-instances.startInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance stopped/",
+          "group": "1_lifecycle@1"
+        },
+        {
+          "command": "redaxo-instances.stopInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
+          "group": "1_lifecycle@1"
+        },
+        {
+          "command": "redaxo-instances.restartInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
+          "group": "1_lifecycle@2"
+        },
+        {
+          "command": "redaxo-instances.openBackend",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / redaxo$/",
+          "group": "2_open@1"
+        },
+        {
+          "command": "redaxo-instances.openInBrowser",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "2_open@2"
+        },
+        {
+          "command": "redaxo-instances.getLoginInfo",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "2_open@3"
+        },
+        {
+          "command": "redaxo-instances.modernizeInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / legacy /",
+          "group": "2_open@0"
+        },
+        {
+          "submenu": "redaxo-instances.instance.tools",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "3_more@1"
+        },
+        {
+          "submenu": "redaxo-instances.instance.live",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance .*v2 redaxo/",
+          "group": "3_more@2"
+        },
+        {
+          "submenu": "redaxo-instances.instance.backup",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "3_more@3"
+        },
+        {
+          "submenu": "redaxo-instances.instance.settings",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "3_more@4"
+        },
+        {
+          "command": "redaxo-instances.renameInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance .*v2 /",
+          "group": "9_manage@1"
+        },
+        {
+          "command": "redaxo-instances.deleteInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "9_manage@2"
+        },
+        {
           "command": "redaxo-instances.startLocalServer",
           "when": "view == redaxo-instances.localServersView && viewItem == 'localServer stopped'",
           "group": "inline@1"
@@ -718,146 +815,6 @@
           "group": "1_session@1"
         },
         {
-          "command": "redaxo-instances.startInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance stopped/",
-          "group": "inline@1"
-        },
-        {
-          "command": "redaxo-instances.stopInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
-          "group": "inline@1"
-        },
-        {
-          "command": "redaxo-instances.openBackend",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/ && viewItem =~ / redaxo$/",
-          "group": "inline@2"
-        },
-        {
-          "command": "redaxo-instances.openInBrowser",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/ && viewItem =~ / custom$/",
-          "group": "inline@2"
-        },
-        {
-          "command": "redaxo-instances.startInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance stopped/",
-          "group": "1_lifecycle@1"
-        },
-        {
-          "command": "redaxo-instances.stopInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
-          "group": "1_lifecycle@1"
-        },
-        {
-          "command": "redaxo-instances.restartInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
-          "group": "1_lifecycle@2"
-        },
-        {
-          "command": "redaxo-instances.openBackend",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / redaxo$/",
-          "group": "2_open@1"
-        },
-        {
-          "command": "redaxo-instances.openInBrowser",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
-          "group": "2_open@2"
-        },
-        {
-          "command": "redaxo-instances.getLoginInfo",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
-          "group": "2_open@3"
-        },
-        {
-          "command": "redaxo-instances.openInAdminer",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
-          "group": "2_open@4"
-        },
-        {
-          "command": "redaxo-instances.clearCache",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/ && viewItem =~ / redaxo$/",
-          "group": "3_redaxo@1"
-        },
-        {
-          "command": "redaxo-instances.runConsoleCommand",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/ && viewItem =~ / redaxo$/",
-          "group": "3_redaxo@2"
-        },
-        {
-          "command": "redaxo-instances.showRedaxoLogs",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / redaxo$/",
-          "group": "3_redaxo@3"
-        },
-        {
-          "command": "redaxo-instances.openTerminal",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
-          "group": "4_tools@1"
-        },
-        {
-          "command": "redaxo-instances.openDbShell",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
-          "group": "4_tools@2"
-        },
-        {
-          "command": "redaxo-instances.showLogs",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
-          "group": "4_tools@3"
-        },
-        {
-          "command": "redaxo-instances.openWorkspace",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
-          "group": "4_tools@4"
-        },
-        {
-          "command": "redaxo-instances.changePhpVersion",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / v2 /",
-          "group": "5_config@1"
-        },
-        {
-          "command": "redaxo-instances.changeMariaDbVersion",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
-          "group": "5_config@2"
-        },
-        {
-          "command": "redaxo-instances.toggleXdebug",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / v2 /",
-          "group": "5_config@3"
-        },
-        {
-          "command": "redaxo-instances.manageDomains",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / v2 /",
-          "group": "5_config@4"
-        },
-        {
-          "command": "redaxo-instances.createDatabase",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
-          "group": "5_config@5"
-        },
-        {
-          "command": "redaxo-instances.modernizeInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / legacy /",
-          "group": "5_config@0"
-        },
-        {
-          "command": "redaxo-instances.copyCopilotInstructions",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
-          "group": "6_ai@1"
-        },
-        {
-          "command": "redaxo-instances.exportInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
-          "group": "7_transfer@1"
-        },
-        {
-          "command": "redaxo-instances.repairInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
-          "group": "7_transfer@2"
-        },
-        {
-          "command": "redaxo-instances.deleteInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
-          "group": "9_danger@1"
-        },
-        {
           "command": "redaxo-instances.copyValue",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /^detail (url|secret)/",
           "group": "inline@1"
@@ -871,56 +828,6 @@
           "command": "redaxo-instances.stopService",
           "when": "view == redaxo-instances.servicesView && viewItem =~ /^service .* running$/",
           "group": "inline@1"
-        },
-        {
-          "command": "redaxo-instances.startDebugging",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/ && viewItem =~ / v2 /",
-          "group": "4_tools@0"
-        },
-        {
-          "command": "redaxo-instances.openInDevContainer",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / v2 /",
-          "group": "4_tools@5"
-        },
-        {
-          "command": "redaxo-instances.setupGit",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
-          "group": "4_tools@6"
-        },
-        {
-          "command": "redaxo-instances.createSnapshot",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
-          "group": "6_backup@1"
-        },
-        {
-          "command": "redaxo-instances.manageSnapshots",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
-          "group": "6_backup@2"
-        },
-        {
-          "command": "redaxo-instances.duplicateInstance",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
-          "group": "7_transfer@3"
-        },
-        {
-          "command": "redaxo-instances.compareWithLive",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance .*v2 redaxo/",
-          "group": "4_live@1"
-        },
-        {
-          "command": "redaxo-instances.pullLive",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance .*v2 redaxo/",
-          "group": "4_live@2"
-        },
-        {
-          "command": "redaxo-instances.deployToLive",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance .*v2 redaxo/",
-          "group": "4_live@3"
-        },
-        {
-          "command": "redaxo-instances.setupLiveServer",
-          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance .*v2 redaxo/",
-          "group": "4_live@4"
         },
         {
           "command": "redaxo-instances.pullLive",
@@ -966,6 +873,11 @@
           "command": "redaxo-instances.useSiteHostsForHttps",
           "when": "view == redaxo-instances.localServersView && viewItem == localSites",
           "group": "1_sites@1"
+        },
+        {
+          "command": "redaxo-instances.renameLocalServer",
+          "when": "view == redaxo-instances.localServersView && viewItem =~ /^localServer /",
+          "group": "9_remove@0"
         }
       ],
       "commandPalette": [
@@ -1016,6 +928,144 @@
         {
           "command": "redaxo-instances.useSiteHostsForHttps",
           "when": "false"
+        }
+      ],
+      "redaxo-instances.instance.tools": [
+        {
+          "command": "redaxo-instances.clearCache",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/ && viewItem =~ / redaxo$/",
+          "group": "1_redaxo@1"
+        },
+        {
+          "command": "redaxo-instances.runConsoleCommand",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/ && viewItem =~ / redaxo$/",
+          "group": "1_redaxo@2"
+        },
+        {
+          "command": "redaxo-instances.openTerminal",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
+          "group": "2_shell@1"
+        },
+        {
+          "command": "redaxo-instances.openDbShell",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
+          "group": "2_shell@2"
+        },
+        {
+          "command": "redaxo-instances.openInAdminer",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
+          "group": "2_shell@3"
+        },
+        {
+          "command": "redaxo-instances.startDebugging",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/ && viewItem =~ / v2 /",
+          "group": "3_dev@1"
+        },
+        {
+          "command": "redaxo-instances.openWorkspace",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "3_dev@2"
+        },
+        {
+          "command": "redaxo-instances.openInDevContainer",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / v2 /",
+          "group": "3_dev@3"
+        },
+        {
+          "command": "redaxo-instances.showRedaxoLogs",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / redaxo$/",
+          "group": "4_logs@1"
+        },
+        {
+          "command": "redaxo-instances.showLogs",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "4_logs@2"
+        }
+      ],
+      "redaxo-instances.instance.live": [
+        {
+          "command": "redaxo-instances.compareWithLive",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance .*v2 redaxo/",
+          "group": "1_live@1"
+        },
+        {
+          "command": "redaxo-instances.pullLive",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance .*v2 redaxo/",
+          "group": "1_live@2"
+        },
+        {
+          "command": "redaxo-instances.deployToLive",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance .*v2 redaxo/",
+          "group": "1_live@3"
+        },
+        {
+          "command": "redaxo-instances.setupLiveServer",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance .*v2 redaxo/",
+          "group": "2_setup@1"
+        }
+      ],
+      "redaxo-instances.instance.backup": [
+        {
+          "command": "redaxo-instances.createSnapshot",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "1_snap@1"
+        },
+        {
+          "command": "redaxo-instances.manageSnapshots",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "1_snap@2"
+        },
+        {
+          "command": "redaxo-instances.exportInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "2_transfer@1"
+        },
+        {
+          "command": "redaxo-instances.duplicateInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "2_transfer@2"
+        }
+      ],
+      "redaxo-instances.instance.settings": [
+        {
+          "command": "redaxo-instances.changePhpVersion",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / v2 /",
+          "group": "1_env@1"
+        },
+        {
+          "command": "redaxo-instances.changeMariaDbVersion",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "1_env@2"
+        },
+        {
+          "command": "redaxo-instances.toggleXdebug",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / v2 /",
+          "group": "1_env@3"
+        },
+        {
+          "command": "redaxo-instances.manageDomains",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance / && viewItem =~ / v2 /",
+          "group": "2_more@1"
+        },
+        {
+          "command": "redaxo-instances.createDatabase",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/",
+          "group": "2_more@2"
+        },
+        {
+          "command": "redaxo-instances.setupGit",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "2_more@3"
+        },
+        {
+          "command": "redaxo-instances.copyCopilotInstructions",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "2_more@4"
+        },
+        {
+          "command": "redaxo-instances.repairInstance",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance /",
+          "group": "3_repair@1"
         }
       ]
     },
@@ -1665,6 +1715,24 @@
           ],
           "additionalProperties": false
         }
+      }
+    ],
+    "submenus": [
+      {
+        "id": "redaxo-instances.instance.tools",
+        "label": "%submenu.tools%"
+      },
+      {
+        "id": "redaxo-instances.instance.live",
+        "label": "%submenu.live%"
+      },
+      {
+        "id": "redaxo-instances.instance.backup",
+        "label": "%submenu.backup%"
+      },
+      {
+        "id": "redaxo-instances.instance.settings",
+        "label": "%submenu.settings%"
       }
     ]
   },
