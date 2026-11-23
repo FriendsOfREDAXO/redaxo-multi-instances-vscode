@@ -5,6 +5,7 @@ Open this help at any time with **REDAXO: Help** (Command Palette `⇧⌘P` / `C
 - [Quick start](#quick-start)
 - [The instances view](#the-instances-view)
 - [Domains and HTTPS](#domains-and-https)
+- [Add-on updates](#add-on-updates)
 - [Live server: pull, compare, deploy](#live-server-pull-compare-deploy)
 - [Local servers (without Docker)](#local-servers-without-docker)
 - [Working with an instance](#working-with-an-instance)
@@ -69,6 +70,17 @@ A shared proxy serves every instance via HTTPS:
   addresses then look like `https://customer.localhost:8443`. The instances view always shows the correct address.
 
 Every instance is also reachable directly via `http://localhost:<port>` (see **Access Data…**).
+
+## Add-on updates
+
+Right-click a running instance → **Tools → Add-on Updates…** shows what is new: for REDAXO 5 the add-ons from the installer of
+redaxo.org, for REDAXO 6 the direct Composer packages. Major versions (e.g. 7.x → 8.0) and pre-releases (beta, RC) are marked and
+not preselected – read their changelog first. For REDAXO 6 the list also shows when `composer.json` pins a version; an update
+then changes nothing and says so. A **snapshot** can be taken first (undo via “Snapshots…”). REDAXO 5: `install:update`,
+REDAXO 6: `composer update … -W`, then `migrate` and `cache:clear`.
+
+**Add-on Updates of All Instances** (“…” menu above the list) writes a report for all running instances. Claude can ask for the
+updates of an instance via the MCP tool `list_updates`.
 
 ## Live server: pull, compare, deploy
 

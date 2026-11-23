@@ -1,5 +1,19 @@
 # Changelog
 
+## Version 2.6.0 (2026-11-22)
+
+### ✨ Neu
+- **AddOn-Updates** (Werkzeuge → „AddOn-Updates…“): REDAXO 5 über den Installer von redaxo.org (`install:list --updates-only`,
+  `install:update` mit Version), REDAXO 6 über `composer outdated --direct` / `composer update … -W` mit anschließendem `migrate`.
+  Hauptversionen und Vorabversionen sind markiert und nicht vorausgewählt, feste Versionen in der `composer.json` werden
+  angezeigt und ein unverändertes Paket als solches gemeldet. Auf Wunsch vorher ein Sicherungspunkt.
+- **AddOn-Updates aller Instanzen:** Bericht über alle laufenden Instanzen (Markdown-Vorschau).
+- MCP/LM-Tool `list_updates`.
+
+### 🐛 Fehlerbehebungen
+- Composer in REDAXO-6-Core-Instanzen: `COMPOSER_ROOT_VERSION` aus dem `branch-alias`, weil Git im Container die Version des
+  Checkouts oft nicht ermitteln kann („redaxo/core 1.0.0+no-version-set“).
+
 ## Version 2.5.0 (2026-11-20)
 
 ### ✨ Neu

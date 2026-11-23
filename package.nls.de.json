@@ -153,5 +153,9 @@
   "submenu.backup": "Sichern & Übertragen",
   "submenu.settings": "Einstellungen",
   "command.renameInstance": "Umbenennen…",
-  "command.renameLocalServer": "Umbenennen…"
+  "command.renameLocalServer": "Umbenennen…",
+  "command.checkUpdates": "AddOn-Updates…",
+  "command.checkAllUpdates": "AddOn-Updates aller Instanzen",
+  "tool.list_updates.name": "List add-on updates",
+  "tool.list_updates.description": "List add-on updates"
 }

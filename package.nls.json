@@ -153,5 +153,9 @@
   "submenu.backup": "Back Up & Transfer",
   "submenu.settings": "Settings",
   "command.renameInstance": "Rename…",
-  "command.renameLocalServer": "Rename…"
+  "command.renameLocalServer": "Rename…",
+  "command.checkUpdates": "Add-on Updates…",
+  "command.checkAllUpdates": "Add-on Updates of All Instances",
+  "tool.list_updates.name": "List add-on updates",
+  "tool.list_updates.description": "List add-on updates"
 }

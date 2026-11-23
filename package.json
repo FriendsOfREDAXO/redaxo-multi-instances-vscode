@@ -2,7 +2,7 @@
   "name": "redaxo-multi-instances-manager",
   "displayName": "%displayName%",
   "description": "%description%",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "publisher": "skerbis",
   "icon": "resources/icon.png",
   "repository": {
@@ -573,6 +573,18 @@
         "title": "%command.renameLocalServer%",
         "category": "%category%",
         "icon": "$(edit)"
+      },
+      {
+        "command": "redaxo-instances.checkUpdates",
+        "title": "%command.checkUpdates%",
+        "category": "%category%",
+        "icon": "$(arrow-circle-up)"
+      },
+      {
+        "command": "redaxo-instances.checkAllUpdates",
+        "title": "%command.checkAllUpdates%",
+        "category": "%category%",
+        "icon": "$(checklist)"
       }
     ],
     "menus": {
@@ -656,6 +668,11 @@
           "command": "redaxo-instances.stopAllLocalServers",
           "when": "view == redaxo-instances.localServersView",
           "group": "1_local@1"
+        },
+        {
+          "command": "redaxo-instances.checkAllUpdates",
+          "when": "view == redaxo-instances.instancesView",
+          "group": "1_instances@3"
         }
       ],
       "view/item/context": [
@@ -940,6 +957,11 @@
           "command": "redaxo-instances.runConsoleCommand",
           "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running/ && viewItem =~ / redaxo$/",
           "group": "1_redaxo@2"
+        },
+        {
+          "command": "redaxo-instances.checkUpdates",
+          "when": "view == redaxo-instances.instancesView && viewItem =~ /^instance running v2 redaxo/",
+          "group": "1_redaxo@3"
         },
         {
           "command": "redaxo-instances.openTerminal",
@@ -1708,6 +1730,33 @@
             "name": {
               "type": "string",
               "description": "Name of the local server"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "redaxo_list_updates",
+        "displayName": "%tool.list_updates.name%",
+        "toolReferenceName": "redaxo-list-updates",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server-environment)",
+        "userDescription": "%tool.list_updates.description%",
+        "modelDescription": "Lists available updates of a running REDAXO instance: add-ons from redaxo.org (REDAXO 5) or direct Composer packages (REDAXO 6), with installed and newest version, major version steps and blocking composer.json constraints. Installing is done in VS Code (Tools → Add-on Updates…).",
+        "tags": [
+          "redaxo",
+          "docker",
+          "php"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Instance name (see list_instances)"
             }
           },
           "required": [
